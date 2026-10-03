@@ -2,7 +2,7 @@
 
 Reference: `thetowersdk` 0.11.0, `WORKSHOP_DATA` in `packages/sdk/src/data/workshop/table.json` in [TheTowerSDK](https://github.com/TmRxJD/TheTowerSDK). These are standard workshop values and **battle cash** purchase prices, not enhancement costs or permanent workshop coin prices. The price at level zero buys the first upgrade; the terminal maximum row is not another purchase.
 
-Towerium's currency is earned and spent within one run. Battle cash is therefore the useful price comparison even though Towerium calls it coins. Effects expressed in meters, game units or percentages cannot be copied directly into the arena's pixels or bullet-hit damage model.
+Towerium's currency is earned and spent within one run. Battle cash is therefore the useful price comparison even though Towerium calls it coins. Effects expressed in meters, game units or percentages cannot be copied directly into the arena's pixels or bullet-hit damage model. Every Towerium purchase price is listed explicitly in [balance.json](../engine/balance.json); `base`, `step` and `cap` define its starting value, promised increment and purchase count.
 
 ## Starting Values And First Purchases
 
@@ -31,6 +31,10 @@ Chance increments below are percentage points. A multiplier increment adds to th
 | Landmine Chance | 0% | 0.6 pp | 25 | 0% | 2 pp | 20 |
 | Shockwave Size | 0.6 | 0.05 | 20 | 150 px | 14 px | 11 |
 | Shockwave Frequency | 20 s | −0.15 s | 20 | 10 s | −0.5 s | 20 |
+| Ammo Drop Chance | — | — | — | 5% | 0.2 pp | 30 |
+| Ammo Quantity | — | — | — | 1× bundle | 0.2× bundle | 25 |
+| Power Up Chance | — | — | — | 5% | 0.1 pp | 30 |
+| Powerup Duration | — | — | — | 0 s bonus | 1 s bonus | 25 |
 
 Ammo Quantity, Ammo Drop Chance, Power Up Chance and Powerup Duration have no direct standard-workshop counterpart. Towerium starts with 15 coins, 40 LSS rounds, 20 missiles and 5 Hook Bombs. Projectiles are unlimited; the primary interval is 0.18 seconds before Attack Speed and Rapid Fire.
 

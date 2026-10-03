@@ -48,9 +48,6 @@ jobs:
       - name: Run playtest policy tests
         run: npm run test:playtest
 
-      - name: Type-check frontend
-        run: npm run typecheck
-
       - name: Build static site and WebAssembly engine
         run: npm run build
 

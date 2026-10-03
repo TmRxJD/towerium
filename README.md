@@ -2,6 +2,8 @@
 
 Towerium is a browser tower-defense mini-game inspired by *Delirium*. It is a standalone game prototype built with a deterministic Rust simulation and a TypeScript canvas interface.
 
+The public play site is configured at [tmrxjd.github.io/towerium](https://tmrxjd.github.io/towerium/); deployment verification is pending.
+
 ## Requirements
 
 - Node.js 22 or newer and npm

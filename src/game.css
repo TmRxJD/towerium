@@ -34,6 +34,7 @@ h1 {font:600 20px 'Barlow Condensed',sans-serif;letter-spacing:3px}
 .coin-stat {display:flex;gap:7px;align-items:center;color:#e8cb85;min-width:44px;justify-content:flex-end;font-size:15px}
 .coin-stat strong {font:20px 'Barlow Condensed',sans-serif}
 .arena-wrap {position:relative;width:min(100%,calc(100dvh - 178px));margin-inline:auto;border:1px solid #2d434c;border-radius:7px;overflow:hidden;background:#090f19}
+.shell:has(#run-mode:not([hidden])) .arena-wrap {width:min(100%,calc(100dvh - 202px))}
 canvas {display:block;width:100%;aspect-ratio:1;touch-action:none;cursor:none}
 .intro {position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse,#0a1420f5,#0a1420bb 48%,#0a142011);cursor:auto}
 .intro[hidden] {display:none}
