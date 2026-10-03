@@ -1,0 +1,2059 @@
+{
+  "mapping": {
+    "source": "facts/v29.0.0 Main authored icon arrays joined to emulated workshop family/index",
+    "scene": "level1",
+    "mainPathId": 98096,
+    "count": 48,
+    "elapsedSeconds": 7.0,
+    "rows": [
+      {
+        "family": "attack",
+        "index": 0,
+        "name": "Damage",
+        "reference": {
+          "m_FileID": 26,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "50de3dd890680e545b5ab3c0e0b2e94e",
+        "spritePathId": 2,
+        "spriteName": "sword",
+        "export": "attack-00.png",
+        "sha256": "22c3dbe7ec2ffb77f68cf971eea6bbc9fa7680c6aa0b090510206c2ff630c115"
+      },
+      {
+        "family": "attack",
+        "index": 1,
+        "name": "Attack Speed",
+        "reference": {
+          "m_FileID": 27,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "dc46673a562c94b4ab90205076e12708",
+        "spritePathId": 2,
+        "spriteName": "speedometer",
+        "export": "attack-01.png",
+        "sha256": "a723d83343968bd2c7258d313f349863cef3abb3e5263ae67461de7a09733798"
+      },
+      {
+        "family": "attack",
+        "index": 2,
+        "name": "Critical Chance",
+        "reference": {
+          "m_FileID": 28,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b78a846aaa2fb48cdb20249c52fbc791",
+        "spritePathId": 2,
+        "spriteName": "CriticalChance",
+        "export": "attack-02.png",
+        "sha256": "7bf7fa4426d38453d7cd80521d4713970b87af3237c51926a2559563fb539a9d"
+      },
+      {
+        "family": "attack",
+        "index": 3,
+        "name": "Critical Factor",
+        "reference": {
+          "m_FileID": 29,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "a7bd7eb09b5a7114694b9fd81b5feb60",
+        "spritePathId": 2,
+        "spriteName": "critFactor",
+        "export": "attack-03.png",
+        "sha256": "1a01879cc5682ed6ab78db25a8a6bec098ca37090026d955bfe243266ec39988"
+      },
+      {
+        "family": "attack",
+        "index": 4,
+        "name": "Attack Range",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2592
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2592,
+        "spriteName": "radar",
+        "export": "attack-04.png",
+        "sha256": "9768a3d9b03a340891f8582ab0e1c0132f915e6d6ea6080786eda7c660db9413"
+      },
+      {
+        "family": "attack",
+        "index": 5,
+        "name": "Damage / Meter",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2738
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2738,
+        "spriteName": "damageMeter",
+        "export": "attack-05.png",
+        "sha256": "f3d550afb46e948eca8fa91b353b6661ec4895c1094de8dfe558c7fd27d14e27"
+      },
+      {
+        "family": "attack",
+        "index": 6,
+        "name": "Multishot Chance",
+        "reference": {
+          "m_FileID": 30,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "21cefbecec00447e0b39094c33ce192f",
+        "spritePathId": 2,
+        "spriteName": "multishot",
+        "export": "attack-06.png",
+        "sha256": "95532fd5337133feddbb34e0fb2bdd3cbacbbf821b0a3a2cd9438a14e117c6b1"
+      },
+      {
+        "family": "attack",
+        "index": 7,
+        "name": "Multishot Targets",
+        "reference": {
+          "m_FileID": 30,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "21cefbecec00447e0b39094c33ce192f",
+        "spritePathId": 2,
+        "spriteName": "multishot",
+        "export": "attack-07.png",
+        "sha256": "95532fd5337133feddbb34e0fb2bdd3cbacbbf821b0a3a2cd9438a14e117c6b1"
+      },
+      {
+        "family": "attack",
+        "index": 8,
+        "name": "Rapid Fire Chance",
+        "reference": {
+          "m_FileID": 31,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "48b7a8dc8275f4824b8aeb715be5e0c8",
+        "spritePathId": 2,
+        "spriteName": "rapidFire",
+        "export": "attack-08.png",
+        "sha256": "80f9b780053865912ea7ee2039ee66ce6f1af1f30765b1fba701bea944ea9df7"
+      },
+      {
+        "family": "attack",
+        "index": 9,
+        "name": "Rapid Fire Duration",
+        "reference": {
+          "m_FileID": 31,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "48b7a8dc8275f4824b8aeb715be5e0c8",
+        "spritePathId": 2,
+        "spriteName": "rapidFire",
+        "export": "attack-09.png",
+        "sha256": "80f9b780053865912ea7ee2039ee66ce6f1af1f30765b1fba701bea944ea9df7"
+      },
+      {
+        "family": "attack",
+        "index": 10,
+        "name": "Bounce Shot Chance",
+        "reference": {
+          "m_FileID": 32,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b01f1d6aa99524f33b39efc4cf4e3a71",
+        "spritePathId": 2,
+        "spriteName": "perk_bounceShot",
+        "export": "attack-10.png",
+        "sha256": "52eec891a920c1bf3fd2d2db9821e4637f8fc87bd3232defee3147171996c97f"
+      },
+      {
+        "family": "attack",
+        "index": 11,
+        "name": "Bounce Shot Targets",
+        "reference": {
+          "m_FileID": 32,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b01f1d6aa99524f33b39efc4cf4e3a71",
+        "spritePathId": 2,
+        "spriteName": "perk_bounceShot",
+        "export": "attack-11.png",
+        "sha256": "52eec891a920c1bf3fd2d2db9821e4637f8fc87bd3232defee3147171996c97f"
+      },
+      {
+        "family": "attack",
+        "index": 12,
+        "name": "Bounce Shot Range",
+        "reference": {
+          "m_FileID": 32,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b01f1d6aa99524f33b39efc4cf4e3a71",
+        "spritePathId": 2,
+        "spriteName": "perk_bounceShot",
+        "export": "attack-12.png",
+        "sha256": "52eec891a920c1bf3fd2d2db9821e4637f8fc87bd3232defee3147171996c97f"
+      },
+      {
+        "family": "attack",
+        "index": 13,
+        "name": "Super Crit Chance",
+        "reference": {
+          "m_FileID": 33,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "576fef14b34136341bfb4853dc8768e8",
+        "spritePathId": 2,
+        "spriteName": "superCritical",
+        "export": "attack-13.png",
+        "sha256": "f6dadf4766159153cd9dbaac854cc2fb9839d7da0d6653d92e9a235fdee3c457"
+      },
+      {
+        "family": "attack",
+        "index": 14,
+        "name": "Super Crit Mult",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1861
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1861,
+        "spriteName": "superCritMulti",
+        "export": "attack-14.png",
+        "sha256": "d43cedb226bf98d7cf1b08a914d7198ce348e57ce27e9e9b3ee7207bcbfaa754"
+      },
+      {
+        "family": "attack",
+        "index": 15,
+        "name": "Rend Armor Chance",
+        "reference": {
+          "m_FileID": 34,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "8bddf7e33b1b74564b04a71bd04ac421",
+        "spritePathId": 2,
+        "spriteName": "rendArmor",
+        "export": "attack-15.png",
+        "sha256": "a908da803be5d48bd4076ddcae2b6ee44307fa87200ee2629445dec5cd5f9f7e"
+      },
+      {
+        "family": "attack",
+        "index": 16,
+        "name": "Rend Armor Mult",
+        "reference": {
+          "m_FileID": 30,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "21cefbecec00447e0b39094c33ce192f",
+        "spritePathId": 2,
+        "spriteName": "multishot",
+        "export": "attack-16.png",
+        "sha256": "95532fd5337133feddbb34e0fb2bdd3cbacbbf821b0a3a2cd9438a14e117c6b1"
+      },
+      {
+        "family": "defense",
+        "index": 0,
+        "name": "Health",
+        "reference": {
+          "m_FileID": 35,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "e993070ceac52ba4e8c51437fccb8296",
+        "spritePathId": 2,
+        "spriteName": "heart",
+        "export": "defense-00.png",
+        "sha256": "e875d21e05bfa51e9b9f059956d8c9e48ec1780b47115b3483cc2c18e5fa4a7d"
+      },
+      {
+        "family": "defense",
+        "index": 1,
+        "name": "Health Regen",
+        "reference": {
+          "m_FileID": 36,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "4a4a1d4a36378aa4b82e5560025661bf",
+        "spritePathId": 2,
+        "spriteName": "heartbeat",
+        "export": "defense-01.png",
+        "sha256": "3a91c0e750f968df45ee8ec62b608b40e7572363f5d4f829b2e21ff0b5fa4bfb"
+      },
+      {
+        "family": "defense",
+        "index": 2,
+        "name": "Defense %",
+        "reference": {
+          "m_FileID": 37,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "4acceeee4cd088c4eb4e53a2ea9a3ab9",
+        "spritePathId": 2,
+        "spriteName": "extraDefense",
+        "export": "defense-02.png",
+        "sha256": "bc04c062d5b263b4631eff082b75347a7a36dc42fc63f15bf7bcbcb903e1e597"
+      },
+      {
+        "family": "defense",
+        "index": 3,
+        "name": "Defense Absolute",
+        "reference": {
+          "m_FileID": 38,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "a6f4899df0f38634bab88bc0d1906d8f",
+        "spritePathId": 2,
+        "spriteName": "Fortress",
+        "export": "defense-03.png",
+        "sha256": "1053282cc00dd1cc46767c85141e9c4f4352a69c9c89c3e1f62e573b63ab4e3c"
+      },
+      {
+        "family": "defense",
+        "index": 4,
+        "name": "Thorn Damage",
+        "reference": {
+          "m_FileID": 39,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "6a39bcf30d6ae774fa014c25de6ad6ba",
+        "spritePathId": 2,
+        "spriteName": "thorns (1)",
+        "export": "defense-04.png",
+        "sha256": "2f385de4e99895364b92b2efa109209bfa43d35c04bb2d4434b61d917a04e5e3"
+      },
+      {
+        "family": "defense",
+        "index": 5,
+        "name": "Lifesteal",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1838
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1838,
+        "spriteName": "lifesteal",
+        "export": "defense-05.png",
+        "sha256": "4f1f84a1b337d980d989298dd3e455afc905ac2b8944951373255e5f543b4e90"
+      },
+      {
+        "family": "defense",
+        "index": 6,
+        "name": "Knockback Chance",
+        "reference": {
+          "m_FileID": 40,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "54c36d86a5dbefa4388ca2fcb692c8a9",
+        "spritePathId": 2,
+        "spriteName": "knockback",
+        "export": "defense-06.png",
+        "sha256": "8d01766bb62f76c16f4a6cad8f5dc93debd1003784a714fe1147587427e96380"
+      },
+      {
+        "family": "defense",
+        "index": 7,
+        "name": "Knockback Force",
+        "reference": {
+          "m_FileID": 40,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "54c36d86a5dbefa4388ca2fcb692c8a9",
+        "spritePathId": 2,
+        "spriteName": "knockback",
+        "export": "defense-07.png",
+        "sha256": "8d01766bb62f76c16f4a6cad8f5dc93debd1003784a714fe1147587427e96380"
+      },
+      {
+        "family": "defense",
+        "index": 8,
+        "name": "Orb Speed",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1858
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1858,
+        "spriteName": "card_16",
+        "export": "defense-08.png",
+        "sha256": "1e1f1bf02a842871c1f53a73f9e59563ed1b6a2e825ce1f2fba7970665321cc4"
+      },
+      {
+        "family": "defense",
+        "index": 9,
+        "name": "Orbs",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1858
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1858,
+        "spriteName": "card_16",
+        "export": "defense-09.png",
+        "sha256": "1e1f1bf02a842871c1f53a73f9e59563ed1b6a2e825ce1f2fba7970665321cc4"
+      },
+      {
+        "family": "defense",
+        "index": 10,
+        "name": "Shockwave Size",
+        "reference": {
+          "m_FileID": 41,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "07845de1be91b47e9802101694dd970c",
+        "spritePathId": 2,
+        "spriteName": "shockwave",
+        "export": "defense-10.png",
+        "sha256": "3e5ce0256595f01db88c117d557212c6f5d10ac41f6d514ce675242c02cfe901"
+      },
+      {
+        "family": "defense",
+        "index": 11,
+        "name": "Shockwave Frequency",
+        "reference": {
+          "m_FileID": 41,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "07845de1be91b47e9802101694dd970c",
+        "spritePathId": 2,
+        "spriteName": "shockwave",
+        "export": "defense-11.png",
+        "sha256": "3e5ce0256595f01db88c117d557212c6f5d10ac41f6d514ce675242c02cfe901"
+      },
+      {
+        "family": "defense",
+        "index": 12,
+        "name": "Land Mine Chance",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1865
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1865,
+        "spriteName": "perk_dropLandMine",
+        "export": "defense-12.png",
+        "sha256": "a7432c22ade68d0ff79dee6def327d118f14721b4d3de63c6e384bbc4be92ba9"
+      },
+      {
+        "family": "defense",
+        "index": 13,
+        "name": "Land Mine Damage",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1865
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1865,
+        "spriteName": "perk_dropLandMine",
+        "export": "defense-13.png",
+        "sha256": "a7432c22ade68d0ff79dee6def327d118f14721b4d3de63c6e384bbc4be92ba9"
+      },
+      {
+        "family": "defense",
+        "index": 14,
+        "name": "Land Mine Radius",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1865
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1865,
+        "spriteName": "perk_dropLandMine",
+        "export": "defense-14.png",
+        "sha256": "a7432c22ade68d0ff79dee6def327d118f14721b4d3de63c6e384bbc4be92ba9"
+      },
+      {
+        "family": "defense",
+        "index": 15,
+        "name": "Death Defy",
+        "reference": {
+          "m_FileID": 42,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "4049e41598e46420bbcb2e96998e1fc8",
+        "spritePathId": 2,
+        "spriteName": "deathDefy",
+        "export": "defense-15.png",
+        "sha256": "33dac5ffa792d8dacc1be0518e1de7c5db5b18c49a90a878732dcd2f23e4d6a6"
+      },
+      {
+        "family": "defense",
+        "index": 16,
+        "name": "Wall Health",
+        "reference": {
+          "m_FileID": 43,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "b231ad4f76ffc42ee818c93ea7cb786d",
+        "spritePathId": 2,
+        "spriteName": "wallRebuild",
+        "export": "defense-16.png",
+        "sha256": "7008070cf267a3c1d8855be51cc966c04b3442f8b21828f985631ee39d08f7eb"
+      },
+      {
+        "family": "defense",
+        "index": 17,
+        "name": "Wall Rebuild",
+        "reference": {
+          "m_FileID": 43,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "b231ad4f76ffc42ee818c93ea7cb786d",
+        "spritePathId": 2,
+        "spriteName": "wallRebuild",
+        "export": "defense-17.png",
+        "sha256": "7008070cf267a3c1d8855be51cc966c04b3442f8b21828f985631ee39d08f7eb"
+      },
+      {
+        "family": "utility",
+        "index": 0,
+        "name": "Cash Bonus",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1808
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1808,
+        "spriteName": "CashBonus",
+        "export": "utility-00.png",
+        "sha256": "ea29b1179c6e68bd2e7e03dff6f3fd7c74b2537d7e1e968e5202632be9274339"
+      },
+      {
+        "family": "utility",
+        "index": 1,
+        "name": "Cash / Wave",
+        "reference": {
+          "m_FileID": 44,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "9f6fa397a58f84989a35f606f1d4a716",
+        "spritePathId": 2,
+        "spriteName": "cashPerWave",
+        "export": "utility-01.png",
+        "sha256": "0a82ae5b1c12951028a841f2463572a279ec49be5f475b886bad63ffe82b6902"
+      },
+      {
+        "family": "utility",
+        "index": 2,
+        "name": "Coins / Kill Bonus",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2431
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2431,
+        "spriteName": "coinKillBonus",
+        "export": "utility-02.png",
+        "sha256": "3632ee3929d74a57afdd078616d6b9914a104c67c17f65679b4fb3948e5dcbc0"
+      },
+      {
+        "family": "utility",
+        "index": 3,
+        "name": "Coins / Wave",
+        "reference": {
+          "m_FileID": 45,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "594b899f8f0ca44d0b56991fc5a26a71",
+        "spritePathId": 2,
+        "spriteName": "coinPerWave",
+        "export": "utility-03.png",
+        "sha256": "d16259755ada478e44442b52b41c68dad65e388ce1765507d87117c32c16bcb4"
+      },
+      {
+        "family": "utility",
+        "index": 4,
+        "name": "Free Attack Upgrade",
+        "reference": {
+          "m_FileID": 46,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "fdd2723ad2cd8d74490312d569316cc8",
+        "spritePathId": 2,
+        "spriteName": "freeAttackUpgrade",
+        "export": "utility-04.png",
+        "sha256": "37f5c5d218e6de3219edca167ab64f53c0eb3afed2e49b4df7592db163d58cf6"
+      },
+      {
+        "family": "utility",
+        "index": 5,
+        "name": "Free Defense Upgrade",
+        "reference": {
+          "m_FileID": 47,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "bfa63ca236acd2f47bb0df94bcbc577e",
+        "spritePathId": 2,
+        "spriteName": "freeDefenseUpgrade",
+        "export": "utility-05.png",
+        "sha256": "c99e2344f053f281e41639b3db323daf2d89daaddcb8b1a1dbaf41ad6b1ca2cc"
+      },
+      {
+        "family": "utility",
+        "index": 6,
+        "name": "Free Utility Upgrade",
+        "reference": {
+          "m_FileID": 48,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "fbf6c448b9064384fa7b25d9509af869",
+        "spritePathId": 2,
+        "spriteName": "freeUtilityUpgrade",
+        "export": "utility-06.png",
+        "sha256": "287ecc9d049a7deca3563852c1b416d17013ac5748090562096afab681646b81"
+      },
+      {
+        "family": "utility",
+        "index": 7,
+        "name": "Interest / Wave",
+        "reference": {
+          "m_FileID": 49,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "9d8d52a6615e5459ba58c5b678a96c4e",
+        "spritePathId": 2,
+        "spriteName": "interestPerWave",
+        "export": "utility-07.png",
+        "sha256": "d17226f8ed29f19ae4233da7e62600d1410618808fa17029cf606d3e0bf5895f"
+      },
+      {
+        "family": "utility",
+        "index": 8,
+        "name": "Recovery Amount",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2361
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2361,
+        "spriteName": "packageRecovery",
+        "export": "utility-08.png",
+        "sha256": "7da501e9551dd2dba80e0c6fec4c3bd39be800a8c86b4d92195a5b48d5a8adb4"
+      },
+      {
+        "family": "utility",
+        "index": 9,
+        "name": "Max Recovery",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2585
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2585,
+        "spriteName": "maxRecovery",
+        "export": "utility-09.png",
+        "sha256": "51d49dafe5911c513f9cb687be2720083c9d5e91759752b23a5c2b1ef24dbe4b"
+      },
+      {
+        "family": "utility",
+        "index": 10,
+        "name": "Package Chance",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2463
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2463,
+        "spriteName": "recoveryAmount",
+        "export": "utility-10.png",
+        "sha256": "4aca1ad42150fbbf7210e50bb4256cd216ffc0a2a81f75207b61fc2da86d079c"
+      },
+      {
+        "family": "utility",
+        "index": 11,
+        "name": "Enemy Attack Level Skip",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1898
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1898,
+        "spriteName": "enemyAttackSkip",
+        "export": "utility-11.png",
+        "sha256": "9ae2ed5460e14195248d1a6fe147b0bcc8d08d63726cbe895f4b031c4e4da4df"
+      },
+      {
+        "family": "utility",
+        "index": 12,
+        "name": "Enemy Health Level Skip",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2290
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2290,
+        "spriteName": "enemyHealthSkip",
+        "export": "utility-12.png",
+        "sha256": "5acc71059a5c2c33f57caa785abf2f43b06d30954be2076ba733f1320575e765"
+      }
+    ]
+  },
+  "runtime": {
+    "sourceMappingSha256": "aad00f483044fd6502a302ee871ac35186bc6ef474ef283e404323b9c9e6169c",
+    "mdReferenceSize": [
+      213,
+      200
+    ],
+    "bound": 213,
+    "rows": [
+      {
+        "family": "attack",
+        "index": 0,
+        "name": "Damage",
+        "reference": {
+          "m_FileID": 26,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "50de3dd890680e545b5ab3c0e0b2e94e",
+        "spritePathId": 2,
+        "spriteName": "sword",
+        "export": "attack-00.png",
+        "sha256": "22c3dbe7ec2ffb77f68cf971eea6bbc9fa7680c6aa0b090510206c2ff630c115",
+        "runtime": {
+          "alias": "damage",
+          "domain": "workshop",
+          "size": "md",
+          "file": "damage-md.webp",
+          "width": 213,
+          "height": 213,
+          "sha256": "9114dd5ee6dada56e4a5f84c08a9127d3fa073342aa9fba30728ee8bd4270f86",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-00.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 1,
+        "name": "Attack Speed",
+        "reference": {
+          "m_FileID": 27,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "dc46673a562c94b4ab90205076e12708",
+        "spritePathId": 2,
+        "spriteName": "speedometer",
+        "export": "attack-01.png",
+        "sha256": "a723d83343968bd2c7258d313f349863cef3abb3e5263ae67461de7a09733798",
+        "runtime": {
+          "alias": "attack-speed",
+          "domain": "workshop",
+          "size": "md",
+          "file": "attack-speed-md.webp",
+          "width": 213,
+          "height": 167,
+          "sha256": "166561e382a0ad699c018abdb7b0b789cd08fb5dd4c84a85adb942896ef3c099",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-01.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 2,
+        "name": "Critical Chance",
+        "reference": {
+          "m_FileID": 28,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b78a846aaa2fb48cdb20249c52fbc791",
+        "spritePathId": 2,
+        "spriteName": "CriticalChance",
+        "export": "attack-02.png",
+        "sha256": "7bf7fa4426d38453d7cd80521d4713970b87af3237c51926a2559563fb539a9d",
+        "runtime": {
+          "alias": "critical-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "critical-chance-md.webp",
+          "width": 196,
+          "height": 213,
+          "sha256": "cb7affe2e11d87b1f0110e25b8ee109a642de3bcb0b562ca942dd272faba5341",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-02.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 3,
+        "name": "Critical Factor",
+        "reference": {
+          "m_FileID": 29,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "a7bd7eb09b5a7114694b9fd81b5feb60",
+        "spritePathId": 2,
+        "spriteName": "critFactor",
+        "export": "attack-03.png",
+        "sha256": "1a01879cc5682ed6ab78db25a8a6bec098ca37090026d955bfe243266ec39988",
+        "runtime": {
+          "alias": "critical-factor",
+          "domain": "workshop",
+          "size": "md",
+          "file": "critical-factor-md.webp",
+          "width": 195,
+          "height": 213,
+          "sha256": "932cfb52f3abb6ae949ef9472a33b92cd8356027333996ae6d6fa777c3163c3a",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-03.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 4,
+        "name": "Attack Range",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2592
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2592,
+        "spriteName": "radar",
+        "export": "attack-04.png",
+        "sha256": "9768a3d9b03a340891f8582ab0e1c0132f915e6d6ea6080786eda7c660db9413",
+        "runtime": {
+          "alias": "range",
+          "domain": "workshop",
+          "size": "md",
+          "file": "range-md.webp",
+          "width": 213,
+          "height": 213,
+          "sha256": "d12c6d827f5a2d5fa54e1f09a23d80cdf8a245c60765b14e5dd1cb730c843b2b",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-04.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 5,
+        "name": "Damage / Meter",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2738
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2738,
+        "spriteName": "damageMeter",
+        "export": "attack-05.png",
+        "sha256": "f3d550afb46e948eca8fa91b353b6661ec4895c1094de8dfe558c7fd27d14e27",
+        "runtime": {
+          "alias": "damage-meter",
+          "domain": "workshop",
+          "size": "md",
+          "file": "damage-meter-md.webp",
+          "width": 213,
+          "height": 200,
+          "sha256": "777d15ff1a17b2186885950d1c5e37a8e866f5720ef62dfb363e3d3a32acd8a4",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-05.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 6,
+        "name": "Multishot Chance",
+        "reference": {
+          "m_FileID": 30,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "21cefbecec00447e0b39094c33ce192f",
+        "spritePathId": 2,
+        "spriteName": "multishot",
+        "export": "attack-06.png",
+        "sha256": "95532fd5337133feddbb34e0fb2bdd3cbacbbf821b0a3a2cd9438a14e117c6b1",
+        "runtime": {
+          "alias": "multi-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "multi-chance-md.webp",
+          "width": 211,
+          "height": 202,
+          "sha256": "0e7bef75fa743b388413198e3a3cf1b65df7669cb0d532d6dfab93e7ab80c04d",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-06.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 7,
+        "name": "Multishot Targets",
+        "reference": {
+          "m_FileID": 30,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "21cefbecec00447e0b39094c33ce192f",
+        "spritePathId": 2,
+        "spriteName": "multishot",
+        "export": "attack-07.png",
+        "sha256": "95532fd5337133feddbb34e0fb2bdd3cbacbbf821b0a3a2cd9438a14e117c6b1",
+        "runtime": {
+          "alias": "multi-qty",
+          "domain": "workshop",
+          "size": "md",
+          "file": "multi-qty-md.webp",
+          "width": 211,
+          "height": 202,
+          "sha256": "0e7bef75fa743b388413198e3a3cf1b65df7669cb0d532d6dfab93e7ab80c04d",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-07.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 8,
+        "name": "Rapid Fire Chance",
+        "reference": {
+          "m_FileID": 31,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "48b7a8dc8275f4824b8aeb715be5e0c8",
+        "spritePathId": 2,
+        "spriteName": "rapidFire",
+        "export": "attack-08.png",
+        "sha256": "80f9b780053865912ea7ee2039ee66ce6f1af1f30765b1fba701bea944ea9df7",
+        "runtime": {
+          "alias": "rapid-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "rapid-chance-md.webp",
+          "width": 213,
+          "height": 149,
+          "sha256": "1103ef7e6f3a6e1236417282a8d0a75ec390493c8db597dcf81d8ea7b709c279",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-08.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 9,
+        "name": "Rapid Fire Duration",
+        "reference": {
+          "m_FileID": 31,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "48b7a8dc8275f4824b8aeb715be5e0c8",
+        "spritePathId": 2,
+        "spriteName": "rapidFire",
+        "export": "attack-09.png",
+        "sha256": "80f9b780053865912ea7ee2039ee66ce6f1af1f30765b1fba701bea944ea9df7",
+        "runtime": {
+          "alias": "rapid-duration",
+          "domain": "workshop",
+          "size": "md",
+          "file": "rapid-duration-md.webp",
+          "width": 213,
+          "height": 149,
+          "sha256": "1103ef7e6f3a6e1236417282a8d0a75ec390493c8db597dcf81d8ea7b709c279",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-09.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 10,
+        "name": "Bounce Shot Chance",
+        "reference": {
+          "m_FileID": 32,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b01f1d6aa99524f33b39efc4cf4e3a71",
+        "spritePathId": 2,
+        "spriteName": "perk_bounceShot",
+        "export": "attack-10.png",
+        "sha256": "52eec891a920c1bf3fd2d2db9821e4637f8fc87bd3232defee3147171996c97f",
+        "runtime": {
+          "alias": "bounce-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "bounce-chance-md.webp",
+          "width": 213,
+          "height": 161,
+          "sha256": "d0ebdc5eba0263342a14eb1b2ebfd4b2165eadbf77bfc5acaed79fb0f5d60519",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-10.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 11,
+        "name": "Bounce Shot Targets",
+        "reference": {
+          "m_FileID": 32,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b01f1d6aa99524f33b39efc4cf4e3a71",
+        "spritePathId": 2,
+        "spriteName": "perk_bounceShot",
+        "export": "attack-11.png",
+        "sha256": "52eec891a920c1bf3fd2d2db9821e4637f8fc87bd3232defee3147171996c97f",
+        "runtime": {
+          "alias": "bounce-targets",
+          "domain": "workshop",
+          "size": "md",
+          "file": "bounce-targets-md.webp",
+          "width": 213,
+          "height": 161,
+          "sha256": "d0ebdc5eba0263342a14eb1b2ebfd4b2165eadbf77bfc5acaed79fb0f5d60519",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-11.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 12,
+        "name": "Bounce Shot Range",
+        "reference": {
+          "m_FileID": 32,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "b01f1d6aa99524f33b39efc4cf4e3a71",
+        "spritePathId": 2,
+        "spriteName": "perk_bounceShot",
+        "export": "attack-12.png",
+        "sha256": "52eec891a920c1bf3fd2d2db9821e4637f8fc87bd3232defee3147171996c97f",
+        "runtime": {
+          "alias": "bounce-range",
+          "domain": "workshop",
+          "size": "md",
+          "file": "bounce-range-md.webp",
+          "width": 213,
+          "height": 161,
+          "sha256": "d0ebdc5eba0263342a14eb1b2ebfd4b2165eadbf77bfc5acaed79fb0f5d60519",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-12.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 13,
+        "name": "Super Crit Chance",
+        "reference": {
+          "m_FileID": 33,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "576fef14b34136341bfb4853dc8768e8",
+        "spritePathId": 2,
+        "spriteName": "superCritical",
+        "export": "attack-13.png",
+        "sha256": "f6dadf4766159153cd9dbaac854cc2fb9839d7da0d6653d92e9a235fdee3c457",
+        "runtime": {
+          "alias": "super-crit-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "super-crit-chance-md.webp",
+          "width": 196,
+          "height": 213,
+          "sha256": "e5a9ce0e886bbce3710005bc992834cff20dd5e7d60c8a63eff6716e59928734",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-13.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 14,
+        "name": "Super Crit Mult",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1861
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1861,
+        "spriteName": "superCritMulti",
+        "export": "attack-14.png",
+        "sha256": "d43cedb226bf98d7cf1b08a914d7198ce348e57ce27e9e9b3ee7207bcbfaa754",
+        "runtime": {
+          "alias": "super-crit-mult",
+          "domain": "workshop",
+          "size": "md",
+          "file": "super-crit-mult-md.webp",
+          "width": 195,
+          "height": 213,
+          "sha256": "0f63775855770a646f45edd5bff9b4f1d2a50feb283a41c3a463225bbd845d19",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-14.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 15,
+        "name": "Rend Armor Chance",
+        "reference": {
+          "m_FileID": 34,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "8bddf7e33b1b74564b04a71bd04ac421",
+        "spritePathId": 2,
+        "spriteName": "rendArmor",
+        "export": "attack-15.png",
+        "sha256": "a908da803be5d48bd4076ddcae2b6ee44307fa87200ee2629445dec5cd5f9f7e",
+        "runtime": {
+          "alias": "rend-armor-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "rend-armor-chance-md.webp",
+          "width": 202,
+          "height": 213,
+          "sha256": "b497e2bd0d5cec1212beef4ac405f33d64403de73fa429529153cd1bf730ef60",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-15.webp"
+        }
+      },
+      {
+        "family": "attack",
+        "index": 16,
+        "name": "Rend Armor Mult",
+        "reference": {
+          "m_FileID": 30,
+          "m_PathID": 2
+        },
+        "field": "upgradeAttackIcon",
+        "assetFile": "21cefbecec00447e0b39094c33ce192f",
+        "spritePathId": 2,
+        "spriteName": "multishot",
+        "export": "attack-16.png",
+        "sha256": "95532fd5337133feddbb34e0fb2bdd3cbacbbf821b0a3a2cd9438a14e117c6b1",
+        "runtime": {
+          "alias": "rend-armor-mult",
+          "domain": "workshop",
+          "size": "md",
+          "file": "rend-armor-mult-md.webp",
+          "width": 211,
+          "height": 202,
+          "sha256": "0e7bef75fa743b388413198e3a3cf1b65df7669cb0d532d6dfab93e7ab80c04d",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "attack-16.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 0,
+        "name": "Health",
+        "reference": {
+          "m_FileID": 35,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "e993070ceac52ba4e8c51437fccb8296",
+        "spritePathId": 2,
+        "spriteName": "heart",
+        "export": "defense-00.png",
+        "sha256": "e875d21e05bfa51e9b9f059956d8c9e48ec1780b47115b3483cc2c18e5fa4a7d",
+        "runtime": {
+          "alias": "health",
+          "domain": "workshop",
+          "size": "md",
+          "file": "health-md.webp",
+          "width": 213,
+          "height": 161,
+          "sha256": "1d35e06c8ffd1d0c6cf36d5fa8e521932fd86c8f8d30e5bd9eb7c263d7efdc19",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-00.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 1,
+        "name": "Health Regen",
+        "reference": {
+          "m_FileID": 36,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "4a4a1d4a36378aa4b82e5560025661bf",
+        "spritePathId": 2,
+        "spriteName": "heartbeat",
+        "export": "defense-01.png",
+        "sha256": "3a91c0e750f968df45ee8ec62b608b40e7572363f5d4f829b2e21ff0b5fa4bfb",
+        "runtime": {
+          "alias": "health-regen",
+          "domain": "workshop",
+          "size": "md",
+          "file": "health-regen-md.webp",
+          "width": 213,
+          "height": 185,
+          "sha256": "4223edbb5bdce6a80b66f9154cc89ba0a38add835e2a723009176027f2acf583",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-01.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 2,
+        "name": "Defense %",
+        "reference": {
+          "m_FileID": 37,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "4acceeee4cd088c4eb4e53a2ea9a3ab9",
+        "spritePathId": 2,
+        "spriteName": "extraDefense",
+        "export": "defense-02.png",
+        "sha256": "bc04c062d5b263b4631eff082b75347a7a36dc42fc63f15bf7bcbcb903e1e597",
+        "runtime": {
+          "alias": "defense",
+          "domain": "workshop",
+          "size": "md",
+          "file": "defense-md.webp",
+          "width": 198,
+          "height": 213,
+          "sha256": "bc97eb4955c2b8fa6243ee6856dd8b1bacda01df41296514ca8c394299496430",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-02.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 3,
+        "name": "Defense Absolute",
+        "reference": {
+          "m_FileID": 38,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "a6f4899df0f38634bab88bc0d1906d8f",
+        "spritePathId": 2,
+        "spriteName": "Fortress",
+        "export": "defense-03.png",
+        "sha256": "1053282cc00dd1cc46767c85141e9c4f4352a69c9c89c3e1f62e573b63ab4e3c",
+        "runtime": {
+          "alias": "defense-absolute",
+          "domain": "workshop",
+          "size": "md",
+          "file": "defense-absolute-md.webp",
+          "width": 210,
+          "height": 213,
+          "sha256": "eb04828db1cedc393ea48c9fecda329c1d63386933cfcf52cd860c64cbcd5962",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-03.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 4,
+        "name": "Thorn Damage",
+        "reference": {
+          "m_FileID": 39,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "6a39bcf30d6ae774fa014c25de6ad6ba",
+        "spritePathId": 2,
+        "spriteName": "thorns (1)",
+        "export": "defense-04.png",
+        "sha256": "2f385de4e99895364b92b2efa109209bfa43d35c04bb2d4434b61d917a04e5e3",
+        "runtime": {
+          "alias": "thorns",
+          "domain": "workshop",
+          "size": "md",
+          "file": "thorns-md.webp",
+          "width": 213,
+          "height": 213,
+          "sha256": "d1f184fb1e9a56da20ba0d3081c6aecf642b1a959eb35f8e2c9b101b3ec27853",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-04.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 5,
+        "name": "Lifesteal",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1838
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1838,
+        "spriteName": "lifesteal",
+        "export": "defense-05.png",
+        "sha256": "4f1f84a1b337d980d989298dd3e455afc905ac2b8944951373255e5f543b4e90",
+        "runtime": {
+          "alias": "lifesteal",
+          "domain": "workshop",
+          "size": "md",
+          "file": "lifesteal-md.webp",
+          "width": 213,
+          "height": 184,
+          "sha256": "9576ff4e8dd42072f4d61eaf6dfa58feba96e629112ca57cbd69a58000edf421",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-05.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 6,
+        "name": "Knockback Chance",
+        "reference": {
+          "m_FileID": 40,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "54c36d86a5dbefa4388ca2fcb692c8a9",
+        "spritePathId": 2,
+        "spriteName": "knockback",
+        "export": "defense-06.png",
+        "sha256": "8d01766bb62f76c16f4a6cad8f5dc93debd1003784a714fe1147587427e96380",
+        "runtime": {
+          "alias": "knock-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "knock-chance-md.webp",
+          "width": 198,
+          "height": 202,
+          "sha256": "2558aa420bc5fd7b7c037a211ade94fd5454119b835812cb8a43f3784d32a84d",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-06.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 7,
+        "name": "Knockback Force",
+        "reference": {
+          "m_FileID": 40,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "54c36d86a5dbefa4388ca2fcb692c8a9",
+        "spritePathId": 2,
+        "spriteName": "knockback",
+        "export": "defense-07.png",
+        "sha256": "8d01766bb62f76c16f4a6cad8f5dc93debd1003784a714fe1147587427e96380",
+        "runtime": {
+          "alias": "knock-force",
+          "domain": "workshop",
+          "size": "md",
+          "file": "knock-force-md.webp",
+          "width": 198,
+          "height": 202,
+          "sha256": "2558aa420bc5fd7b7c037a211ade94fd5454119b835812cb8a43f3784d32a84d",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-07.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 8,
+        "name": "Orb Speed",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1858
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1858,
+        "spriteName": "card_16",
+        "export": "defense-08.png",
+        "sha256": "1e1f1bf02a842871c1f53a73f9e59563ed1b6a2e825ce1f2fba7970665321cc4",
+        "runtime": {
+          "alias": "orb-speed",
+          "domain": "workshop",
+          "size": "md",
+          "file": "orb-speed-md.webp",
+          "width": 91,
+          "height": 91,
+          "sha256": "2d96d1146dcc76b95f2b2adf91beb0b39d02629534d7a2e7e045633308d1abb8",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-08.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 9,
+        "name": "Orbs",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1858
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1858,
+        "spriteName": "card_16",
+        "export": "defense-09.png",
+        "sha256": "1e1f1bf02a842871c1f53a73f9e59563ed1b6a2e825ce1f2fba7970665321cc4",
+        "runtime": {
+          "alias": "orb-qty",
+          "domain": "workshop",
+          "size": "md",
+          "file": "orb-qty-md.webp",
+          "width": 91,
+          "height": 91,
+          "sha256": "2d96d1146dcc76b95f2b2adf91beb0b39d02629534d7a2e7e045633308d1abb8",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-09.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 10,
+        "name": "Shockwave Size",
+        "reference": {
+          "m_FileID": 41,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "07845de1be91b47e9802101694dd970c",
+        "spritePathId": 2,
+        "spriteName": "shockwave",
+        "export": "defense-10.png",
+        "sha256": "3e5ce0256595f01db88c117d557212c6f5d10ac41f6d514ce675242c02cfe901",
+        "runtime": {
+          "alias": "shockwave-size",
+          "domain": "workshop",
+          "size": "md",
+          "file": "shockwave-size-md.webp",
+          "width": 213,
+          "height": 140,
+          "sha256": "9a90d0b1a35d0d3713b70325d6b548a25704b4bf403fa04222e9ed5ff3472cef",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-10.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 11,
+        "name": "Shockwave Frequency",
+        "reference": {
+          "m_FileID": 41,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "07845de1be91b47e9802101694dd970c",
+        "spritePathId": 2,
+        "spriteName": "shockwave",
+        "export": "defense-11.png",
+        "sha256": "3e5ce0256595f01db88c117d557212c6f5d10ac41f6d514ce675242c02cfe901",
+        "runtime": {
+          "alias": "shockwave-freq",
+          "domain": "workshop",
+          "size": "md",
+          "file": "shockwave-freq-md.webp",
+          "width": 213,
+          "height": 140,
+          "sha256": "9a90d0b1a35d0d3713b70325d6b548a25704b4bf403fa04222e9ed5ff3472cef",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-11.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 12,
+        "name": "Land Mine Chance",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1865
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1865,
+        "spriteName": "perk_dropLandMine",
+        "export": "defense-12.png",
+        "sha256": "a7432c22ade68d0ff79dee6def327d118f14721b4d3de63c6e384bbc4be92ba9",
+        "runtime": {
+          "alias": "landmine-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "landmine-chance-md.webp",
+          "width": 149,
+          "height": 149,
+          "sha256": "41c31d19ff08f4f8c83e970260c8831ca85c330f88b794ad20e0299cc63b6304",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-12.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 13,
+        "name": "Land Mine Damage",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1865
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1865,
+        "spriteName": "perk_dropLandMine",
+        "export": "defense-13.png",
+        "sha256": "a7432c22ade68d0ff79dee6def327d118f14721b4d3de63c6e384bbc4be92ba9",
+        "runtime": {
+          "alias": "land-mine-damage",
+          "domain": "workshop",
+          "size": "md",
+          "file": "land-mine-damage-md.webp",
+          "width": 149,
+          "height": 149,
+          "sha256": "41c31d19ff08f4f8c83e970260c8831ca85c330f88b794ad20e0299cc63b6304",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-13.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 14,
+        "name": "Land Mine Radius",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1865
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1865,
+        "spriteName": "perk_dropLandMine",
+        "export": "defense-14.png",
+        "sha256": "a7432c22ade68d0ff79dee6def327d118f14721b4d3de63c6e384bbc4be92ba9",
+        "runtime": {
+          "alias": "land-mine-radius",
+          "domain": "workshop",
+          "size": "md",
+          "file": "land-mine-radius-md.webp",
+          "width": 149,
+          "height": 149,
+          "sha256": "41c31d19ff08f4f8c83e970260c8831ca85c330f88b794ad20e0299cc63b6304",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-14.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 15,
+        "name": "Death Defy",
+        "reference": {
+          "m_FileID": 42,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "4049e41598e46420bbcb2e96998e1fc8",
+        "spritePathId": 2,
+        "spriteName": "deathDefy",
+        "export": "defense-15.png",
+        "sha256": "33dac5ffa792d8dacc1be0518e1de7c5db5b18c49a90a878732dcd2f23e4d6a6",
+        "runtime": {
+          "alias": "death-defy",
+          "domain": "workshop",
+          "size": "md",
+          "file": "death-defy-md.webp",
+          "width": 213,
+          "height": 211,
+          "sha256": "8ff2088c908420ca97652f6f1608011fc66efb3a82ca2dd87e0188013b07ff08",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-15.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 16,
+        "name": "Wall Health",
+        "reference": {
+          "m_FileID": 43,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "b231ad4f76ffc42ee818c93ea7cb786d",
+        "spritePathId": 2,
+        "spriteName": "wallRebuild",
+        "export": "defense-16.png",
+        "sha256": "7008070cf267a3c1d8855be51cc966c04b3442f8b21828f985631ee39d08f7eb",
+        "runtime": {
+          "alias": "wall-health",
+          "domain": "workshop",
+          "size": "md",
+          "file": "wall-health-md.webp",
+          "width": 210,
+          "height": 202,
+          "sha256": "976bfcd11793345ffd9c8c6c809d005736ddce3ae308d643ada25a5ae59e0fce",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-16.webp"
+        }
+      },
+      {
+        "family": "defense",
+        "index": 17,
+        "name": "Wall Rebuild",
+        "reference": {
+          "m_FileID": 43,
+          "m_PathID": 2
+        },
+        "field": "upgradeDefenseIcon",
+        "assetFile": "b231ad4f76ffc42ee818c93ea7cb786d",
+        "spritePathId": 2,
+        "spriteName": "wallRebuild",
+        "export": "defense-17.png",
+        "sha256": "7008070cf267a3c1d8855be51cc966c04b3442f8b21828f985631ee39d08f7eb",
+        "runtime": {
+          "alias": "wall-rebuild",
+          "domain": "workshop",
+          "size": "md",
+          "file": "wall-rebuild-md.webp",
+          "width": 210,
+          "height": 202,
+          "sha256": "976bfcd11793345ffd9c8c6c809d005736ddce3ae308d643ada25a5ae59e0fce",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "defense-17.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 0,
+        "name": "Cash Bonus",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1808
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1808,
+        "spriteName": "CashBonus",
+        "export": "utility-00.png",
+        "sha256": "ea29b1179c6e68bd2e7e03dff6f3fd7c74b2537d7e1e968e5202632be9274339",
+        "runtime": {
+          "alias": "cash-bonus",
+          "domain": "workshop",
+          "size": "md",
+          "file": "cash-bonus-md.webp",
+          "width": 151,
+          "height": 213,
+          "sha256": "4b3bf827d5ae0287ce5179554ec0890c7ec9a644149ea56cf67fe502186f95b4",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-00.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 1,
+        "name": "Cash / Wave",
+        "reference": {
+          "m_FileID": 44,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "9f6fa397a58f84989a35f606f1d4a716",
+        "spritePathId": 2,
+        "spriteName": "cashPerWave",
+        "export": "utility-01.png",
+        "sha256": "0a82ae5b1c12951028a841f2463572a279ec49be5f475b886bad63ffe82b6902",
+        "runtime": {
+          "alias": "cash-wave",
+          "domain": "workshop",
+          "size": "md",
+          "file": "cash-wave-md.webp",
+          "width": 178,
+          "height": 204,
+          "sha256": "ba5affab3f19fb52c05c54d540cfd42a4b60a0e9b85a0f089cc54b539a428712",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-01.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 2,
+        "name": "Coins / Kill Bonus",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2431
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2431,
+        "spriteName": "coinKillBonus",
+        "export": "utility-02.png",
+        "sha256": "3632ee3929d74a57afdd078616d6b9914a104c67c17f65679b4fb3948e5dcbc0",
+        "runtime": {
+          "alias": "coins-kill",
+          "domain": "workshop",
+          "size": "md",
+          "file": "coins-kill-md.webp",
+          "width": 194,
+          "height": 213,
+          "sha256": "cf88d9cf223239ffcd61d39bcdff3d3cadab53574aaab20babf97305f152e202",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-02.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 3,
+        "name": "Coins / Wave",
+        "reference": {
+          "m_FileID": 45,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "594b899f8f0ca44d0b56991fc5a26a71",
+        "spritePathId": 2,
+        "spriteName": "coinPerWave",
+        "export": "utility-03.png",
+        "sha256": "d16259755ada478e44442b52b41c68dad65e388ce1765507d87117c32c16bcb4",
+        "runtime": {
+          "alias": "coins-wave",
+          "domain": "workshop",
+          "size": "md",
+          "file": "coins-wave-md.webp",
+          "width": 178,
+          "height": 205,
+          "sha256": "95e2f00695b1a766e83180c61c6a51c4c60b392865bcb0e79f0dcb02d1413d6b",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-03.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 4,
+        "name": "Free Attack Upgrade",
+        "reference": {
+          "m_FileID": 46,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "fdd2723ad2cd8d74490312d569316cc8",
+        "spritePathId": 2,
+        "spriteName": "freeAttackUpgrade",
+        "export": "utility-04.png",
+        "sha256": "37f5c5d218e6de3219edca167ab64f53c0eb3afed2e49b4df7592db163d58cf6",
+        "runtime": {
+          "alias": "free-attack-upgrade",
+          "domain": "workshop",
+          "size": "md",
+          "file": "free-attack-upgrade-md.webp",
+          "width": 213,
+          "height": 213,
+          "sha256": "da4394937e2fc41bdda778559262d2c957a6b0eb5cff72cfb0f2fe1c8cc238ca",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-04.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 5,
+        "name": "Free Defense Upgrade",
+        "reference": {
+          "m_FileID": 47,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "bfa63ca236acd2f47bb0df94bcbc577e",
+        "spritePathId": 2,
+        "spriteName": "freeDefenseUpgrade",
+        "export": "utility-05.png",
+        "sha256": "c99e2344f053f281e41639b3db323daf2d89daaddcb8b1a1dbaf41ad6b1ca2cc",
+        "runtime": {
+          "alias": "free-defense-upgrade",
+          "domain": "workshop",
+          "size": "md",
+          "file": "free-defense-upgrade-md.webp",
+          "width": 213,
+          "height": 213,
+          "sha256": "1939a94a3977f30426e853faa0295d1e94763bf2bd684425e99417e26974f4b4",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-05.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 6,
+        "name": "Free Utility Upgrade",
+        "reference": {
+          "m_FileID": 48,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "fbf6c448b9064384fa7b25d9509af869",
+        "spritePathId": 2,
+        "spriteName": "freeUtilityUpgrade",
+        "export": "utility-06.png",
+        "sha256": "287ecc9d049a7deca3563852c1b416d17013ac5748090562096afab681646b81",
+        "runtime": {
+          "alias": "free-utility-upgrade",
+          "domain": "workshop",
+          "size": "md",
+          "file": "free-utility-upgrade-md.webp",
+          "width": 213,
+          "height": 213,
+          "sha256": "d736607227f129f3a3536ff245f9222e0a4bf879d81ce29e3c65650ae11f58f4",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-06.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 7,
+        "name": "Interest / Wave",
+        "reference": {
+          "m_FileID": 49,
+          "m_PathID": 2
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "9d8d52a6615e5459ba58c5b678a96c4e",
+        "spritePathId": 2,
+        "spriteName": "interestPerWave",
+        "export": "utility-07.png",
+        "sha256": "d17226f8ed29f19ae4233da7e62600d1410618808fa17029cf606d3e0bf5895f",
+        "runtime": {
+          "alias": "interest-wave",
+          "domain": "workshop",
+          "size": "md",
+          "file": "interest-wave-md.webp",
+          "width": 198,
+          "height": 213,
+          "sha256": "ec130044ac7e65aa0b1b7be53be73f9d4e699ff146ca5120e89f522477cf3c08",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-07.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 8,
+        "name": "Recovery Amount",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2361
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2361,
+        "spriteName": "packageRecovery",
+        "export": "utility-08.png",
+        "sha256": "7da501e9551dd2dba80e0c6fec4c3bd39be800a8c86b4d92195a5b48d5a8adb4",
+        "runtime": {
+          "alias": "recovery-amount",
+          "domain": "workshop",
+          "size": "md",
+          "file": "recovery-amount-md.webp",
+          "width": 213,
+          "height": 212,
+          "sha256": "1b637e9d5ea55ba6009a18952712aaa8363c0cb0c249a122be5dcc7342df4b40",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-08.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 9,
+        "name": "Max Recovery",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2585
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2585,
+        "spriteName": "maxRecovery",
+        "export": "utility-09.png",
+        "sha256": "51d49dafe5911c513f9cb687be2720083c9d5e91759752b23a5c2b1ef24dbe4b",
+        "runtime": {
+          "alias": "max-recovery",
+          "domain": "workshop",
+          "size": "md",
+          "file": "max-recovery-md.webp",
+          "width": 211,
+          "height": 213,
+          "sha256": "4b8d50dfc77faf02d54b271c9a0de289026b041dab207a7667f5771072da4671",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-09.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 10,
+        "name": "Package Chance",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2463
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2463,
+        "spriteName": "recoveryAmount",
+        "export": "utility-10.png",
+        "sha256": "4aca1ad42150fbbf7210e50bb4256cd216ffc0a2a81f75207b61fc2da86d079c",
+        "runtime": {
+          "alias": "package-chance",
+          "domain": "workshop",
+          "size": "md",
+          "file": "package-chance-md.webp",
+          "width": 203,
+          "height": 213,
+          "sha256": "1410a9414bf41136e3fe8fff6230b34d9f5d8f2d9fae514776b69539fbf244cf",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-10.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 11,
+        "name": "Enemy Attack Level Skip",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 1898
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 1898,
+        "spriteName": "enemyAttackSkip",
+        "export": "utility-11.png",
+        "sha256": "9ae2ed5460e14195248d1a6fe147b0bcc8d08d63726cbe895f4b031c4e4da4df",
+        "runtime": {
+          "alias": "enemy-attack-level-skip",
+          "domain": "workshop",
+          "size": "md",
+          "file": "enemy-attack-level-skip-md.webp",
+          "width": 213,
+          "height": 202,
+          "sha256": "8acecdcfdf5853c541949d23fc913f943a873b4eed8f499438a1145b9c1db1d8",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-11.webp"
+        }
+      },
+      {
+        "family": "utility",
+        "index": 12,
+        "name": "Enemy Health Level Skip",
+        "reference": {
+          "m_FileID": 2,
+          "m_PathID": 2290
+        },
+        "field": "upgradeUtilityIcon",
+        "assetFile": "sharedassets1.assets",
+        "spritePathId": 2290,
+        "spriteName": "enemyHealthSkip",
+        "export": "utility-12.png",
+        "sha256": "5acc71059a5c2c33f57caa785abf2f43b06d30954be2076ba733f1320575e765",
+        "runtime": {
+          "alias": "enemy-health-level-skip",
+          "domain": "workshop",
+          "size": "md",
+          "file": "enemy-health-level-skip-md.webp",
+          "width": 213,
+          "height": 202,
+          "sha256": "f3b3123368f676e743b01233d38bc400334c63b3d2c1a6cd0059878c6255737c",
+          "encoding": "lossless WebP",
+          "sourceReferenceExport": "utility-12.webp"
+        }
+      }
+    ]
+  },
+  "receipt": {
+    "gameVersion": "29.0.0",
+    "mappingSha256": "aad00f483044fd6502a302ee871ac35186bc6ef474ef283e404323b9c9e6169c",
+    "image": "sha256:7a74a0bbd998fd8eccfe676ed16154dd2e9e3e2fccf20a8fe54e30c831ec23a5",
+    "facts": {
+      "facts\\v29.0.0\\serialized-assets.json": "ab66805577cea3ebfddfc49874af15df79a65411fd563c86065e800653d52ad5",
+      "facts\\v29.0.0\\workshop.json": "46cb7461c198a892627540dfacb66ec3ca33b944decd6b9a80be996c8507c7d3"
+    },
+    "assets": {
+      "07845de1be91b47e9802101694dd970c": "a99b3443088c7f0c9a8d4a9d98878ceeea353e24d201a6101525c1b7dfb62341",
+      "21cefbecec00447e0b39094c33ce192f": "cf849aca8058d0d9dcc62e568b8b50544306abcd400c121955257be54c4facc0",
+      "4049e41598e46420bbcb2e96998e1fc8": "2d8bec182b92a8a645b118b3003c03df9f62f932ae6a5dab597d7fa5f7d1d7ff",
+      "48b7a8dc8275f4824b8aeb715be5e0c8": "d4eec17e096e787c8eab735d5fe6ce582755ca8cea17814d34bf4af067012412",
+      "4a4a1d4a36378aa4b82e5560025661bf": "82d968e4db82ea66317413a58b22e2dc5e023d697486cafc9316be98cc3480fd",
+      "4acceeee4cd088c4eb4e53a2ea9a3ab9": "ba3c0aeebe4e61ae67edf660aa1a56159720690b4f5a7804aa10a4833c559add",
+      "50de3dd890680e545b5ab3c0e0b2e94e": "7dcf5f5494439fe7b0956c500a0e0d90c166272b8243fcfd7d84fbc8fbbb50d0",
+      "54c36d86a5dbefa4388ca2fcb692c8a9": "97122bc03a59db79f523deae0aaa4b76efa289b5252174724a5424ff260d61ad",
+      "576fef14b34136341bfb4853dc8768e8": "9e64cae2893ddf11a0dff10d35267ba0758c776dbf5c1c6171470c314eacb620",
+      "594b899f8f0ca44d0b56991fc5a26a71": "a17105237d13d28abacf0ea17a3c33154bc62614ab375aa9e56658550fca4d26",
+      "6a39bcf30d6ae774fa014c25de6ad6ba": "17f8739aed035872b955fa2f9857cab5dab5c879122eb95bc4dbf5bad8186898",
+      "8bddf7e33b1b74564b04a71bd04ac421": "a09973c104cbea0d8010e01b73885b079d69bd1455d218dd9e4c408017e5b5b0",
+      "9d8d52a6615e5459ba58c5b678a96c4e": "3b081d47d6bca206727d0fe607ca459e8bbef9f395b578fe778055fa61b32808",
+      "9f6fa397a58f84989a35f606f1d4a716": "dc3c496ba65ac2ed7dd70c489fc2d18d520735ff8d09f70c97586494aa7be794",
+      "a6f4899df0f38634bab88bc0d1906d8f": "93e2ed54af83d2ad2ef6394bfaed3997a8fa07dc6026311ae8c9a21b885afc2c",
+      "a7bd7eb09b5a7114694b9fd81b5feb60": "30559d8307f89f657e5d00fbd2bb9fa0555274c07a5076ce1aac8391a65bea93",
+      "b01f1d6aa99524f33b39efc4cf4e3a71": "1922451fa57a66f544e6b0050877865542f9b37a4741e21edd0cfc2be46b9a7d",
+      "b231ad4f76ffc42ee818c93ea7cb786d": "14e87bd3bf241e315727841dac611cd2d50ef41469addffe4f5d7e8ed6120b8d",
+      "b78a846aaa2fb48cdb20249c52fbc791": "64f2684220d66676cfeb9d4b6a8b5dff06bfa1c854dc60b61cd381e1f5e7a3bb",
+      "bfa63ca236acd2f47bb0df94bcbc577e": "f0c80e9524c9996d7b6e04dc3ef4d8f59c493312ec64b8d26c3f9d014b4795c7",
+      "dc46673a562c94b4ab90205076e12708": "6ae14a677bc931c17bfe7a5c0b0f8b6ee51e45297732204c0462395040e2238c",
+      "e993070ceac52ba4e8c51437fccb8296": "bca8843739b0758514a40d9df17436fea0f24f629b38baaa412c404e2543640b",
+      "fbf6c448b9064384fa7b25d9509af869": "56623d9089b312f219fd824514964a64c0af58093eac4b89bc3824b0acc0b50b",
+      "fdd2723ad2cd8d74490312d569316cc8": "3e9111f83a7362f206f80745968e43a399f36cbe409e601dc27df88887a58bee",
+      "level1": "b9fd3d81646390dc4a85ddd358b7b9a99c4535e0145efbd3b8b6ca8d457c135e",
+      "sharedassets1.assets": "8516f09da61f06eb3cd0beff61f57eb9881fabf9a02ebff04862de62ce0ca7ed"
+    },
+    "scriptSha256": "8db4f223c801bbb803de9125d7676257cef99ee1513abd5fa1349603d66a26ae",
+    "verifiedExports": 48,
+    "restrictions": {
+      "network": "none",
+      "cpus": 2,
+      "memoryBytes": 2147483648,
+      "pids": 64,
+      "uid": 65534,
+      "readonlyRoot": true,
+      "readonlyInputs": true,
+      "capDrop": "ALL",
+      "noNewPrivileges": true,
+      "noGpuDevices": true,
+      "scratchNoexec": true,
+      "deadlineSeconds": 140
+    },
+    "failures": [
+      "Initial export completed but process exited before tmpfs transfer",
+      "Same-container restart export: PermissionError: [Errno 13] Permission denied: /out/attack-00.png"
+    ],
+    "resolution": "Fresh container explicit tmpfs mode1777, selective referenced asset loading, 50s bounded transfer window, binary tar stream while running",
+    "runtime": {
+      "mappingSha256": "397d0b583100e80c5eccdaea7288562b17c0f41694ec16e8575e91addfc4df69",
+      "verifiedExports": 48,
+      "mdReferenceSize": [
+        213,
+        200
+      ],
+      "bound": 213,
+      "upscale": false,
+      "encoding": "lossless WebP",
+      "conversionScriptSha256": "1cc59215193de3d49e2693cca3981eef24395b7e7ebf4548542dfdeec0b46919"
+    }
+  }
+}

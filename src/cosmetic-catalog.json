@@ -1,0 +1,16 @@
+{
+  "skins": [
+    { "id": "hexagon", "name": "Hexagon", "asset": null },
+    { "id": "cyber", "name": "Cyber Tower", "asset": "Cyber Tower" },
+    { "id": "crystal", "name": "Crystal", "asset": "Crystal" },
+    { "id": "starship", "name": "Starship", "asset": "Starship" },
+    { "id": "atom", "name": "Atom", "asset": "Atom Tower" },
+    { "id": "prisma", "name": "Prisma", "asset": "Prisma Shape" },
+    { "id": "virus", "name": "Virus", "asset": "Virus" },
+    { "id": "storm", "name": "Storm Eye", "asset": "Storm Eye" },
+    { "id": "fire", "name": "Fire Eye", "asset": "Fire Eye" },
+    { "id": "brain", "name": "Brain", "asset": "Brain" },
+    { "id": "black-hole", "name": "Black Hole", "asset": "Black Hole" }
+  ],
+  "backgrounds": ["Clock Tower Space", "Autumn Background Night", "Abduction Background"]
+}

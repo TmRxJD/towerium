@@ -1,0 +1,27 @@
+{
+  "name": "towerium",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assets:sync": "node scripts/sync-assets.mjs",
+    "wasm:build": "node scripts/build-wasm.mjs",
+    "dev": "vite --host 127.0.0.1 --port 5184",
+    "typecheck": "tsc --noEmit",
+    "test": "cargo test --manifest-path engine/Cargo.toml",
+    "build": "npm run test:content && npm run wasm:build && npm run typecheck && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5184",
+    "test:browser": "playwright test",
+    "test:playtest": "node --test tests/playtest-policy.test.mjs",
+    "playtest": "node scripts/playtest.mjs",
+    "test:content": "node scripts/validate-help-catalog.mjs && node scripts/verify-pages-assets.mjs"
+  },
+  "dependencies": {
+    "thetowersdk": "0.11.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.0"
+  }
+}

@@ -1,0 +1,46 @@
+ignore = ["^Music", "^Effects", "^Projectiles", "^Light Speed", "^Smart Missiles", "^Hook Bomb", "^Build", "^Aim", "^Weapons"]
+
+[app]
+kind = "web"
+purpose = "Towerium: a pointer-aimed arcade survival game. Start a run, switch weapons, shoot temporary drops, bank/use Death Wave, review wave and overall statistics, open the workshop or start the next wave, pause, restart safely, and resume a locally saved run. Report and workshop share footer controls. Game Over shows the overall report and Play Again. Help and skins return to the originating screen. Combat/report/shop/game-over are sequential run states, not independent modes."
+url = "http://127.0.0.1:5186/?seed=42"
+viewport = [1440, 1080]
+settle_ms = 600
+
+[[tasks]]
+name = "start a run"
+goal = "Begin playing Towerium"
+done = { text = "Wave 1" }
+budget = 1
+primary = true
+
+[[tasks]]
+name = "read controls"
+goal = "Learn the controls and how power-up drops work"
+done = { text = "How To Play" }
+budget = 1
+primary = true
+
+[[tasks]]
+name = "pause combat"
+goal = "Start a run, then pause it safely"
+done = { text = "Paused" }
+budget = 2
+primary = true
+
+# Wave-gated purchases, skin selection/unlocks, Death Wave, and restart contracts are exercised by engine/browser tests
+# and browser tests; a click-only explorer cannot aim/shoot through an entire wave.
+
+[[tasks]]
+name = "restart confirmation"
+goal = "Start a run, pause, and find the restart confirmation"
+done = { text = "Restart Run?" }
+budget = 3
+primary = true
+
+[[tasks]]
+name = "pause Auto Play"
+goal = "Start watching an automated run, then pause it"
+done = { control = "^Stop Auto Play$" }
+budget = 3
+primary = true

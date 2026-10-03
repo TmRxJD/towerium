@@ -1,0 +1,437 @@
+{
+  "source": "User-supplied Tower extraction",
+  "assets": {
+    "enemy-basic": {
+      "name": "Enemy Basic",
+      "domain": "enemies",
+      "path": "enemies/enemy-basic-md.webp",
+      "sha256": "cb4084bfa1618d39143a390ea339e425b03cfeca3b10b83cdc188a9c47e90804"
+    },
+    "enemy-fast": {
+      "name": "Enemy Fast",
+      "domain": "enemies",
+      "path": "enemies/enemy-fast-md.webp",
+      "sha256": "cddefe47b85bfab83f04d3a411973d6266eb3d0da97c288561c17ee13487338b"
+    },
+    "enemy-tank": {
+      "name": "Enemy Tank",
+      "domain": "enemies",
+      "path": "enemies/enemy-tank-md.webp",
+      "sha256": "3745a37a82f912e8e1adb27ba6dcf00644474c7c3f6ce241cf80440a308cfe03"
+    },
+    "enemy-ranged": {
+      "name": "Enemy Ranged",
+      "domain": "enemies",
+      "path": "enemies/enemy-ranged-md.webp",
+      "sha256": "adea57dac69f92b0f23d44ed7aa666a9f054d839f7d8087967e901e8a6a091e6"
+    },
+    "enemy-protector": {
+      "name": "Enemy Protector",
+      "domain": "enemies",
+      "path": "enemies/enemy-protector-md.webp",
+      "sha256": "d53cdac50069da187b28d456ecccb98816275bb6dab0a14d443f5767d176cfb0"
+    },
+    "enemy-boss": {
+      "name": "Enemy Boss",
+      "domain": "enemies",
+      "path": "enemies/enemy-boss-md.webp",
+      "sha256": "9df5aac67107fd920a594bb1ca2ada2270281ce53c64a9bf37cfa17c35a56deb"
+    },
+    "enemy-vampire": {
+      "name": "Enemy Vampire",
+      "domain": "enemies",
+      "path": "enemies/enemy-vampire-md.webp",
+      "sha256": "1d72da1fbd007c2157f58599924a474694e9635f306ba9bf8d3a9b42bb4aaca5"
+    },
+    "enemy-ray": {
+      "name": "Enemy Ray",
+      "domain": "enemies",
+      "path": "enemies/enemy-ray-md.webp",
+      "sha256": "b68cf47ba8e4045f98a3d5606ed8695db9b013117cff8befa0415d1f448b63e4"
+    },
+    "enemy-scatter": {
+      "name": "Enemy Scatter",
+      "domain": "enemies",
+      "path": "enemies/enemy-scatter-md.webp",
+      "sha256": "e8ced3ab46335f017f1a1e9b6bc68c021164f2af33b1f7fcdcacf407e6588495"
+    },
+    "enemy-commander": {
+      "name": "Enemy Commander",
+      "domain": "enemies",
+      "path": "enemies/enemy-commander-md.webp",
+      "sha256": "64bcd2ce083fdc4e426d1021d868d727ec5aef477cafd146fc7bef8136b7f496"
+    },
+    "enemy-saboteur": {
+      "name": "Enemy Saboteur",
+      "domain": "enemies",
+      "path": "enemies/enemy-saboteur-md.webp",
+      "sha256": "f7e77f59c0736337c4ea8b39a96379ca9b2bcd0f8cf6061416fb69cf8de68d7b"
+    },
+    "enemy-overcharge": {
+      "name": "Enemy Overcharge",
+      "domain": "enemies",
+      "path": "enemies/enemy-overcharge-md.webp",
+      "sha256": "dec68d94bec0f283dc06db14d3a99548cae05356afe7e93acc0ce31f5ee1240c"
+    },
+    "enemy-boss ultimate": {
+      "name": "Enemy Boss Ultimate",
+      "domain": "enemies",
+      "path": "enemies/enemy-boss-ultimate-md.webp",
+      "sha256": "d115cb0e8353900d57e0491c3fb683c3b48d62b84286c2e8a6dd8e358b5fa5ea"
+    },
+    "tower": {
+      "name": "Cyber Tower",
+      "domain": "tower-skins",
+      "path": "tower-skins/cyber-tower-md.webp",
+      "sha256": "14c53d5c4c315d2ae3744e33360004bbaa31e3eaa136ee5e46d901b1f058488c"
+    },
+    "chain": {
+      "name": "Weapon Chain Lightning",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-chain-lightning-md.webp",
+      "sha256": "29b79776e2c4ed871f41d9b5df545506f443c82fa1f1c3c92da6a7bbfe025cde"
+    },
+    "chrono": {
+      "name": "Weapon Chrono Field",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-chrono-field-md.webp",
+      "sha256": "2513dc5bf195516dea0e2c6bdf208db4959125dd5d4163e5febdf3541a9db309"
+    },
+    "poison": {
+      "name": "Weapon Swamp",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-swamp-md.webp",
+      "sha256": "8ec0c2ea8e271218c982ca739ac1f1aa136b1b53a54e1f92726c8ec6efb5c9b6"
+    },
+    "blackhole": {
+      "name": "Weapon Black Hole",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-black-hole-md.webp",
+      "sha256": "c82941a20dba2a4d9d6d2bdb39eecaf9ebebdaa889a059026939d699a8bb1072"
+    },
+    "spotlight": {
+      "name": "Weapon Spotlight",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-spotlight-md.webp",
+      "sha256": "4c54366034a76ba5ee9b59209d690acdabc9b4049dbadcd6bf3b7f078307d864"
+    },
+    "golden": {
+      "name": "Weapon Golden Tower",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-golden-tower-md.webp",
+      "sha256": "84c31440de292eff77bc7d1e238d69688079a58a18b384e3822a857e8afe1242"
+    },
+    "deathwave": {
+      "name": "Weapon Death Wave",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-death-wave-md.webp",
+      "sha256": "7ff92a3feeac1c9c7d1256de7aecc6ccb81dbf63bae58574518b7fcb3768eced"
+    },
+    "missile": {
+      "name": "Weapon Smart Missilies",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-smart-missilies-md.webp",
+      "sha256": "33317137ec270a2d389e981b010ba91299023d29dc830548debbb2747a84aa6c"
+    },
+    "mine": {
+      "name": "Weapon Land Mines",
+      "domain": "ultimate-weapons",
+      "path": "ultimate-weapons/weapon-land-mines-md.webp",
+      "sha256": "df600488f6efcb02fcdfef9c8673176c80d64017eb0ab8b2df1c82d7f306ed09"
+    },
+    "recovery": {
+      "name": "Recovery Package",
+      "domain": "workshop",
+      "path": "workshop/recovery-package-md.webp",
+      "sha256": "c7e3a9a96867080268bfcd3a79a9a62c272dd12cb982ac7cbe5f8152f42af786"
+    },
+    "deathray": {
+      "name": "Death Ray",
+      "domain": "cards",
+      "path": "cards/death-ray-md.webp",
+      "sha256": "b24339622255d195e87839947d38fe9e8513b85e257a27fcc7ea1d3169bc85df"
+    },
+    "shield": {
+      "name": "Shield",
+      "domain": "icons",
+      "path": "icons/shield-md.webp",
+      "sha256": "6035d3e9886b5836106a5207f9284d03296dae31513387ab2597741670be746f"
+    },
+    "coin": {
+      "name": "Coin",
+      "domain": "icons",
+      "path": "icons/coin-md.webp",
+      "sha256": "4338506dab1d1bfa4e66b2baa8b1c602883f27ccf774ee17d961f7352d094d16"
+    },
+    "workshop-0": {
+      "name": "Attack Speed",
+      "domain": "workshop",
+      "path": "workshop/attack-speed-md.webp",
+      "authoredIcon": "attack-01.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "166561e382a0ad699c018abdb7b0b789cd08fb5dd4c84a85adb942896ef3c099"
+    },
+    "workshop-1": {
+      "name": "Range",
+      "domain": "workshop",
+      "path": "workshop/range-md.webp",
+      "authoredIcon": "attack-04.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "d12c6d827f5a2d5fa54e1f09a23d80cdf8a245c60765b14e5dd1cb730c843b2b"
+    },
+    "workshop-11": {
+      "name": "Health",
+      "domain": "workshop",
+      "path": "workshop/health-md.webp",
+      "authoredIcon": "defense-00.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "1d35e06c8ffd1d0c6cf36d5fa8e521932fd86c8f8d30e5bd9eb7c263d7efdc19"
+    },
+    "workshop-12": {
+      "name": "Regen",
+      "domain": "workshop",
+      "path": "workshop/regen-md.webp",
+      "authoredIcon": "defense-01.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "4223edbb5bdce6a80b66f9154cc89ba0a38add835e2a723009176027f2acf583"
+    },
+    "workshop-19": {
+      "name": "Coins/Kill",
+      "domain": "workshop",
+      "path": "workshop/coins-kill-md.webp",
+      "authoredIcon": "utility-02.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "cf88d9cf223239ffcd61d39bcdff3d3cadab53574aaab20babf97305f152e202"
+    },
+    "workshop-2": {
+      "name": "Multishot Chance",
+      "domain": "workshop",
+      "path": "workshop/multishot-chance-md.webp",
+      "authoredIcon": "attack-06.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "0e7bef75fa743b388413198e3a3cf1b65df7669cb0d532d6dfab93e7ab80c04d"
+    },
+    "workshop-3": {
+      "name": "Multishot Qty",
+      "domain": "workshop",
+      "path": "workshop/multishot-qty-md.webp",
+      "authoredIcon": "attack-07.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "0e7bef75fa743b388413198e3a3cf1b65df7669cb0d532d6dfab93e7ab80c04d"
+    },
+    "workshop-13": {
+      "name": "Thorns",
+      "domain": "workshop",
+      "path": "workshop/thorns-md.webp",
+      "authoredIcon": "defense-04.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "d1f184fb1e9a56da20ba0d3081c6aecf642b1a959eb35f8e2c9b101b3ec27853"
+    },
+    "workshop-24": {
+      "name": "Overheal %",
+      "domain": "workshop",
+      "path": "workshop/overheal-md.webp",
+      "authoredIcon": "utility-09.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "4b8d50dfc77faf02d54b271c9a0de289026b041dab207a7667f5771072da4671"
+    },
+    "workshop-23": {
+      "name": "Free Utility Upgrade",
+      "domain": "workshop",
+      "path": "workshop/free-utility-upgrade-md.webp",
+      "sha256": "be66c684fefeb061c5dcb23b19f2071e3abdc2db1736a6453517840d4ad2d54f"
+    },
+    "workshop-4": {
+      "name": "Rapid Fire Chance",
+      "domain": "workshop",
+      "path": "workshop/rapid-fire-chance-md.webp",
+      "authoredIcon": "attack-08.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "1103ef7e6f3a6e1236417282a8d0a75ec390493c8db597dcf81d8ea7b709c279"
+    },
+    "workshop-5": {
+      "name": "Rapid Fire Duration",
+      "domain": "workshop",
+      "path": "workshop/rapid-fire-duration-md.webp",
+      "authoredIcon": "attack-09.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "1103ef7e6f3a6e1236417282a8d0a75ec390493c8db597dcf81d8ea7b709c279"
+    },
+    "workshop-9": {
+      "name": "Knockback Chance",
+      "domain": "workshop",
+      "path": "workshop/knockback-chance-md.webp",
+      "authoredIcon": "defense-06.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "2558aa420bc5fd7b7c037a211ade94fd5454119b835812cb8a43f3784d32a84d"
+    },
+    "workshop-10": {
+      "name": "Knockback Force",
+      "domain": "workshop",
+      "path": "workshop/knockback-force-md.webp",
+      "authoredIcon": "defense-07.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "2558aa420bc5fd7b7c037a211ade94fd5454119b835812cb8a43f3784d32a84d"
+    },
+    "workshop-22": {
+      "name": "Recovery Amount",
+      "domain": "workshop",
+      "path": "workshop/recovery-amount-md.webp",
+      "sha256": "7b9debd910f74bf9e0357bede68da136b6533a6208ddcc1995ccf6c0c904916a"
+    },
+    "workshop-6": {
+      "name": "Bounce Chance",
+      "domain": "workshop",
+      "path": "workshop/bounce-chance-md.webp",
+      "authoredIcon": "attack-10.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "d0ebdc5eba0263342a14eb1b2ebfd4b2165eadbf77bfc5acaed79fb0f5d60519"
+    },
+    "workshop-8": {
+      "name": "Bounce Targets",
+      "domain": "workshop",
+      "path": "workshop/bounce-targets-md.webp",
+      "authoredIcon": "attack-11.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "d0ebdc5eba0263342a14eb1b2ebfd4b2165eadbf77bfc5acaed79fb0f5d60519"
+    },
+    "workshop-15": {
+      "name": "Orb Speed",
+      "domain": "workshop",
+      "path": "workshop/orb-speed-md.webp",
+      "authoredIcon": "defense-08.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "2d96d1146dcc76b95f2b2adf91beb0b39d02629534d7a2e7e045633308d1abb8"
+    },
+    "workshop-14": {
+      "name": "Orb Qty",
+      "domain": "workshop",
+      "path": "workshop/orb-qty-md.webp",
+      "authoredIcon": "defense-09.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "2d96d1146dcc76b95f2b2adf91beb0b39d02629534d7a2e7e045633308d1abb8"
+    },
+    "workshop-21": {
+      "name": "Free Defense Upgrade",
+      "domain": "workshop",
+      "path": "workshop/free-defense-upgrade-md.webp",
+      "sha256": "949371a901e779febdfeb679b1c68b7bf58316d9c48418fb1a0c8c580c7ebe63"
+    },
+    "workshop-7": {
+      "name": "Bounce Range",
+      "domain": "workshop",
+      "path": "workshop/bounce-range-md.webp",
+      "authoredIcon": "attack-12.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "d0ebdc5eba0263342a14eb1b2ebfd4b2165eadbf77bfc5acaed79fb0f5d60519"
+    },
+    "workshop-16": {
+      "name": "Landmine Chance",
+      "domain": "workshop",
+      "path": "workshop/landmine-chance-md.webp",
+      "authoredIcon": "defense-12.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "41c31d19ff08f4f8c83e970260c8831ca85c330f88b794ad20e0299cc63b6304"
+    },
+    "workshop-17": {
+      "name": "Shockwave Size",
+      "domain": "workshop",
+      "path": "workshop/shockwave-size-md.webp",
+      "authoredIcon": "defense-10.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "9a90d0b1a35d0d3713b70325d6b548a25704b4bf403fa04222e9ed5ff3472cef"
+    },
+    "workshop-18": {
+      "name": "Shockwave Freq",
+      "domain": "workshop",
+      "path": "workshop/shockwave-freq-md.webp",
+      "authoredIcon": "defense-11.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "9a90d0b1a35d0d3713b70325d6b548a25704b4bf403fa04222e9ed5ff3472cef"
+    },
+    "workshop-20": {
+      "name": "Lab Queue On",
+      "domain": "icons",
+      "path": "icons/lab-queue-on-md.webp",
+      "sha256": "a787bb6c2da8c4dfb8e7a8579a76003df3a4a4ac2f1f87bc095d3a384490eec4"
+    },
+    "skin-cyber": {
+      "name": "Cyber Tower",
+      "domain": "tower-skins",
+      "path": "tower-skins/cyber-tower-lg.webp",
+      "sha256": "944ecc6486ae7629349d27a7ac5bcafee94612e19e2fd64cf237f404f2f0ff13"
+    },
+    "skin-crystal": {
+      "name": "Crystal",
+      "domain": "tower-skins",
+      "path": "tower-skins/crystal-lg.webp",
+      "sha256": "fecb41fbb477a099fb8497580661ad4841ad64b8257581470ab34fd834b00628"
+    },
+    "skin-starship": {
+      "name": "Starship",
+      "domain": "tower-skins",
+      "path": "tower-skins/starship-lg.webp",
+      "sha256": "ae57a132f17d9f72754c206ab2cf3c6b46ddd39a16dd06cfbc2b88c7d72feab9"
+    },
+    "skin-atom": {
+      "name": "Atom Tower",
+      "domain": "tower-skins",
+      "path": "tower-skins/atom-tower-lg.webp",
+      "sha256": "3afa77a9abe1145c8ffc4a006297004c3a483b1104623223dd260e464f413a73"
+    },
+    "skin-prisma": {
+      "name": "Prisma Shape",
+      "domain": "tower-skins",
+      "path": "tower-skins/prisma-shape-lg.webp",
+      "sha256": "140f6eaf311b7ea39a99fbbda56c13c773ffce465742f5997db3b7352c7919f9"
+    },
+    "skin-virus": {
+      "name": "Virus",
+      "domain": "tower-skins",
+      "path": "tower-skins/virus-lg.webp",
+      "sha256": "fe4652dbe49c93cf896b9672e0aa33dd4fbf0e2d3aea73eeb4b716a14801e75d"
+    },
+    "skin-storm": {
+      "name": "Storm Eye",
+      "domain": "tower-skins",
+      "path": "tower-skins/storm-eye-lg.webp",
+      "sha256": "0d169dca8bf8959311bbd9b9d64af48b87a00564849715c52d48a810a9809f4d"
+    },
+    "skin-fire": {
+      "name": "Fire Eye",
+      "domain": "tower-skins",
+      "path": "tower-skins/fire-eye-lg.webp",
+      "sha256": "e4fe4fa4abd5943b874c2fbab1262126adae22fc3b54f9a8cf022ba7c788b65d"
+    },
+    "skin-brain": {
+      "name": "Brain",
+      "domain": "tower-skins",
+      "path": "tower-skins/brain-lg.webp",
+      "sha256": "1508dbef122c223ec421da08021e980b47577479762bd88b16668f8ff2dbc34a"
+    },
+    "skin-black-hole": {
+      "name": "Black Hole",
+      "domain": "tower-skins",
+      "path": "tower-skins/black-hole-lg.webp",
+      "sha256": "8f1c369fea47d226cfd6045076132919cbc1743b0e0c23ef33c5f63f5819c729"
+    },
+    "background-0": {
+      "name": "Clock Tower Space",
+      "domain": "backgrounds",
+      "path": "backgrounds/clock-tower-space-lg.webp",
+      "sha256": "039750f8c2c7f1dd0d4161c645d46217c15a9f3da7e637608ab77658af73959b"
+    },
+    "background-1": {
+      "name": "Autumn Background Night",
+      "domain": "backgrounds",
+      "path": "backgrounds/autumn-background-night-lg.webp",
+      "sha256": "bd3b1abf2b99ee134297a36b286148debf7d59c2b3d466c27a010989e3fcd79c"
+    },
+    "background-2": {
+      "name": "Abduction Background",
+      "domain": "backgrounds",
+      "path": "backgrounds/abduction-background-lg.webp",
+      "sha256": "f9e2f35241f8c7ecedcc005ad1895956ef7c2a1fda6669cb59051970c55d6988"
+    }
+  }
+}

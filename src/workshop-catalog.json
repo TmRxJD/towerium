@@ -1,0 +1,173 @@
+[
+  {
+    "index": 0,
+    "label": "Attack Speed",
+    "asset": "Attack Speed",
+    "domain": "workshop",
+    "source": "attack-01.webp"
+  },
+  {
+    "index": 1,
+    "label": "Range",
+    "asset": "Range",
+    "domain": "workshop",
+    "source": "attack-04.webp"
+  },
+  {
+    "index": 11,
+    "label": "Health",
+    "asset": "Health",
+    "domain": "workshop",
+    "source": "defense-00.webp"
+  },
+  {
+    "index": 12,
+    "label": "Regen",
+    "asset": "Regen",
+    "domain": "workshop",
+    "source": "defense-01.webp"
+  },
+  {
+    "index": 19,
+    "label": "Coins/Kill",
+    "asset": "Coins/Kill",
+    "domain": "workshop",
+    "source": "utility-02.webp"
+  },
+  {
+    "index": 2,
+    "label": "Multishot Chance",
+    "asset": "Multishot Chance",
+    "domain": "workshop",
+    "source": "attack-06.webp"
+  },
+  {
+    "index": 3,
+    "label": "Multishot Qty",
+    "asset": "Multishot Qty",
+    "domain": "workshop",
+    "source": "attack-07.webp"
+  },
+  {
+    "index": 13,
+    "label": "Thorns",
+    "asset": "Thorns",
+    "domain": "workshop",
+    "source": "defense-04.webp"
+  },
+  {
+    "index": 24,
+    "label": "Overheal %",
+    "asset": "Overheal %",
+    "domain": "workshop",
+    "source": "utility-09.webp"
+  },
+  {
+    "index": 23,
+    "label": "Ammo Drop Chance",
+    "asset": "Free Utility Upgrade",
+    "domain": "workshop"
+  },
+  {
+    "index": 4,
+    "label": "Rapid Fire Chance",
+    "asset": "Rapid Fire Chance",
+    "domain": "workshop",
+    "source": "attack-08.webp"
+  },
+  {
+    "index": 5,
+    "label": "Rapid Fire Duration",
+    "asset": "Rapid Fire Duration",
+    "domain": "workshop",
+    "source": "attack-09.webp"
+  },
+  {
+    "index": 9,
+    "label": "Knockback Chance",
+    "asset": "Knockback Chance",
+    "domain": "workshop",
+    "source": "defense-06.webp"
+  },
+  {
+    "index": 10,
+    "label": "Knockback Force",
+    "asset": "Knockback Force",
+    "domain": "workshop",
+    "source": "defense-07.webp"
+  },
+  {
+    "index": 22,
+    "label": "Ammo Qty",
+    "asset": "Recovery Amount",
+    "domain": "workshop"
+  },
+  {
+    "index": 6,
+    "label": "Bounce Chance",
+    "asset": "Bounce Chance",
+    "domain": "workshop",
+    "source": "attack-10.webp"
+  },
+  {
+    "index": 8,
+    "label": "Bounce Targets",
+    "asset": "Bounce Targets",
+    "domain": "workshop",
+    "source": "attack-11.webp"
+  },
+  {
+    "index": 15,
+    "label": "Orb Speed",
+    "asset": "Orb Speed",
+    "domain": "workshop",
+    "source": "defense-08.webp"
+  },
+  {
+    "index": 14,
+    "label": "Orb Qty",
+    "asset": "Orb Qty",
+    "domain": "workshop",
+    "source": "defense-09.webp"
+  },
+  {
+    "index": 21,
+    "label": "Power Up Chance",
+    "asset": "Free Defense Upgrade",
+    "domain": "workshop"
+  },
+  {
+    "index": 7,
+    "label": "Bounce Range",
+    "asset": "Bounce Range",
+    "domain": "workshop",
+    "source": "attack-12.webp"
+  },
+  {
+    "index": 16,
+    "label": "Landmine Chance",
+    "asset": "Landmine Chance",
+    "domain": "workshop",
+    "source": "defense-12.webp"
+  },
+  {
+    "index": 17,
+    "label": "Shockwave Size",
+    "asset": "Shockwave Size",
+    "domain": "workshop",
+    "source": "defense-10.webp"
+  },
+  {
+    "index": 18,
+    "label": "Shockwave Freq",
+    "asset": "Shockwave Freq",
+    "domain": "workshop",
+    "source": "defense-11.webp"
+  },
+  {
+    "index": 20,
+    "label": "Powerup Duration",
+    "asset": "Lab Queue On",
+    "domain": "icons"
+  }
+]

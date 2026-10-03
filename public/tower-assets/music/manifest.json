@@ -1,0 +1,93 @@
+{
+  "source": "Tower v29.0.0 local extraction; artist labels verified against serialized-assets.json",
+  "tracks": [
+    {
+      "artist": "Krisu",
+      "title": "Morning Dew",
+      "clip": "MorningDewMain",
+      "file": "krisu-morning-dew.ogg",
+      "duration": 113.34530612244897,
+      "rms": 0.15124921021959456,
+      "bytes": 1634777,
+      "sha256": "1f7e82fb9c97c5b3ea524daedb64a221d6612a95b136ec2dcf3e385577ccabd9",
+      "source_wav_sha256": "2c3c464a0ff284f88613976eb74677f64dcddf396cc7280a623d046d45e70622"
+    },
+    {
+      "artist": "Krisu",
+      "title": "My Dying Star",
+      "clip": "MyDyingStarMain",
+      "file": "krisu-my-dying-star.ogg",
+      "duration": 109.71428571428571,
+      "rms": 0.10467179943230855,
+      "bytes": 1414128,
+      "sha256": "d8108e149ee315e0640ef6b989659f7fd8014f5edbfa99950d6c18a5c3eb6fba",
+      "source_wav_sha256": "cc07c614f8b32f97a92a6af01997baf01ce2bcd489df750c3476b33026cbc48a"
+    },
+    {
+      "artist": "Krisu",
+      "title": "Oceans Sing",
+      "clip": "OceansSingMain",
+      "file": "krisu-oceans-sing.ogg",
+      "duration": 131.1869387755102,
+      "rms": 0.07780475004587384,
+      "bytes": 1858836,
+      "sha256": "a2bc77155005b88ef233c1926317d01125e2ed1f03fd61c5cc7fcdb4d200f15b",
+      "source_wav_sha256": "1414eb84642375a18bf266a3d98e35b3dd79d291e7ce47ec758e3251aca19d9e"
+    },
+    {
+      "artist": "Krisu",
+      "title": "Hiding in Himalaya",
+      "clip": "HidingInHimalayaMain",
+      "file": "krisu-hiding-in-himalaya.ogg",
+      "duration": 86.85714285714286,
+      "rms": 0.05741339929851979,
+      "bytes": 1161565,
+      "sha256": "72c5e2b93cb971a8f680a9aaf6ea5f7fff0d6a6611db383eca56dc5b891b1f19",
+      "source_wav_sha256": "8a757fda93cf9dd39569e1bc3b050102cab22f88086787a80939a61063dfe5dd"
+    },
+    {
+      "artist": "Krisu",
+      "title": "Aska",
+      "clip": "AskaMain",
+      "file": "krisu-aska.ogg",
+      "duration": 214.20408163265307,
+      "rms": 0.09234518597323861,
+      "bytes": 2533126,
+      "sha256": "436cf485af03c25056342cbc3a10471261c453a0cc2baa90b79ccf9b077555b2",
+      "source_wav_sha256": "161f6f3b2b0ae218a1841680be26aeea5a4144f9fdb1792191b81547557dda5c"
+    },
+    {
+      "artist": "Krisu",
+      "title": "The Ethereal and I",
+      "clip": "The Ethereal and I Main",
+      "file": "krisu-the-ethereal-and-i.ogg",
+      "duration": 201.9787755102041,
+      "rms": 0.1468035625975449,
+      "bytes": 2813509,
+      "sha256": "b2245ead833f0ba89b12bbca6bbd35367839f1c2974fb0d9753f995e3efbb784",
+      "source_wav_sha256": "8505b4a1e5e775a81ed1ae14d2d1584daabc8d14968795e93b29f419335b1f75"
+    },
+    {
+      "artist": "Krisu",
+      "title": "Forest Bathing",
+      "clip": "Forest Bathing Main",
+      "file": "krisu-forest-bathing.ogg",
+      "duration": 213.68163265306123,
+      "rms": 0.17878914555726924,
+      "bytes": 3257145,
+      "sha256": "507c76a9e6775704e51a25eabc4be4091661b86d202214f8027495a01143e492",
+      "source_wav_sha256": "bc9bcad806fda0a99405a8c738c7fe1c20ec6cac94b80237c919d4e3c52024ed"
+    },
+    {
+      "artist": "Krisu",
+      "title": "Embrace Oblivion",
+      "clip": "Embrace Oblivion Main",
+      "file": "krisu-embrace-oblivion.ogg",
+      "duration": 245.99510204081633,
+      "rms": 0.12829507215278507,
+      "bytes": 3153862,
+      "sha256": "1d802e30057b97a0823fbd753043835e672f171f07781f3f9cb98a6c3f29e360",
+      "source_wav_sha256": "8149d34111b15449e00e30dea2bfc3916826178f6a98092befd9ddcc90042372"
+    }
+  ]
+}
