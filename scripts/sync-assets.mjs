@@ -35,6 +35,7 @@ const entries = [
   ['extra-orbs','extra-orb','cards'], ['aoe','aoe','cards'],
   ['gold-bot','golden-bot','icons'], ['amp-bot','amplify-bot','icons'],
   ['flame-bot','flame-bot','icons'], ['thunder-bot','thunder-bot','icons'],
+  ['critical-coin','critical-coin','cards'],
   ['coin','Coin','icons'],
   ['power-stone','coin_ultimate','icons'],
   ...workshop.map(item=>[`workshop-${item.index}`,item.asset,item.domain,'md',item.source]),

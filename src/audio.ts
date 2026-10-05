@@ -101,6 +101,8 @@ export class Audio {
     this.missileFlight(s.phase===1&&!s.paused&&s.shots.some(shot=>shot[1]===2));
     const previous=this.previous;
     if(previous&&s.time>=previous.time&&s.phase===1&&!s.paused){
+      const fired=[3,2,1,0].find(i=>s.weapon_report[i].shots>previous.weapon_report[i].shots);
+      if(fired!==undefined)this.shot(s.time,fired);
       if(s.hp<previous.hp&&s.time-this.lastDamage>.35){this.lastDamage=s.time;this.tone(170,.12,'sine',.016,65);}
       if(s.charges>previous.charges)this.tone(420,.2,'sine',.018,650);
       if(s.shields>previous.shields)this.tone(260,.2,'sine',.035,420);

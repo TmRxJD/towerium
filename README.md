@@ -41,7 +41,7 @@ Vite prints the local address. To build a static production bundle, run `npm run
 
 Auto Play spends its starting coin and Power Stone budgets using the selected build, then starts the chosen wave automatically. Timing defaults are 180 ms / 2,400 battlefield pixels per second / 160 ms switch delay (touch: 240 ms / 1,800 pixels per second / 200 ms); Crowd Sweeps favors nearby groups and fires Multishot while turning through them; these defaults are tuning assumptions, not proof of human playability. Camera zoom keeps the range circle inside the viewport.
 
-Supplies sells premium ammo, Death Wave charges and ready powers for coins. The last 20% of workshop levels now cost 75% more, extending completion beyond wave 400 in the reference model. Ammo drops start at 4%, reaching 7% with investment.
+Supplies sells premium ammo, Death Wave charges and ready powers for coins. The last 20% of workshop levels now cost 75% more, making full workshop affordability an extreme endurance outcome (around wave 900 in the reference model). Ammo drops start at 4%, reaching 7% with investment.
 
 The Workshop has separate coin-funded upgrades and a Powerups category bought with run-local Power Stones. Special weapons have finite ammunition. Ammo drops are collected automatically; power-up drops must be shot to collect them. Music and effects have independent settings. Death Penalty marks an enemy, including bosses; Space Displacer spaces persistent mines evenly inside the orb path and sends them in the opposite direction; Pulsar Harvester procs on weapon hits to reduce that enemy’s speed and mass; Multiverse Nexus activates Golden Tower, Spotlight and Black Hole together.
 
@@ -51,7 +51,7 @@ Landmine Radius and Damage specialize mine builds. Wall HP unlocks a contact bar
 
 Rapid Fire triggers 4× firing speed for 0.25–0.5 seconds, with 2–10% chance on normal volleys. Burst volleys cannot renew the effect. Rapid Fire Chance and Thorns have steep specialization prices.
 
-Power supply scales with wave density after 100 planned enemies. Base/max global drop investment produces approximately 6/8 pickups per fully cleared late wave; individual drop-share upgrades favor chosen powers. Multiverse Nexus is a rarer bundled activation; its duration upgrades extend all three grants. Timed pickups add remaining time up to a 50-second bank. Pulsar Harvester uses the SDK’s 2.5% per-hit proc baseline, adapted to reduce speed and mass by 5% per proc, with a 25% floor.
+Power supply scales with wave density after 100 planned enemies. Base/max global drop investment produces approximately 6/8 pickups per fully cleared late wave; individual drop-share upgrades favor chosen powers. Multiverse Nexus is a rarer bundled activation; its duration upgrades extend all three grants. Timed pickups add remaining time up to the Power Stack Cap (50s initially, 70s maximum). Pulsar Harvester uses the SDK’s 2.5% per-hit proc baseline, adapted to reduce speed and mass by 5% per proc, with a 25% floor.
 
 Extra Orbs adds three faster counter-rotating Orbs through Black Hole centers. Area Of Effect expands splash and control fields. Four roaming bots provide coin/Stone rewards, damage amplification, escalating burns or stun/slow control; each bot has its own radius upgrades in Powerups. Gold and Amp are support auras and never attack.
 
@@ -76,3 +76,19 @@ The reference values and remaining economy caveats are summarized in [the Tower 
 The game uses locally extracted Tower artwork and music under `public/tower-assets/`. `npm run assets:sync` refreshes the curated local assets when their source packages are available. It does not download game files.
 
 Towerium is inspired by *Delirium*. Tower artwork was extracted from *The Tower*; the included music tracks are attributed to Krisu in the asset manifest. See the packaged provenance manifests for per-asset source details.
+
+## Assisted Aim And Run Perks
+
+Auto Aim is part of normal gameplay: mobile defaults on, desktop defaults off. Eight ordered rules cover tower threats, ranged attackers, fast enemies, bosses/elites, powerups, closest, weakest and strongest. Higher enabled rules break ties before lower rules, with distance and entity ID as final ties. Preferences persist locally. The automatic cannon fires independently alongside manual shots. Manual aiming and weapon selection stay independent. Automatic cooldowns and Rapid Fire bursts are separate, with manual shots taking priority over shared ammo. The Auto Weapons upgrade unlocks automatic LSS, missiles, then Hook Bombs; premium shots target tougher threats. Death Wave stays manual. Results include `aimAssisted`; spectator Auto Play remains separate from human saves/results.
+
+Three seeded, unique, unmaxed perk choices appear after cleared waves 5, 15, 30, 50, 75, 105 and increasingly spaced intervals. One selection is required before the next wave. Perks persist in the run/checkpoint, have explicit caps, and do not alter Workshop purchase levels or prices. Older saves and fresh milestone starts begin a new schedule relative to their starting point. Fifteen perks include five single-level tradeoffs. Cannon Damage adds one base damage per level (maximum five); LSS retains its one-fewer-hit relationship to the improved cannon. Multiplicative tradeoffs apply explicitly to damage, HP, fire rate, range or Orb speed. Heavy Orbs doubles Orb damage. Full definitions are shown in Help.
+
+Bounce redirects now show a gold dashed trail and destination flash. Native regressions cover projectile and LSS bounce hits separately from visual state. These additions require renewed human balance feedback; prior endurance results do not establish the new build balance.
+
+Auto Buy purchases the highest affordable enabled workshop priority. Its checkbox repeats purchases between waves and starts the next wave after five seconds; the button buys once. Configure level limits and automatic perk priorities with the adjacent settings button. Hold a workshop upgrade to buy repeatedly, accelerating while held. Basics award no Coins unless Critical Coin is active; its reward uses the same economy multipliers as other kills.
+
+Accurate original manual cannon hits also earn precision refills: every 12 enemy contacts grant 4 Light Speed and 1 Smart Missile; every fourth refill adds 1 Hook Bomb. Ammo Quantity and capacities apply. Misses, automatic fire, pickups, side pellets and ricochets earn no credit. Runs start with 150 Coins; the first 40 Auto Cannon Efficiency levels cost 100 in total, reaching 50%.
+
+Crowd-control tuning strengthens early Multishot, Bounce, Knockback and Shockwave while retaining SDK enemy progression. Manual accuracy earns precision ammunition; side pellets and automatic fire cannot farm that credit. Current endurance evidence and remaining targets are recorded in [PLAYTESTING.md](PLAYTESTING.md).
+
+Crowd Sweeps keeps standard weapons firing through observed enemies while moving toward the next target, including Multishot fan coverage weighted by its current proc chance. Cursor movement stays bounded and direct; it pauses firing through empty sectors, and keeps premium weapons settled-only. Transit geometry is cached at reaction boundaries; intermediate shots cannot reserve damage against the destination, even when shot-counter snapshots arrive late. LSS route targets stay inside its range.

@@ -13,10 +13,11 @@
     "build": "npm run test:content && npm run wasm:build && npm run typecheck && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 5184",
     "test:browser": "playwright test",
-    "test:playtest": "node --test tests/playtest-policy.test.mjs tests/human-controls.test.mjs tests/aim-assist.test.mjs",
+    "test:playtest": "node --test tests/playtest-policy.test.mjs tests/human-controls.test.mjs tests/aim-assist.test.mjs tests/auto-aim.test.mjs tests/automation.test.mjs",
     "playtest": "node scripts/playtest.mjs",
     "audit:power-supply": "node scripts/audit-power-supply.mjs",
-    "test:content": "node scripts/validate-help-catalog.mjs && node scripts/verify-pages-assets.mjs"
+    "test:content": "node scripts/validate-help-catalog.mjs && node scripts/verify-pages-assets.mjs",
+    "audit:balance": "node scripts/balance-audit.mjs"
   },
   "dependencies": {
     "thetowersdk": "0.11.0"

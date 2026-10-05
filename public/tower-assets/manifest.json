@@ -583,6 +583,42 @@
       "domain": "icons",
       "path": "icons/thunder-bot-md.webp",
       "sha256": "34ee72420f69864aae0aadd7a786cc1b8e4408faf1a4f781846e817940f77e63"
+    },
+    "workshop-30": {
+      "name": "amplify-bot",
+      "domain": "icons",
+      "path": "icons/amplify-bot-md.webp",
+      "sha256": "4a8bd1c0389302981c8ed74fd46832c37b834b862fed6cc6e3d4c223874e1652"
+    },
+    "workshop-31": {
+      "name": "thunder-bot",
+      "domain": "icons",
+      "path": "icons/thunder-bot-md.webp",
+      "sha256": "34ee72420f69864aae0aadd7a786cc1b8e4408faf1a4f781846e817940f77e63"
+    },
+    "workshop-32": {
+      "name": "flame-bot",
+      "domain": "icons",
+      "path": "icons/flame-bot-md.webp",
+      "sha256": "e020cf84b71acdd7e3d578f1901008c0fc8a7534cb80dd65b631b3e7a58b75eb"
+    },
+    "workshop-33": {
+      "name": "golden-bot",
+      "domain": "icons",
+      "path": "icons/golden-bot-md.webp",
+      "sha256": "fa4ead9f4eba01b3d6291d13630ba3e958f805ae948edc2ed9205289b72b0eb4"
+    },
+    "workshop-34": {
+      "name": "coin-ultimate",
+      "domain": "icons",
+      "path": "icons/coin-ultimate-md.webp",
+      "sha256": "eef672d90406aa1a831c2e549034fa979cadd09f040f17d09addec34a687dc79"
+    },
+    "critical-coin": {
+      "name": "critical-coin",
+      "domain": "cards",
+      "path": "cards/critical-coin-md.webp",
+      "sha256": "912d98ed7565abce540a2124ef9646fd5fc1f1812c0fdae50bf170d6757aa0b4"
     }
   }
 }

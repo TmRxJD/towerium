@@ -204,5 +204,35 @@
     "asset": "Ammo Capacity",
     "domain": "workshop",
     "source": "attack-07.webp"
+  },
+  {
+    "index": 30,
+    "label": "Auto Cannon Efficiency",
+    "asset": "amplify-bot",
+    "domain": "icons"
+  },
+  {
+    "index": 31,
+    "label": "Targeting Speed",
+    "asset": "thunder-bot",
+    "domain": "icons"
+  },
+  {
+    "index": 32,
+    "label": "Auto Weapons",
+    "asset": "flame-bot",
+    "domain": "icons"
+  },
+  {
+    "index": 33,
+    "label": "Missile Fire Rate",
+    "asset": "golden-bot",
+    "domain": "icons"
+  },
+  {
+    "index": 34,
+    "label": "Power Stack Cap",
+    "asset": "coin-ultimate",
+    "domain": "icons"
   }
 ]

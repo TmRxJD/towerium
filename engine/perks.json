@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Sharp Shots",
+    "effect": "Cannon Damage +1",
+    "cap": 5,
+    "tradeoff": false
+  },
+  {
+    "name": "Vitality",
+    "effect": "Max HP +15%",
+    "cap": 5,
+    "tradeoff": false
+  },
+  {
+    "name": "Recovery",
+    "effect": "Regen +20%",
+    "cap": 4,
+    "tradeoff": false
+  },
+  {
+    "name": "Quick Trigger",
+    "effect": "Attack Speed +10%",
+    "cap": 4,
+    "tradeoff": false
+  },
+  {
+    "name": "Orb Reinforcements",
+    "effect": "Orbs +1",
+    "cap": 2,
+    "tradeoff": false
+  },
+  {
+    "name": "Ricochet",
+    "effect": "Bounce Targets +1",
+    "cap": 2,
+    "tradeoff": false
+  },
+  {
+    "name": "Bounty",
+    "effect": "Kill Coins +15%",
+    "cap": 4,
+    "tradeoff": false
+  },
+  {
+    "name": "Time Dilation",
+    "effect": "Enemy Speed −8%",
+    "cap": 3,
+    "tradeoff": false
+  },
+  {
+    "name": "Featherweight",
+    "effect": "Enemy Mass −10%",
+    "cap": 3,
+    "tradeoff": false
+  },
+  {
+    "name": "Crowded Skies",
+    "effect": "Spawns +10% · Kill Coins +15%",
+    "cap": 2,
+    "tradeoff": false
+  },
+  {
+    "name": "Glass Cannon",
+    "effect": "Damage ×1.5 · Max HP ×0.7",
+    "cap": 1,
+    "tradeoff": true
+  },
+  {
+    "name": "Fortress",
+    "effect": "Max HP ×1.5 · Attack Speed ×0.85",
+    "cap": 1,
+    "tradeoff": true
+  },
+  {
+    "name": "Golden Bargain",
+    "effect": "Kill Coins ×1.4 · Damage ×0.85",
+    "cap": 1,
+    "tradeoff": true
+  },
+  {
+    "name": "Overdrive",
+    "effect": "Attack Speed ×1.35 · Range ×0.85",
+    "cap": 1,
+    "tradeoff": true
+  },
+  {
+    "name": "Heavy Orbs",
+    "effect": "Orb Damage ×2 · Orb Speed ×0.75",
+    "cap": 1,
+    "tradeoff": true
+  }
+]

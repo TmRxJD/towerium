@@ -16,6 +16,10 @@ import { renderHelp, weaponNames } from './help';
 import { TouchControls } from './touch-controls';
 import { RunRetries, retryStorageKey } from './run-retries';
 import { createSaveCompatibility } from './save-compatibility';
+import { defaultAutomation, validateAutomation, priorityPurchase, priorityPerk, holdInterval, RoundCountdown } from '../scripts/automation.mjs';
+import { perks } from './perks';
+import { AutoAimController, priorityRules, validateAimPreferences, type AimPreferences } from '../scripts/auto-aim.mjs';
+import { perkChoices, selectAutoPerk } from './perks';
 import { assistAim } from '../scripts/aim-assist.mjs';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
@@ -32,6 +36,42 @@ let renderer:Renderer;
 let aim:[number,number]=[0,-220],firing=false,weapon=0;
 let touchControls:TouchControls;
 const touchDevice=matchMedia('(any-pointer: coarse)').matches;
+const aimKey='towerium.aim.v1';
+let aimPreferences:AimPreferences=validateAimPreferences(null,touchDevice),assistedAim:[number,number]|null=null;
+try{aimPreferences=validateAimPreferences(JSON.parse(localStorage.getItem(aimKey)??'null'),touchDevice);}catch{/* Optional preferences. */}
+let prioritiesOpen=false,prioritiesWasPaused=false,autoWeapon=0,autoTargetId=-1,autoFireReady=false;
+const aimController=new AutoAimController();
+let automation=defaultAutomation(balance,perks);
+try{automation=validateAutomation(JSON.parse(localStorage.getItem('towerium.automation.v1')??'null'),balance,perks);}catch{/* Optional browser storage. */}
+const roundCountdown=new RoundCountdown();
+let automationOpen=false,automationTab:'buy'|'perks'='buy',automationAppliedWave=-1;
+let heldStat=-1,heldPointer=-1,holdSince=0,holdTimer=0,heldPurchased=false,suppressBuyClick=false;
+function saveAutomation(){try{localStorage.setItem('towerium.automation.v1',JSON.stringify(automation));}catch{/* Optional browser storage. */}}
+function buyRanked(){if(autoPlayer||snapshot.phase!==2)return;let changed=false;
+ for(let n=0;n<1000;n++){const id=priorityPurchase(snapshot,automation);if(id<0)break;if(!game.buy(id))throw new Error('Ranked Workshop Purchase Rejected');changed=true;read();}
+ if(changed){saveRun();updateHud();returnRunScreen();}
+}
+function applyAutomaticPerk(){if(!automation.perkEnabled||!snapshot.perks.offers.length)return;const choice=priorityPerk(snapshot,automation);if(choice===undefined)return;
+ if(game.choose_perk(choice)){read();if(snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());saveRun();returnRunScreen();}
+}
+function updateAutomation(dt:number){
+ if(autoPlayer||snapshot.phase!==2||!automation.enabled){roundCountdown.reset();automationAppliedWave=-1;return;}
+ const viewing=modal.classList.contains('shop-modal')||modal.classList.contains('report-modal');
+ if(!viewing||automationOpen||helpOpen||prioritiesOpen||restartPrompt)return;
+ if(automationAppliedWave!==snapshot.wave){applyAutomaticPerk();buyRanked();automationAppliedWave=snapshot.wave;}
+ const remaining=roundCountdown.tick(snapshot.wave,dt,!snapshot.perks.offers.length);
+ const next=document.getElementById('next-wave');if(next&&!snapshot.perks.offers.length)next.textContent=`Next Wave · ${Math.ceil(remaining)}s`;
+ if(remaining===0&&!snapshot.perks.offers.length)startWave();
+}
+function renderAutomation(){const buying=automationTab==='buy',rules=buying?automation.buy:automation.perks;
+ modalContent(`<div class="modal-top"><h2 id="modal-title">${buying?'Buy Priorities':'Perk Priorities'}</h2></div><div class="automation-tabs"><button id="automation-buy-tab" class="secondary" aria-pressed="${buying}">Workshop</button><button id="automation-perk-tab" class="secondary" aria-pressed="${!buying}">Perks</button></div><div class="priority-body"><p>${buying?'Highest affordable priority first. Set a level limit to reserve coins.':'First enabled offered perk wins.'}</p>${buying?'':`<label class="perk-auto-toggle"><input id="auto-perk-enabled" type="checkbox" ${automation.perkEnabled?'checked':''}>Pick Perks Automatically</label>`}<ol class="priority-list">${rules.map((r,i)=>`<li><span>${i+1}</span><button data-auto-rule="${i}" aria-pressed="${r.enabled}">${buying?balance.upgrades[r.id].name:perks[r.id].name}<small>${r.enabled?'On':'Off'}</small></button>${buying?`<input data-auto-limit="${i}" aria-label="${balance.upgrades[r.id].name} Level Limit" type="number" inputmode="numeric" min="0" max="${balance.upgrades[r.id].cap}" value="${automation.buy[i].limit}">`:''}<button data-auto-move="${i}" data-direction="-1" aria-label="Move Priority ${i+1} Up" ${i===0?'disabled':''}>↑</button><button data-auto-move="${i}" data-direction="1" aria-label="Move Priority ${i+1} Down" ${i===rules.length-1?'disabled':''}>↓</button></li>`).join('')}</ol></div><div class="modal-actions"><button id="automation-done" class="primary">Done</button></div>`);modal.classList.add('automation-modal');
+}
+function openAutomation(){automationOpen=true;roundCountdown.reset();renderAutomation();}
+function stopStatHold(){window.clearTimeout(holdTimer);if(heldPurchased)suppressBuyClick=true;heldStat=-1;heldPointer=-1;heldPurchased=false;}
+function repeatStat(){if(heldStat<0||snapshot.phase!==2||autoPlayer){stopStatHold();return;}if(!modal.hasPointerCapture(heldPointer))modal.setPointerCapture(heldPointer);if(!game.buy(heldStat)){stopStatHold();return;}heldPurchased=true;read();saveRun();updateHud();renderShop();holdTimer=window.setTimeout(repeatStat,holdInterval(performance.now()-holdSince));}
+
+function saveAimPreferences(){try{localStorage.setItem(aimKey,JSON.stringify(aimPreferences));}catch{/* Optional preferences. */}
+}
 let last=0,lastHud=0,uiPhase=-1,helpOpen=false,resultSent=false,animation=0;
 let best=0;
 try {const stored=Number(localStorage.getItem('towerium.best-wave'));if(Number.isSafeInteger(stored)&&stored>0)best=stored;}catch{/* Storage is optional in embedded/private contexts. */}
@@ -89,9 +129,10 @@ function stopAutoPlay(){
 }
 function runAutoPlayer(dt:number){
   if(!autoPlayer || helpOpen || restartPrompt)return;
+  if(snapshot.phase===2&&snapshot.perks.offers.length){game.choose_perk(selectAutoPerk(snapshot,autoPlayer.strategy)!);read();renderReport();return;}
   const action=autoPlayer.update(snapshot,dt);if(!action)return;
   if(action.kind==='combat'){
-    aim=action.aim;weapon=action.weapon;firing=action.fire;input();
+    aim=action.aim;weapon=action.weapon;firing=action.fire;input();game.set_auto_input(...action.autoAim,action.autoFire,action.autoWeapon);
     if(action.deathWave)game.death_wave();
   }else if(action.kind==='buy-supply'){
     shopCategory='supplies';if(game.buy_supply(action.item)){read();renderShop();}
@@ -159,6 +200,7 @@ app.innerHTML=`
           <section id="intro" class="intro" aria-label="Start Towerium"><img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2><button id="start" class="primary">Play</button></section>
           <div id="notice" class="run-status" role="status" aria-live="polite"></div>
         </div>
+        <div class="aim-tools"><button id="auto-aim-toggle" class="secondary" aria-pressed="false">Auto Aim: Off</button><button id="aim-priorities" class="secondary">Aim Priorities</button></div>
         <div class="weapon-bar" aria-label="Weapon selection">${weaponNames.map((name,i)=>`<button class="weapon${i===0?' selected':''}" data-weapon="${i}" aria-label="${name}" aria-pressed="${i===0}" title="${name} · ${i+1}">${weaponIcons[i]}<b id="ammo-${i}" aria-hidden="true">${i===0?'∞':balance.weapons[i].ammo}</b></button>`).join('')}<button id="death-wave" class="weapon death-weapon" aria-label="Death Wave" title="Death Wave · Q · No charges" disabled>${weaponIcons[4]}<b id="charge-count" aria-hidden="true">0/3</b></button></div>
         <div id="touch-controls" class="touch-controls" hidden></div>
       </section>
@@ -188,13 +230,29 @@ function post(type:string,payload:Record<string,unknown>={}) {
 function read() {snapshot=JSON.parse(game.snapshot()) as Snapshot;return snapshot;}
 // Read-only diagnostics for integration tests. No test-only simulation controls.
 export function getRenderSnapshot():Snapshot {return JSON.parse(game.snapshot()) as Snapshot;}
-export function getControlState(){return {aim:[...aim],effectiveAim:[...displayedAim()],firing,weapon};}
-function displayedAim():[number,number] {return touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;}
-function input() {game.input(...displayedAim(),firing,weapon);}
+export function getControlState(){return {aim:[...aim],effectiveAim:[...displayedAim()],firing,weapon,autoFireReady,autoWeapon,autoTargetId,autoAim:assistedAim?[...assistedAim]:null,aimPreferences:structuredClone(aimPreferences)};}
+function displayedAim():[number,number] {if(assistedAim&&!firing&&!autoPlayer)return assistedAim;return touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;}
+function input() {
+ const manualAim=touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;
+ game.input(...manualAim,firing,weapon);
+ if(!autoPlayer)game.set_auto_input(...(assistedAim??aim),!!assistedAim&&autoFireReady&&aimPreferences.enabled,autoWeapon);
+}
+function renderPriorities(){
+ modalContent(`<div class="modal-top"><h2 id="modal-title">Aim Priorities</h2><button id="priorities-auto-aim" class="secondary" aria-pressed="${aimPreferences.enabled}">Auto Aim: ${aimPreferences.enabled?'On':'Off'}</button></div><div class="priority-body"><p>Higher rules win. The automatic cannon fires alongside manual shots. Manual aim stays independent. Workshop upgrades unlock automatic weapons; Death Wave stays manual.</p><ol class="priority-list">${aimPreferences.rules.map((r,i)=>{const name=priorityRules.find(p=>p.id===r.id)!.label;return `<li><span>${i+1}</span><button data-rule="${r.id}" aria-pressed="${r.enabled}" aria-label="${name}, ${r.enabled?'enabled':'disabled'}">${name}<small>${r.enabled?'On':'Off'}</small></button><button data-move-rule="${i}" data-direction="-1" aria-label="Move ${name} Up" ${i===0?'disabled':''}>↑</button><button data-move-rule="${i}" data-direction="1" aria-label="Move ${name} Down" ${i===aimPreferences.rules.length-1?'disabled':''}>↓</button></li>`;}).join('')}</ol></div><div class="modal-actions"><button id="reset-priorities" class="quiet">Reset</button><button id="close-priorities" class="primary">${snapshot.phase===1&&!prioritiesWasPaused?'Resume':'Done'}</button></div>`);
+}
+function openPriorities(){prioritiesWasPaused=snapshot.paused;prioritiesOpen=true;if(snapshot.phase===1)pause(false);renderPriorities();}
+function closePriorities(){prioritiesOpen=false;assistedAim=null;if(snapshot.phase===1&&!prioritiesWasPaused)resume();else if(snapshot.phase===1)pause();else if(snapshot.phase>=2)returnRunScreen();else closeModal();}
+function updateAim(dt:number){
+ assistedAim=null;autoFireReady=false;
+ if(!aimPreferences.enabled||autoPlayer||snapshot.phase!==1||snapshot.paused||modal.open)return;
+ const action=aimController.step(snapshot,balance,aimPreferences.rules,dt);
+ autoWeapon=action.weapon;autoTargetId=action.targetId;assistedAim=action.aim as [number,number];autoFireReady=action.fire;
+
+}
 function canFireWeapon(){return !!snapshot&&snapshot.disabled_weapon!==weapon&&(weapon===0||snapshot.ammo[weapon]>0);}
-function stopFiring() {touchControls.reset();firing=false;if(game)input();}
+function stopFiring() {assistedAim=null;autoTargetId=-1;aimController.reset();autoFireReady=false;touchControls.reset();firing=false;if(game)input();}
 function selectWeapon(index:number) {if(snapshot.disabled_weapon===index)return;if(index!==weapon)touchControls.releaseFire();weapon=index;input();read();updateHud();}
-function modalContent(html:string) {if(autoPlayer)html=html.replace('</h2>','</h2><span class="auto-badge">Auto Play</span>');modal.classList.remove('shop-modal','report-modal');modal.classList.toggle('auto-mode',!!autoPlayer);modal.innerHTML=html;if(!modal.open)modal.showModal();}
+function modalContent(html:string) {if(autoPlayer)html=html.replace('</h2>','</h2><span class="auto-badge">Auto Play</span>');modal.classList.remove('shop-modal','report-modal','automation-modal');modal.classList.toggle('auto-mode',!!autoPlayer);modal.innerHTML=html;if(!modal.open)modal.showModal();}
 function closeModal() {if(modal.open)modal.close();}
 function pause(show=true) {
   if(!game || (snapshot.phase!==1 && !(autoPlayer && snapshot.phase===2)))return;
@@ -249,11 +307,11 @@ function runFooter(ended=false) {
   const pauseOrRestart=ended?'':autoPlayer?'<button id="auto-pause" class="quiet">Pause</button>':'<button id="request-restart" class="quiet">Restart</button>';
   let actions=ended
     ? autoPlayer?'<button class="secondary" id="stop-auto-play">Stop Auto Play</button><button class="primary" id="restart">Watch Again</button>':'<button class="primary" id="restart">Play Again</button>'
-    : navigation+`<button id="next-wave" class="primary" ${autoPlayer?'disabled title="Auto Play Starts The Next Wave"':''}>Next Wave →</button>`;
+    : `<div class="auto-buy-control"><button id="buy-now" title="Buy Now" ${autoPlayer?'disabled':''}>Buy</button><label title="Auto Buy Between Waves"><input id="auto-buy-enabled" type="checkbox" aria-label="Auto Buy Between Waves" ${automation.enabled?'checked':''} ${autoPlayer?'disabled':''}><span>Auto</span></label><button id="buy-priorities" title="Buy & Perk Priorities" aria-label="Buy & Perk Priorities" ${autoPlayer?'disabled':''}>☷</button></div>`+navigation+`<button id="next-wave" class="primary" ${autoPlayer?'disabled title="Auto Play Starts The Next Wave"':snapshot.perks.offers.length?'disabled title="Choose One Perk In Report First"':''}>${snapshot.perks.offers.length?'Choose A Perk':'Next Wave →'}</button>`;
   if(ended&&!autoPlayer&&runRetries.available&&runRetries.checkpoint?.seed===seed)actions=`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint.wave} · ${3-runRetries.used} Left</button>`+actions;
   if(ended&&!autoPlayer&&cosmetics.completed>=50)actions=`<button id="milestone-run" class="secondary">Fresh Wave ${Math.floor(cosmetics.completed/50)*50}</button>`+actions;
   if(!ended&&snapshot.pending_start_wave>0)actions=`<button id="next-wave" class="primary" ${autoPlayer?'disabled':''}>Start Wave ${snapshot.pending_start_wave} →</button>`;
-  return `<div class="shop-footer"><div class="shop-tools">${shopSoundButtons()}${pauseOrRestart}<button id="shop-help" class="quiet">Help</button><button id="shop-skins" ${autoPlayer?'disabled':''} class="quiet skin-button" title="${autoPlayer?'Skins Are Read Only During Auto Play':'Tower Skins'}" aria-label="Skins${cosmetics.fresh?', new skin unlocked':''}">${skinIcon(cosmetics.selected)}<span${cosmetics.fresh?' class="new-skin"':''}>Skins</span></button></div><p id="purchase-status" class="sr-only" role="status">${snapshot.notice.text.includes('upgraded')?esc(snapshot.notice.text):''}</p><div class="report-actions">${actions}</div></div>`;
+  return `<div class="shop-footer"><div class="shop-tools">${shopSoundButtons()}${pauseOrRestart}<button id="shop-aim-priorities" class="quiet" ${autoPlayer?'disabled':''}>Aim</button><button id="shop-help" class="quiet">Help</button><button id="shop-skins" ${autoPlayer?'disabled':''} class="quiet skin-button" title="${autoPlayer?'Skins Are Read Only During Auto Play':'Tower Skins'}" aria-label="Skins${cosmetics.fresh?', new skin unlocked':''}">${skinIcon(cosmetics.selected)}<span${cosmetics.fresh?' class="new-skin"':''}>Skins</span></button></div><p id="purchase-status" class="sr-only" role="status">${snapshot.notice.text.includes('upgraded')?esc(snapshot.notice.text):''}</p><div class="report-actions">${actions}</div></div>`;
 }
 function returnRunScreen() {
   if(snapshot.phase===3)gameOver();else if(snapshot.pending_start_wave>0||postWaveView==='shop')renderShop();else renderReport();
@@ -262,7 +320,7 @@ function renderReport() {
   if(snapshot.pending_start_wave>0){renderShop();return;}
   postWaveView='report';
   if(!autoPlayer)cosmetics.clear(snapshot.wave);
-  modalContent(`<div class="shop-heading"><h2 id="modal-title">Wave ${snapshot.wave} Cleared</h2>${wallet()}</div><div class="report-body">${reportSection('This Wave',snapshot.wave_report,'wave-report-heading')}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter()}`);
+  modalContent(`<div class="shop-heading"><h2 id="modal-title">Wave ${snapshot.wave} Cleared</h2>${wallet()}</div><div class="report-body">${perkChoices(snapshot,!!autoPlayer)}${reportSection('This Wave',snapshot.wave_report,'wave-report-heading')}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter()}`);
   modal.classList.add('report-modal');
 }
 function renderShop() {
@@ -294,8 +352,8 @@ function renderSkins() {
 function gameOver() {
   const cleared=Math.max(0,snapshot.wave-1);
   if(!autoPlayer&&cleared>best){best=cleared;try{localStorage.setItem('towerium.best-wave',String(best));}catch{/* Optional local best. */}}
-  if(!autoPlayer&&!resultSent){audio.tone(180,.5,'triangle',.025,40);post('towerium:result',{payload:{version:1,seed,waveReached:snapshot.wave,wavesCleared:cleared,kills:snapshot.kills,coinsEarned:snapshot.earned,durationSeconds:Math.round(snapshot.time)}});resultSent=true;}
-  modalContent(`<div class="shop-heading"><h2 id="modal-title">Game Over</h2><span class="run-result">Wave ${snapshot.wave} · ${cleared} Cleared</span></div><div class="report-body">${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter(true)}`);
+  if(!autoPlayer&&!resultSent){audio.tone(180,.5,'triangle',.025,40);post('towerium:result',{payload:{version:1,aimAssisted:snapshot.aim_assisted,seed,waveReached:snapshot.wave,wavesCleared:cleared,kills:snapshot.kills,coinsEarned:snapshot.earned,durationSeconds:Math.round(snapshot.time)}});resultSent=true;}
+  modalContent(`<div class="shop-heading"><h2 id="modal-title">Game Over</h2><span class="run-result">Wave ${snapshot.wave} · ${cleared} Cleared</span></div><div class="report-body">${snapshot.aim_assisted?'<p class="perk-picked">Assisted Aim</p>':'<p class="perk-picked">Manual Aim</p>'}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter(true)}`);
   modal.classList.add('report-modal');
 }
 function syncPhase() {
@@ -303,7 +361,7 @@ function syncPhase() {
   el('intro').hidden=snapshot.phase!==0;
   if(snapshot.phase===2){
     stopFiring();
-    if(!autoPlayer&&snapshot.pending_start_wave===0&&snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());
+    if(!autoPlayer&&snapshot.pending_start_wave===0&&snapshot.wave%10===0&&snapshot.perks.offers.length===0)runRetries.capture(seed,snapshot.wave,game.save());
     renderReport();
   }
   if(snapshot.phase===3){stopFiring();gameOver();}
@@ -321,6 +379,7 @@ function updateHud() {
   el('touch-controls').hidden=!mobile;
   document.querySelector('.shell')!.classList.toggle('touch-mode',mobile);
   touchControls.update(mobile&&snapshot.phase===1&&!snapshot.paused&&!modal.open,canFireWeapon());
+  const toggle=el<HTMLButtonElement>('auto-aim-toggle');toggle.textContent=`Auto Aim: ${aimPreferences.enabled?'On':'Off'}`;toggle.setAttribute('aria-pressed',String(aimPreferences.enabled));toggle.disabled=!!autoPlayer;el<HTMLButtonElement>('aim-priorities').disabled=!!autoPlayer;
   const s=snapshot;
   el('run-mode').hidden=!autoPlayer;
   setText('wave',String(s.wave||1).padStart(2,'0'));setText('coins',number(s.coins));setText('stones',number(s.stones));
@@ -349,13 +408,27 @@ function updateHud() {
 }
 document.addEventListener('click',event=>{
   const button=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(!button || button.disabled || !game)return;
+  if(button.dataset.autoRule!==undefined){const rules=automationTab==='buy'?automation.buy:automation.perks;rules[Number(button.dataset.autoRule)].enabled=!rules[Number(button.dataset.autoRule)].enabled;saveAutomation();renderAutomation();return;}
+  if(button.dataset.autoMove!==undefined){const rules=automationTab==='buy'?automation.buy:automation.perks,i=Number(button.dataset.autoMove),j=i+Number(button.dataset.direction);if(j>=0&&j<rules.length){[rules[i],rules[j]]=[rules[j],rules[i]];saveAutomation();renderAutomation();}return;}
+  if(button.dataset.perk!==undefined&&!autoPlayer){if(game.choose_perk(Number(button.dataset.perk))){read();if(snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());saveRun();renderReport();el('next-wave').focus();}return;}
+  if(button.dataset.rule){const r=aimPreferences.rules.find(r=>r.id===button.dataset.rule);if(r){r.enabled=!r.enabled;saveAimPreferences();renderPriorities();modal.querySelector<HTMLButtonElement>(`[data-rule="${r.id}"]`)?.focus();}return;}
+  if(button.dataset.moveRule!==undefined){const i=Number(button.dataset.moveRule),j=i+Number(button.dataset.direction);if(j>=0&&j<aimPreferences.rules.length){const moved=aimPreferences.rules[i];[aimPreferences.rules[i],aimPreferences.rules[j]]=[aimPreferences.rules[j],aimPreferences.rules[i]];saveAimPreferences();renderPriorities();modal.querySelector<HTMLButtonElement>(`[data-rule="${moved.id}"]`)?.focus();}return;}
   if(button.dataset.weapon!==undefined&&!autoPlayer){selectWeapon(Number(button.dataset.weapon));return;}
   if(button.dataset.skin!==undefined&&!autoPlayer){if(cosmetics.select(Number(button.dataset.skin))){renderer.skin=cosmetics.selected;returnRunScreen();el('shop-skins').focus({preventScroll:true});}return;}
   if(button.dataset.supply!==undefined&&!autoPlayer){const item=Number(button.dataset.supply);if(game.buy_supply(item)){read();saveRun();renderShop();updateHud();modal.querySelector<HTMLButtonElement>(`[data-supply="${item}"]`)?.focus({preventScroll:true});}return;}
   if(button.dataset.powerSelect!==undefined){selectedPower=Number(button.dataset.powerSelect);renderShop();modal.querySelector<HTMLButtonElement>(`[data-power-select="${selectedPower}"]`)?.focus({preventScroll:true});return;}
   if(button.dataset.powerBuy!==undefined&&!autoPlayer){const power=Number(button.dataset.powerBuy),path=Number(button.dataset.powerPath);if(game.buy_power(power,path)){read();saveRun();renderShop();const next=modal.querySelector<HTMLButtonElement>(`[data-power-buy="${power}"][data-power-path="${path}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else modal.querySelector<HTMLButtonElement>(`[data-power-select="${power}"]`)?.focus({preventScroll:true});updateHud();}return;}
-  if(button.dataset.upgrade!==undefined&&!autoPlayer){const id=Number(button.dataset.upgrade);if(game.buy(id)){read();saveRun();const top=modal.querySelector('.shop-body')?.scrollTop??0;renderShop();const body=modal.querySelector('.shop-body');if(body)body.scrollTop=top;const next=modal.querySelector<HTMLButtonElement>(`[data-upgrade="${id}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else el('next-wave').focus({preventScroll:true});updateHud();}return;}
+  if(button.dataset.upgrade!==undefined&&!autoPlayer){if(suppressBuyClick&&event.detail>0){suppressBuyClick=false;return;}const id=Number(button.dataset.upgrade);if(game.buy(id)){read();saveRun();const top=modal.querySelector('.shop-body')?.scrollTop??0;renderShop();const body=modal.querySelector('.shop-body');if(body)body.scrollTop=top;const next=modal.querySelector<HTMLButtonElement>(`[data-upgrade="${id}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else el('next-wave').focus({preventScroll:true});updateHud();}return;}
   switch(button.id){
+    case 'auto-aim-toggle':case 'priorities-auto-aim':aimPreferences.enabled=!aimPreferences.enabled;assistedAim=null;saveAimPreferences();input();updateHud();if(prioritiesOpen){renderPriorities();el('priorities-auto-aim').focus();}if(aimPreferences.enabled&&!snapshot.paused)void resumeAudio();break;
+    case 'aim-priorities':case 'shop-aim-priorities':openPriorities();break;
+    case 'reset-priorities':aimPreferences=validateAimPreferences(null,aimPreferences.enabled);saveAimPreferences();renderPriorities();break;
+    case 'close-priorities':closePriorities();break;
+    case 'buy-now':buyRanked();break;
+    case 'buy-priorities':openAutomation();break;
+    case 'automation-buy-tab':automationTab='buy';renderAutomation();break;
+    case 'automation-perk-tab':automationTab='perks';renderAutomation();break;
+    case 'automation-done':automationOpen=false;returnRunScreen();roundCountdown.reset();break;
     case 'auto-play':configureAutoPlay();break;
     case 'watch-auto-play':startAutoPlay();break;
     case 'cancel-auto-play':closeModal();break;
@@ -404,7 +477,7 @@ window.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'&&!(e.target i
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('keydown',e=>{
   if(!game || e.ctrlKey || e.metaKey || e.altKey)return;
-  if(e.key==='Escape'){e.preventDefault();if(snapshot.phase===0){closeModal();return;}if(restartPrompt){cancelRestart();return;}if(snapshot.phase===1){if(snapshot.paused)resume();else pause();}else if(snapshot.phase===2){helpOpen=false;if(autoPlayer&&snapshot.paused)resume();else returnRunScreen();}else if(helpOpen){helpOpen=false;closeModal();if(snapshot.phase===3)gameOver();}return;}
+  if(e.key==='Escape'){e.preventDefault();if(automationOpen){automationOpen=false;returnRunScreen();roundCountdown.reset();return;}if(prioritiesOpen){closePriorities();return;}if(snapshot.phase===0){closeModal();return;}if(restartPrompt){cancelRestart();return;}if(snapshot.phase===1){if(snapshot.paused)resume();else pause();}else if(snapshot.phase===2){helpOpen=false;if(autoPlayer&&snapshot.paused)resume();else returnRunScreen();}else if(helpOpen){helpOpen=false;closeModal();if(snapshot.phase===3)gameOver();}return;}
   if(modal.open)return;
   if(e.key==='?' || e.key.toLowerCase()==='h'){help();return;}
   if(autoPlayer || snapshot.phase!==1 || snapshot.paused)return;
@@ -415,7 +488,7 @@ document.addEventListener('keydown',e=>{
   if(e.code==='Space' && e.target===canvas){e.preventDefault();firing=true;input();}
 });
 document.addEventListener('keyup',e=>{if(e.code==='Space'&&e.target!==el('touch-fire'))stopFiring();});
-modal.addEventListener('cancel',e=>{e.preventDefault();if(restartPrompt)cancelRestart();});
+modal.addEventListener('cancel',e=>{e.preventDefault();if(prioritiesOpen)closePriorities();else if(restartPrompt)cancelRestart();});
 window.addEventListener('blur',()=>{if(!autoPlayer)pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!autoPlayer){pause();saveRun();}backgroundLast=performance.now();last=0;});
 const observer=new IntersectionObserver(entries=>{if(entries[0]&&!entries[0].isIntersecting && game && snapshot.phase===1&&!autoPlayer)pause();},{threshold:0.1});observer.observe(canvas);
@@ -428,7 +501,7 @@ function stepGame(dt:number){
   if(autoPlayer){
     autoAccumulator+=dt;
     while(autoAccumulator+1e-8>=1/60){autoAccumulator-=1/60;runAutoPlayer(1/60);game.advance(1/60);read();syncPhase();}
-  }else{autoAccumulator=0;if(touchDevice&&firing)input();game.advance(dt);read();syncPhase();}
+  }else{autoAccumulator=0;updateAim(dt);input();game.advance(dt);read();syncPhase();}
 }
 // Hidden tabs suspend animation frames. Catch up in bounded native steps instead.
 window.setInterval(()=>{
@@ -440,8 +513,7 @@ window.setInterval(()=>{
 function frame(now:number) {
   if(autoPlayer&&document.hidden){last=0;animation=requestAnimationFrame(frame);return;}
   const dt=last?Math.min((now-last)/1000,0.1):0;last=now;
-  stepGame(dt);renderer.draw(snapshot,displayedAim(),dt);audio.update(snapshot);
-  if(firing&&!snapshot.paused&&snapshot.phase===1&&snapshot.fx.some(f=>f[0]===0))audio.shot(snapshot.time,weapon);
+  updateAutomation(dt);stepGame(dt);renderer.draw(snapshot,displayedAim(),dt);audio.update(snapshot);
   touchControls.finishShot();
   if(now-lastSave>1000){saveRun();lastSave=now;}
   if(now-lastHud>100){updateHud();lastHud=now;}
@@ -471,3 +543,7 @@ void boot().catch(error=>{
   el('reload-game').addEventListener('click',()=>location.reload());
   console.error('Towerium initialization failed:',error);
 });
+
+document.addEventListener('change',event=>{const input=event.target as HTMLInputElement;if(input.id==='auto-buy-enabled'){automation.enabled=input.checked;roundCountdown.reset();automationAppliedWave=-1;saveAutomation();return;}if(input.id==='auto-perk-enabled'){automation.perkEnabled=input.checked;saveAutomation();return;}if(input.dataset.autoLimit!==undefined){const i=Number(input.dataset.autoLimit),rule=automation.buy[i];rule.limit=Math.max(0,Math.min(balance.upgrades[rule.id].cap,Math.floor(Number(input.value)||0)));saveAutomation();renderAutomation();}});
+document.addEventListener('pointerdown',event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-upgrade]');if(!button||button.disabled||autoPlayer||event.button!==0)return;suppressBuyClick=false;heldPurchased=false;heldStat=Number(button.dataset.upgrade);heldPointer=event.pointerId;holdSince=performance.now();holdTimer=window.setTimeout(repeatStat,400);});
+document.addEventListener('pointerup',event=>{if(event.pointerId===heldPointer)stopStatHold();});document.addEventListener('pointercancel',stopStatHold);window.addEventListener('blur',stopStatHold);

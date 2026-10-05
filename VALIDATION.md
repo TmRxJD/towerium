@@ -1,8 +1,17 @@
 # Validation status
 
-Recorded 2026-10-05 against the camera, bot movement, Thunder contact, Black Hole, Death Ray and Nuke follow-up.
+Recorded 2026-10-05. Current checks cover Auto Aim, perks, automation and Critical Coin; earlier release evidence is labeled historical.
 
-## Automated checks
+## Current Auto Aim, Perks, Automation And Critical Coin Checks
+
+- Rust: 179 passed, 0 failed, 1 ignored (`dense_endurance_profile`). Formatting and Clippy with `-D warnings` passed.
+- Controller and automation: 73 passed, including purchase priorities, perk priorities, hold acceleration, finite aim movement and premium-shot conservation.
+- Content and production build passed: 13 enemies, 35 Workshop stats, 23 Power upgrades, 91 extracted Tower assets, generated WASM and TypeScript checks.
+- Earlier feature browser coverage: 32/32 unique cases passed across the initial full suite and focused rechecks of all five failures. Additional affected-flow rechecks passed. Coverage includes Auto Buy, countdown cancellation, click/hold/keyboard purchases, legacy saves, Critical Coin, mobile perks, responsive shops and original-art background RGB. The 568×320 report fits with This Wave above Overall. No browser cases were skipped.
+- The current balance audit contains 28 bounded cases across six build policies, finite-reaction controllers, circle and idle controls. Four runs hit wall-clock limits; those are censored results, not successful clears. See [PLAYTESTING.md](PLAYTESTING.md).
+- The latest survival targets are not validated. Candidate 1 saved seven of ten jobs before `exit 11` without stderr; missing jobs are not results. The temporary candidate-2 Skilled diagnostic died at 282; controller-fixed Hybrid diagnostics reached 560 (Skilled) and 651 (Pro); the matched priority/sweep comparisons remain in progress. The isolated scheduler passed three-job success and intentional-error contract checks. No deployment of this revision has been made.
+
+## Historical Automated Checks
 
 - Rust engine: 154 passed, 0 failed, 1 ignored (`dense_endurance_profile`, the manual release-profile stress workload). An earlier manual workload completed 120 ticks with 750, 3,000, and 13,000 enemies; these are native timings, not browser FPS or playable wave results.
 - Rust formatting: `cargo fmt --check` passed.
@@ -50,4 +59,28 @@ npm run build
 
 Native regressions cover stable zoom across all Range levels and AOE states, faster bounded bot paths, immediate Thunder contact and lingering slow, saved contact state, Death Ray common-enemy clears and once-per-contact bonus, monotonic Black Hole capture through stun/knockback/shockwaves and resume, one-second damage including control-immune bosses, and Nuke class selection. No new human endurance or physical-phone result is claimed.
 
-The previous published save resumed on desktop (1440�1080) and mobile (390�844), retaining 10,000 coins and maximum Range 600. Camera extent remained 660 with AOE and Chrono Field both off and on; Chrono radius changed from 630 to 724.5 without zooming. Real pointer aiming reached the range boundary. Four full-viewport captures are saved as `.local/camera-range-{desktop-1440x1080,mobile-390x844}-aoe-cf-{off,on}.png`. Visual review accepted the framing and mobile controls; intermittent range-ring contrast against the nebula remains minor polish.
+The previous published save resumed on desktop (1440×1080) and mobile (390×844), retaining 10,000 coins and maximum Range 600. Camera extent remained 660 with AOE and Chrono Field both off and on; Chrono radius changed from 630 to 724.5 without zooming. Real pointer aiming reached the range boundary. Four full-viewport captures are saved as `.local/camera-range-{desktop-1440x1080,mobile-390x844}-aoe-cf-{off,on}.png`. Visual review accepted the framing and mobile controls; intermittent range-ring contrast against the nebula remains minor polish.
+
+## Current Review Limits
+
+Kritic deterministic validation passed. Its final UX crawl reached five screens before `deadline reached`; pause, restart and priority flows were unmeasured by that crawl and checked separately in Playwright. The visual reviewer accepted the checkbox, shared footer and compact layouts. Kev scoring was unavailable because its backend was off; no local inference was started. Physical-phone play, human fatigue and the proposed 900–1,000-wave outcomes remain unmeasured.
+
+A failing ammo fixture was followed once by native `0xc0000005 STATUS_ACCESS_VIOLATION`; the fixture was corrected to retain the new 70% sustainability / 50% waste contract, and the complete native suite subsequently passed. The original audit `exit 11` remains unexplained; an isolated serial replay completed without reproducing it.
+
+Kritic deterministic validation passed all 64 controller tests through a Bash script. Its initial quoted Bash invocation failed with `is not recognized as an internal or external command`; the script invocation corrected that runner issue. Model scoring was unscored: `Kev is off (kev.backend = "off"): only deterministic checks run`. No local model was started.
+
+The bounded UX crawl reached Play, Help and Aim Priorities in one step. Pause/restart exploration hit its action cap; enabling Auto Aim was not measured because the persisted setting already matched the done-check. The reviewer found no structural blocker, but its port-5202 capture still showed stale manual-guidance copy. Fresh-server browser checks verify that manual aim and automatic aim remain independent, wave-160 Auto Play spends its budget before starting, and its restart restores the isolated demonstration. The updated capture was accepted without a structural UI blocker.
+
+Continuous clearing adds nine controller regressions for occupied versus empty transfer routes, bounded direct movement, observed Multishot fans, premium-shot conservation, LSS range limits and avoiding false pending-damage credit at the destination. Fresh-server affected-flow browser checks passed after these changes. Full matched survival comparisons are still running; combat buffs have not been reduced on the assumption that this controller improvement explains the prior results.
+
+The final sweep revision passed all 73 controller tests and the production build. The native `a_fired_projectile_can_travel_beyond_range` regression passed. A temporary additional WASM fixture failed with `Invalid wave pressure milestones` and was removed; no successful result is claimed for that extra fixture.
+
+The forced-arc prototype was rejected after actual-WASM measurements. Direct finite-speed movement passed the 73-test controller suite and production build while preserving route firing and premium-shot conservation. Two funded-start probes improved clear time and accuracy; final wave-one endurance measurements are separate.
+
+Perk offers now use an independent saved RNG stream. Native regressions cover divergent combat draws, matching choices, persistence before/during offers, deterministic version-1 migration preserving combat state and selected/pending perks, and malformed/missing version-2 RNG rejection. The new stream is required and nonzero. The 179-test native suite, Clippy, production build, 73 controller tests and a fresh browser legacy-resume check passed. Earlier controller survival comparisons were confounded by shared perk/combat RNG and remain diagnostic; matched controllers must use the same new engine/config.
+
+The matched independent-perk-stream comparison completed without harness errors: pre-sweep Pro/Hybrid seed 101 died at 360, continuous sweep at 687. All 359 common completed-wave rows had identical perk levels. Aggregate accuracy was 54.12% versus 54.76%. This supports continuous route pressure; it does not establish the full human skill curve. Full current browser verification passed 33/33 on a fresh server, including legacy-save resume, Auto Play, mobile workshop/perks, Auto Buy and independent manual/automatic aiming.
+
+Kritic's complete 55-file deterministic validation passed. It skipped text parsing of the Critical Coin WebP as `binary/lockfile`; content and browser asset checks cover the image. Initial review invocations used Linux paths against Windows Git (`fatal: Invalid path '/mnt/c': No such file or directory` and `empty artifact (nothing readable to score)`); normalizing file paths corrected the runner inputs. Model scoring remains unscored: `Kev is off (kev.backend = "off"): only deterministic checks run`. No local inference was started.
+
+Release-candidate browser setup initially failed with `Error: Cannot find module @rollup/rollup-win32-x64-msvc` and `[WebServer] 'vite' is not recognized as an internal or external command`. Using the configured Linux Vite runtime and Windows browser runner resolved those setup errors; all 33 current browser cases then passed. Native dense stress remains ignored, physical-phone play and human endurance unmeasured. Git whitespace validation passed after the documentation updates.

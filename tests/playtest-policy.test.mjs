@@ -138,9 +138,9 @@ test('later strategy avoids expensive tiny attack-speed gains and useless depend
   const index=baselinePurchase(later,config,'offense');
   assert.notEqual(index,0);assert(![3,5,7,8,15].includes(index));
   const focused={...later,coins:100,costs:Array(25).fill(Infinity)};
-  focused.costs[2]=10;focused.costs[11]=6;focused.hp=90;
+  focused.costs[2]=10;focused.costs[11]=6;focused.hp=focused.max_hp;
   assert.equal(baselinePurchase(focused,config,'offense'),2);
-  assert.equal(baselinePurchase(focused,config,'defense'),11);
+  assert.equal(baselinePurchase(focused,config,'defense'),2);
 });
 test('observations preserve visible threats and pickups without duplicate targets',()=>{
   const items=targets(state,config);assert.deepEqual(new Set(items.map(t=>t.key)),new Set(['enemy_1','enemy_2','enemy_3','drop_4']));assert.equal(items[0].y,0);
@@ -204,7 +204,7 @@ test('shop nominations cover every upgrade without eliminating the final buy-or-
   const request=shopRequest({...state,coins:10000},config,'balanced');
   const nomination=shopNominations(request);
   const groups=Object.values(nomination.questions);
-  assert.deepEqual(groups.map(group=>Object.keys(group.criteria).length),[10,10,10]);
+  assert.deepEqual(groups.map(group=>Object.keys(group.criteria).length),[10,10,10,5]);
   assert(groups.every(group=>!Object.hasOwn(group.criteria,'save')));
   assert.deepEqual(groups.flatMap(group=>Object.keys(group.criteria)),Object.keys(request.questions.purchase.criteria).filter(key=>key!=='save'));
   assert(Object.hasOwn(request.questions.purchase.criteria,'save'));
@@ -257,7 +257,7 @@ test('crowd sweeps favor a nearby group and advance through it without sweeping 
   const candidates=targets(s,config,'crowd');
   const first=baselineAction(s,config,candidates,'crowd',2,{human:true,aim:[200,0]});
   assert.equal(first.target,'enemy_2');assert.equal(first.sweep,true);assert.equal(first.weapon,0);
-  const next=baselineAction(s,config,candidates,'crowd',2,{human:true,aim:[200,20],lastTarget:first.target});
+  const next=baselineAction(s,config,candidates,'crowd',2,{human:true,aim:[200,20],lastTarget:first.target,pendingDamage:new Map([['enemy_2',20]])});
   assert.equal(next.target,'enemy_3');
   const transfer={...s,enemies:[s.enemies[0]]};
   assert.equal(baselineAction(transfer,config,targets(transfer,config,'crowd'),'crowd',2,{human:true,aim:[200,0]}).sweep,false);
@@ -280,4 +280,44 @@ test('Supplies spending preserves workshop specialization and only stocks needed
   assert.equal(baselineSupplyPurchase(maxed,config),11);
   assert.equal(baselineSupplyPurchase({...maxed,charges:1},config),0);
   assert.equal(baselinePowerPurchase({...state,stones:1000},config,'none'),undefined);
+});
+
+
+test('assisted builds bootstrap affordable efficiency while manual builds can skip it',()=>{
+  const ready={...state,coins:config.starting_coins};
+  assert.equal(baselinePurchase(ready,config,'balanced',-1,true),30);
+  assert.notEqual(baselinePurchase(ready,config,'balanced'),30);
+  assert.equal(config.upgrades[30].costs.slice(0,40).reduce((a,b)=>a+b,0),100);
+});
+
+test('crowd targeting breaks a Protector cluster before safe normal targets',()=>{
+  const s={...state,hp:100,max_hp:100,range:360,drops:[],enemies:[[1,4,0,300,20,20,0],[2,2,10,295,30,30,0],[3,2,-10,300,30,30,0],[4,2,0,310,30,30,0],[5,0,280,0,10,10,0]],ammo:[0,0,0,0]};
+  assert.equal(baselineAction(s,config,targets(s,config),'crowd').target,'enemy_1');
+  const danger={...s,hp:5,enemies:[...s.enemies,[6,0,50,0,2,2,0]]};
+  assert.equal(baselineAction(danger,config,targets(danger,config),'crowd').target,'enemy_6');
+});
+
+test('crowd sweeps retain nearby equal targets until a lethal threat interrupts',()=>{
+ const s={...state,enemies:[[1,0,200,-10,100,100,0],[2,0,200,10,100,100,0]],drops:[],ammo:[0,0,0,0]};
+ const action=baselineAction(s,config,targets(s,config),'crowd',2,{human:true,aim:[200,0],lastTarget:'enemy_2'});
+ assert.equal(action.target,'enemy_2');
+ const threatened={...s,hp:4,enemies:[...s.enemies,[3,0,-60,0,100,100,0]]};
+ const rescue=baselineAction(threatened,config,targets(threatened,config),'crowd',2,{human:true,aim:[200,0],lastTarget:'enemy_2'});
+ assert.equal(rescue.target,'enemy_3');assert.equal(rescue.urgent,true);
+});
+
+test('imminent crowd pressure interrupts routine ranged priorities',()=>{
+ const s={...state,enemies:[[1,7,350,0,100,100,0],[2,0,75,0,100,100,0],[3,0,0,80,100,100,0],[4,0,-85,0,100,100,0]],enemy_effects:[[1,.7,0]],drops:[],ammo:[0,0,0,0]};
+ const action=baselineAction(s,config,targets(s,config),'crowd',2,{human:true,aim:[75,0]});
+ assert.notEqual(action.target,'enemy_1');
+ const safe={...s,enemies:s.enemies.map(e=>e[0]===1?e:[e[0],e[1],300,e[3],...e.slice(4)])};
+ assert.equal(baselineAction(safe,config,targets(safe,config),'crowd',2,{human:true,aim:[75,0]}).target,'enemy_1');
+});
+
+test('LSS route observations exclude enemies beyond its range',()=>{
+ const s={...state,enemies:[[1,2,0,100,100,100,0],[2,0,400,0,100,100,0]],drops:[],ammo:[0,200,0,0]};
+ const action=baselineAction(s,config,targets(s,config),'crowd',2,{human:true,aim:[400,0]});
+ assert.equal(action.weapon,1);
+ assert.equal(action.transitTargets.length,1);
+ assert.equal(action.transitTargets[0][0],0);
 });

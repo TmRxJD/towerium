@@ -699,10 +699,25 @@ fn pre_report_saves_remain_loadable() {
     w.input(100.0, 0.0, true, PROJECTILE);
     w.advance(DT);
     let mut saved: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+    saved["version"] = serde_json::json!(1);
     let world = saved["world"].as_object_mut().unwrap();
+    world.remove("perk_rng");
     world.remove("wave_stats");
     world.remove("overall_stats");
     world.remove("wave_coins");
+    for key in [
+        "manual_shots_fired",
+        "manual_ammo_spent",
+        "auto_aim",
+        "auto_cannon_firing",
+        "auto_weapon",
+        "auto_fire_timer",
+        "auto_rapid",
+        "precision_hit_credit",
+        "precision_grant_cycle",
+    ] {
+        world.remove(key);
+    }
     for shot in world["shots"].as_array_mut().unwrap() {
         shot.as_object_mut().unwrap().remove("counted_shot");
     }
@@ -1271,12 +1286,15 @@ fn regeneration_preserves_overheal_and_repairs_normal_hp() {
     let mut w = active();
     w.spawn(5, V::new(450.0, 0.0));
     w.levels[12] = 1;
-    w.hp = 150.0;
+    let max_hp = w.stat(11);
+    let regeneration = w.stat(12);
+    w.hp = max_hp + 10.0;
     w.advance(DT);
-    assert_eq!(w.hp, 150.0);
-    w.hp = 60.0;
+    assert_eq!(w.hp, max_hp + 10.0);
+    let damaged_hp = max_hp * 0.5;
+    w.hp = damaged_hp;
     w.advance(DT);
-    assert!(w.hp > 60.0);
+    assert!((w.hp - (damaged_hp + regeneration * DT)).abs() < 0.001);
 }
 
 #[test]
@@ -1377,22 +1395,25 @@ fn shield_blocks_real_orb_ray_swamp_and_mine_hits_without_mine_stun() {
 }
 
 #[test]
-fn protector_stops_chain_hops_until_destroyed_by_player_weapon() {
+fn chain_skips_shielded_targets_and_hits_them_after_protector_is_destroyed() {
     let mut w = active();
+    w.c.powers.chain_count = 1;
     w.c.powers.chain_chance = 1.0;
     w.activate(CHAIN);
     w.spawn(5, V::new(250.0, 0.0));
     w.spawn(4, V::new(270.0, 0.0));
+    w.spawn(0, V::new(280.0, 0.0));
     w.spawn(0, V::new(270.0 + w.c.defense.protector_radius + 10.0, 0.0));
-    for (i, e) in w.enemies.iter().enumerate() {
-        w.grid.insert(e.p, i);
-    }
+    w.enemies.iter_mut().for_each(|e| e.hp = 1000.0);
+    let protector_hp = w.enemies[1].hp;
     w.impact(0, PROJECTILE, 1.0);
-    assert_eq!(w.enemies[1].hp, w.c.enemies[4].hp);
-    assert_eq!(w.enemies[2].hp, w.c.enemies[0].hp);
-    assert!(w.hit(1, 100.0, LIGHT));
+    assert_eq!(w.enemies[1].hp, protector_hp);
+    assert_eq!(w.enemies[2].hp, 1000.0);
+    assert!(w.enemies[3].hp < 1000.0);
+
+    assert!(w.hit(1, 1000.0, LIGHT));
     w.impact(0, PROJECTILE, 1.0);
-    assert!(w.enemies[2].hp <= 0.0);
+    assert!(w.enemies[2].hp < 1000.0);
 }
 
 #[test]
@@ -1577,10 +1598,10 @@ fn reference_economy_report_is_finite_and_sensitive_to_rewards() {
         "REFERENCE_ECONOMY {}",
         serde_json::to_string(&report).unwrap()
     );
-    assert!(report.minutes >= 135.0);
+    assert!(report.minutes >= 450.0);
     assert!(report.affordable_share > 0.0 && report.affordable_share.is_finite());
     assert!(
-        (0.35..=0.65).contains(&report.affordable_share),
+        (0.60..=0.85).contains(&report.affordable_share),
         "Elite purchasing power must retain substantial specialization"
     );
     assert!(
@@ -1612,36 +1633,36 @@ fn range_and_orb_speed_have_tower_style_display_metadata() {
 fn reference_purchasing_power_reports_approximate_timing_targets() {
     let c = Config::standard();
     assert_eq!(c.elite_reference.cleanup_seconds, 10.0);
-    let reports: Vec<_> = (1..=500)
+    let reports: Vec<_> = (1..=1100)
         .map(|wave| crate::balance::reference_income(&c, wave))
         .collect();
-    assert!(reports.windows(2).all(|pair| {
-        pair[1].affordable_share.is_finite() && pair[1].affordable_share >= pair[0].affordable_share
-    }));
-    let goals: [(f32, f32, f32); 6] = [
-        (0.10, 5.0, 11.0),
-        (0.25, 10.0, 21.0),
-        (0.50, 20.0, 36.0),
-        (0.65, 35.0, 51.0),
-        (0.80, 45.0, 61.0),
-        (1.00, 60.0, 76.0),
-    ];
-    let mut previous_crossing = 0;
-    for (target, earliest, latest) in goals {
-        let crossing = reports
-            .iter()
-            .find(|report| report.affordable_share >= target)
-            .expect("purchasing-power target must be reachable by wave 500");
-        println!(
-            "PURCHASING_POWER target={target:.2} wave={} minutes={:.2} share={:.4} requested_minutes={earliest}..{latest} within_target={} cleanup_assumption_seconds=10",
-            crossing.waves, crossing.minutes, crossing.affordable_share,
-            (earliest..=latest).contains(&crossing.minutes)
+    assert!(reports
+        .windows(2)
+        .all(|pair| pair[1].affordable_share.is_finite()
+            && pair[1].affordable_share >= pair[0].affordable_share));
+    // Latest endurance targets; accounting does not establish survival.
+    for (wave, low, high) in [
+        (100, 0.01, 0.05),
+        (500, 0.25, 0.50),
+        (750, 0.60, 0.85),
+        (1000, 1.0, 1.5),
+    ] {
+        let report = &reports[wave - 1];
+        assert!(
+            (low..=high).contains(&report.affordable_share),
+            "wave {} purchasing share {}",
+            wave,
+            report.affordable_share
         );
-        // These are approximate tuning targets, not invariants. Report drift rather
-        // than flattening enemy counts to fit them. The elite 80% guard above stays hard.
-        assert!(crossing.waves > previous_crossing);
-        previous_crossing = crossing.waves;
     }
+    assert!(
+        reports
+            .iter()
+            .find(|r| r.affordable_share >= 1.0)
+            .unwrap()
+            .waves
+            > 800
+    );
 }
 
 #[test]
@@ -2038,7 +2059,7 @@ fn scatter_has_exactly_one_generation_and_rewards_account_for_children() {
     assert_eq!(w.kills, 1 + w.c.specials.scatter_children as u32);
     assert_eq!(
         w.earned,
-        w.c.enemies[SCATTER].coins + w.c.specials.scatter_children as f32 * w.c.enemies[1].coins
+        w.c.enemies[SCATTER].coins + w.c.specials.scatter_children as f32 * 4.0
     );
     let mut deathwave = active();
     deathwave.spawn(SCATTER, V::new(100.0, 0.0));
@@ -2387,7 +2408,8 @@ fn light_speed_bounces_are_bounded_unique_and_apply_knockback() {
     w.spawn(2, V::new(200.0, 180.0));
     w.input(200.0, 0.0, true, LIGHT);
     w.advance(DT);
-    assert_eq!(w.fx.iter().filter(|f| f.0 == 1).count(), 3);
+    assert_eq!(w.fx.iter().filter(|f| matches!(f.0, 1 | 16)).count(), 3);
+    assert_eq!(w.fx.iter().filter(|f| f.0 == 16).count(), 2);
     for e in &w.enemies[..3] {
         assert!((e.hp - 7.875).abs() < 0.0001);
     }
@@ -2768,6 +2790,27 @@ fn saved_run_rejects_corruption_and_invalid_types() {
     assert!(World::restore(Config::standard(), &saved.to_string()).is_err());
     saved["version"] = serde_json::json!(2);
     assert!(World::restore(Config::standard(), &saved.to_string()).is_err());
+
+    let mut clean = world();
+    clean.start_wave();
+    let valid: serde_json::Value = serde_json::from_str(&clean.save()).unwrap();
+    for malformed in [
+        serde_json::Value::Null,
+        serde_json::json!(0),
+        serde_json::json!("not-an-rng"),
+        serde_json::json!([]),
+    ] {
+        let mut bad = valid.clone();
+        bad["world"]["perk_rng"] = malformed;
+        assert!(World::restore(Config::standard(), &bad.to_string()).is_err());
+    }
+    let mut missing = valid.clone();
+    missing["world"].as_object_mut().unwrap().remove("perk_rng");
+    assert!(World::restore(Config::standard(), &missing.to_string()).is_err());
+
+    let mut unsupported = valid;
+    unsupported["version"] = serde_json::json!(3);
+    assert!(World::restore(Config::standard(), &unsupported.to_string()).is_err());
 }
 #[test]
 fn chain_lightning_reaches_nearest_distant_enemy() {
@@ -2836,20 +2879,12 @@ fn restore_rejects_softlocking_and_inconsistent_states() {
     assert!(World::restore(Config::standard(), &data.to_string()).is_err());
 }
 #[test]
-fn endurance_workshop_completion_extends_beyond_wave_400() {
+fn endurance_workshop_completion_requires_extreme_progression() {
     let c = Config::standard();
-    let early = crate::balance::reference_income(&c, 100);
-    let exceptional = crate::balance::reference_income(&c, 300);
-    println!(
-        "ENDURANCE_MODEL {}",
-        serde_json::to_string(&exceptional).unwrap()
-    );
-    assert!(early.affordable_share < 0.15);
-    assert!((0.5..=0.65).contains(&exceptional.affordable_share));
-    assert!(
-        crate::balance::reference_income(&c, 400).affordable_share < 1.0
-            && crate::balance::reference_income(&c, 500).affordable_share > 1.0
-    );
+    assert!(crate::balance::reference_income(&c, 100).affordable_share < 0.05);
+    assert!(crate::balance::reference_income(&c, 500).affordable_share < 0.5);
+    assert!(crate::balance::reference_income(&c, 800).affordable_share < 1.0);
+    assert!(crate::balance::reference_income(&c, 1000).affordable_share > 1.0);
 }
 
 #[test]
@@ -2919,7 +2954,12 @@ fn diagnostic_weapon_damage_counts_actual_hp_and_child_bombs() {
 
 #[test]
 fn accurate_lss_sustains_opening_mix_but_waste_costs_ammo() {
-    for (quantity, accuracy, sustainable) in [(5, 85, true), (6, 80, true), (5, 70, false)] {
+    for (quantity, accuracy, sustainable, pickups) in [
+        (5, 85, true, 40),
+        (6, 80, true, 40),
+        (5, 70, true, 40),
+        (5, 50, false, 39),
+    ] {
         let mut w = active();
         w.remaining = 1;
         w.spawn_timer = 1e9;
@@ -2947,7 +2987,7 @@ fn accurate_lss_sustains_opening_mix_but_waste_costs_ammo() {
         let final_ammo = w.ammo[LIGHT as usize];
         println!("LSS_SUSTAIN quantity={quantity} requested_accuracy={accuracy} measured_accuracy={:.2} rounds={shots} ammo_change={}",w.snapshot().overall_report.accuracy,final_ammo as i64-opening as i64);
         assert_eq!(final_ammo >= opening, sustainable);
-        assert_eq!(w.ammo_pickups, 40);
+        assert_eq!(w.ammo_pickups, pickups);
     }
 }
 
@@ -2990,7 +3030,7 @@ fn passive_kills_keep_coins_and_powers_but_cannot_refill_ammo() {
     w.c.upgrades[21].base = 1.0;
     w.c.upgrades[23].base = 1.0;
     let before = w.ammo;
-    w.spawn(0, V::new(80.0, 0.0));
+    w.spawn(1, V::new(80.0, 0.0));
     w.hit(0, 100.0, OTHER);
     assert_eq!(w.ammo, before);
     assert_eq!(w.ammo_pickups, 0);

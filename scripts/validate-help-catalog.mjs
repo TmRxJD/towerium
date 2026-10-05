@@ -37,10 +37,10 @@ const assertAssetExists = async (assetPath, label) => {
 };
 
 assert.equal(weapons.length, 4, 'weapon labels must match four engine weapon slots');
-assert.equal(powers.length, 22, 'power labels must match engine pickup types');
+assert.equal(powers.length, 23, 'power labels must match engine pickup types');
 assertUnique(weapons, 'weapon labels');
 assertUnique(powers, 'power labels');
-assert.equal(balance.power_workshop.upgrades.length,22);
+assert.equal(balance.power_workshop.upgrades.length,23);
 assert.deepEqual(balance.power_workshop.upgrades.map(u=>u.name),powers,'power shop labels must match pickup identities');
 for(const u of balance.power_workshop.upgrades){
   assertKeys(u,['name','weight','weight_step','weight_costs','effect_label','effect_base','effect_step','effect_costs','unit'],'power upgrade');
@@ -59,11 +59,11 @@ assert.equal(provenance.sdkVersion,lock.packages['node_modules/thetowersdk'].ver
 for (const label of [...weapons, ...powers]) assertNonEmpty(label, 'gameplay label');
 assert.equal(balance.enemies.length, 13, 'enemy catalog must contain 13 entries');
 assertUnique(balance.enemies.map(enemy => enemy.name), 'enemy names');
-assert.equal(balance.upgrades.length, 30, 'balance must contain 30 upgrades');
-assert.equal(workshop.length, 30, 'workshop catalog must contain 30 entries');
+assert.equal(balance.upgrades.length, 35, 'balance must contain 35 upgrades');
+assert.equal(workshop.length, 35, 'workshop catalog must contain 35 entries');
 assertUnique(workshop.map(item => item.index), 'workshop indices');
 assert.deepEqual([...workshop.map(item => item.index)].sort((a, b) => a - b),
-  Array.from({ length: 30 }, (_, index) => index), 'workshop indices must cover 0–29');
+  Array.from({ length: 35 }, (_, index) => index), 'workshop indices must cover 0–34');
 assertUnique(workshop.map(item => item.label), 'workshop labels');
 assertUnique(workshop.map(item => `${item.domain}/${item.asset}`), 'workshop asset paths');
 for (const item of workshop) {
@@ -107,6 +107,11 @@ console.log(`Help catalogs valid: ${balance.enemies.length} enemies, ${workshop.
 
 assertKeys(balance.supplies,['ammo_quantities','ammo_prices','power_prices','wave_price_step'],'Supplies');
 assert.equal(balance.supplies.ammo_quantities.length,3);
-assert.equal(balance.supplies.power_prices.length,22);
+assert.equal(balance.supplies.power_prices.length,23);
 assert.ok([...balance.supplies.ammo_prices,...balance.supplies.power_prices].every(n=>Number.isFinite(n)&&n>0));
 assert.equal(balance.powers.timer_cap,50);
+
+const perks = await readJson('../engine/perks.json');
+assert.equal(perks.length,15);assertUnique(perks.map(p=>p.name),'perks');
+for(const [i,p] of perks.entries()) {assertKeys(p,['name','effect','cap','tradeoff'],'perk');assertNonEmpty(p.name,'perk name');assertNonEmpty(p.effect,'perk effect');assert.ok(Number.isInteger(p.cap)&&p.cap>=1&&p.cap<=5);assert.equal(p.tradeoff,i>=10);if(p.tradeoff)assert.equal(p.cap,1);}
+console.log('Perk catalog: 15 definitions, 5 tradeoffs validated');

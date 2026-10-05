@@ -4,7 +4,7 @@ import type { Snapshot } from './types';
 
 const TAU=Math.PI*2;
 const colors=['#cad5e5','#ff6592','#efb85f','#91a8ff','#7ce991','#f97764','#ff637d','#ffe85b','#ad84ff','#ffac58','#ed83cd','#72e8fc','#f265ff'];
-const powerColors=['#b8a0ff','#78dce4','#8bd768','#bcb0f9','#ffda7a','#ff7187','#f1c86d','#88e8ac','#cb95ff','#83e9ff','#d6e85f','#ff3f68','#ffb273','#ca91eb','#83dbc0','#91baff','#a9f8e7','#a98dff','#ffd56c','#e497ff','#65b9ff','#a5edff'];
+const powerColors=['#b8a0ff','#78dce4','#8bd768','#bcb0f9','#ffda7a','#ff7187','#f1c86d','#88e8ac','#cb95ff','#83e9ff','#d6e85f','#ff3f68','#ffb273','#ca91eb','#83dbc0','#91baff','#a9f8e7','#a98dff','#ffd56c','#e497ff','#65b9ff','#a5edff','#e8d772'];
 export class Renderer {
   skin=0;
   touchAim=false;
@@ -39,9 +39,8 @@ export class Renderer {
     if(background){
       const scale=Math.max(1100/background.width,1100/background.height);
       c.drawImage(background,-background.width*scale/2,-background.height*scale/2,background.width*scale,background.height*scale);
-      c.fillStyle='#060e1910';c.fillRect(-550,-550,1100,1100);
     }
-    const glow=c.createRadialGradient(0,0,10,0,0,550);glow.addColorStop(0,background?'#11212b00':'#11212b');glow.addColorStop(1,background?'#090f1933':'#090f19');c.fillStyle=glow;c.fillRect(-550,-550,1100,1100);
+    const glow=c.createRadialGradient(0,0,10,0,0,550);glow.addColorStop(0,background?'#11212b00':'#11212b');glow.addColorStop(1,background?'#090f1900':'#090f19');c.fillStyle=glow;c.fillRect(-550,-550,1100,1100);
     c.setTransform(this.canvas.width/(extent*2),0,0,this.canvas.height/(extent*2),this.canvas.width/2,this.canvas.height/2);
     const screenPixel=extent*2/Math.max(1,width);
     c.setLineDash([3*screenPixel,7*screenPixel]);this.circle(0,0,s.range,'#08131dcc',undefined,3*screenPixel);this.circle(0,0,s.range,'#baf7e0bb',undefined,screenPixel);c.setLineDash([]);
@@ -173,6 +172,7 @@ export class Renderer {
     for(const [kind,x,y,a,b,life] of s.fx) {
       c.save();c.globalAlpha=Math.min(1,life*4);
       if(kind===1){c.strokeStyle='#b5e4ff';c.lineWidth=3;c.beginPath();c.moveTo(x,y);c.lineTo(a,b);c.stroke();}
+      if(kind===16){c.globalAlpha=Math.min(1,life*6);c.strokeStyle='#ffd46b';c.lineWidth=4;c.setLineDash([8,5]);c.beginPath();c.moveTo(x,y);c.lineTo(a,b);c.stroke();c.setLineDash([]);this.circle(a,b,7,'#fff1b5',undefined,2);}
       if(kind===5){
         const dx=a-x,dy=b-y,length=Math.hypot(dx,dy),segments=Math.max(4,Math.min(18,Math.ceil(length/22))),offset=Math.min(17,length*.13);
         c.beginPath();c.moveTo(x,y);

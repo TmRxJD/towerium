@@ -1,8 +1,8 @@
-ignore = ["^Music", "^Effects", "^Projectiles", "^Light Speed", "^Smart Missiles", "^Hook Bomb", "^Build", "^Aim", "^Weapons"]
+ignore = ["^Music", "^Effects", "^Projectiles", "^Light Speed", "^Smart Missiles", "^Hook Bomb", "^Build", "^Aim$", "^Weapons"]
 
 [app]
 kind = "web"
-purpose = "Towerium: a pointer-aimed arcade survival game. Start a run, switch weapons, shoot temporary drops, bank/use Death Wave, review wave and overall statistics, open the workshop or start the next wave, pause, restart safely, and resume a locally saved run. Report and workshop share footer controls. Game Over shows the overall report and Play Again. Help and skins return to the originating screen. Combat/report/shop/game-over are sequential run states, not independent modes."
+purpose = "Towerium: an arcade survival game with manual aim and configurable automatic targeting. Between waves, choose perks and buy workshop upgrades manually or with ranked Auto Buy. Start a run, switch weapons, shoot temporary drops, bank/use Death Wave, review wave and overall statistics, open the workshop or start the next wave, pause, restart safely, and resume a locally saved run. Report and workshop share footer controls. Game Over shows the overall report and Play Again. Help and skins return to the originating screen. Combat/report/shop/game-over are sequential run states, not independent modes."
 url = "http://127.0.0.1:5186/?seed=42"
 viewport = [1440, 1080]
 settle_ms = 600
@@ -43,4 +43,18 @@ name = "pause Auto Play"
 goal = "Start watching an automated run, then pause it"
 done = { control = "^Stop Auto Play$" }
 budget = 3
+primary = true
+
+[[tasks]]
+name = "enable auto aim"
+goal = "Turn automatic aiming on for normal gameplay"
+done = { text = "Auto Aim: On" }
+budget = 1
+primary = true
+
+[[tasks]]
+name = "configure target priorities"
+goal = "Find the ranked target priorities for automatic aiming"
+done = { control = "^Move Powerups Up$" }
+budget = 1
 primary = true

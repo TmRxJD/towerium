@@ -1,3 +1,4 @@
+import { chooseBuildPerk } from './perks.mjs';
 import {readFile, mkdir, writeFile, appendFile, readdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -132,6 +133,11 @@ for(let run=0;run<count;run++) {
     await appendFile(log,JSON.stringify({event:'start',seed,startWave,prepare:true,configHash:metadata.configHash})+'\n');
     while(s.phase!==3&&s.wave<=maxWaves&&s.time<maxSeconds&&decisions<maxDecisions) {
       if(s.phase===2) {
+        if(s.perks?.offers.length){
+          const perk=chooseBuildPerk(s,strategy);
+          if(!game.choose_perk(perk))throw new Error('Rejected perk choice');
+          await appendFile(log,JSON.stringify({event:'perk',wave:s.wave,perk})+'\n');s=snapshot();continue;
+        }
         const enteringShop=!s.pending_start_wave&&!waves.some(w=>w.wave===s.wave);
         if(enteringShop)waves.push({wave:s.wave,time:s.time,waveSeconds:s.wave_time,cleanupSeconds:s.cleanup_seconds,hp:s.hp,coins:s.coins,earned:s.earned,ammo:s.ammo,levels:s.levels});
         if(s.wave>=maxWaves&&!s.pending_start_wave)break;

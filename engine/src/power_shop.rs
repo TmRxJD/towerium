@@ -1,7 +1,7 @@
 use crate::{config::Config, sim::World};
 use serde::Deserialize;
 
-pub const POWER_COUNT: usize = 22;
+pub const POWER_COUNT: usize = 23;
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -50,6 +50,7 @@ impl PowerWorkshop {
             (c.powers.swamp_radius + 1.0, c.powers.blackhole_radius - 1.0),
             (c.powers.swamp_radius + 1.0, c.powers.blackhole_radius - 1.0),
             (c.powers.swamp_radius + 1.0, c.powers.blackhole_radius - 1.0),
+            (1.0, 2.0),
         ];
         let bases = effect_bases(c);
         for (i, u) in self.upgrades.iter().enumerate() {
@@ -113,6 +114,7 @@ fn effect_bases(c: &Config) -> [f32; POWER_COUNT] {
         c.expansion.bot_radius,
         c.expansion.bot_radius,
         c.expansion.bot_radius,
+        1.0,
     ]
 }
 

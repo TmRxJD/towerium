@@ -12,11 +12,12 @@ pub const GOLD_BOT: usize = 18;
 pub const AMP_BOT: usize = 19;
 pub const FLAME_BOT: usize = 20;
 pub const THUNDER_BOT: usize = 21;
+pub const CRITICAL_COIN: usize = 22;
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Expansion {
-    pub durations: [f32; 6],
+    pub durations: [f32; 7],
     pub aoe_multiplier: f32,
     pub chrono_aoe_multiplier: f32,
     pub extra_orb_coin_multiplier: f32,

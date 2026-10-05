@@ -5,7 +5,7 @@ import type { Snapshot } from './types';
 import { formatNumberForDisplay } from 'thetowersdk/formatting';
 
 export function supplyShop(state:Snapshot,spectator:boolean):string {
-  const cap=balance.powers.timer_cap;
+  const cap=state.values[34];
   const number=(n:number)=>formatNumberForDisplay(n,'Period (.)',{mode:'compact',smallNumberMaxFractionDigits:0,notationMaxFractionDigits:1});
   const cards=state.supply_costs.map((cost,item)=>{
     const power=item-3,name=item<3?['Light Speed','Smart Missiles','Hook Bomb'][item]:power===10?'Fallout':powerNames[power];

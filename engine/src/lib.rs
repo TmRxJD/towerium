@@ -3,6 +3,7 @@ mod config;
 #[cfg(test)]
 mod expansion_tests;
 mod math;
+mod perks;
 mod power_expansion;
 mod power_shop;
 #[cfg(test)]
@@ -66,10 +67,20 @@ impl Game {
         })
     }
     pub fn input(&mut self, x: f32, y: f32, firing: bool, weapon: u8) {
+        self.world.auto_firing = false;
         self.world.input(x, y, firing, weapon);
+    }
+    pub fn assisted_input(&mut self, x: f32, y: f32, firing: bool, weapon: u8) {
+        self.world.assisted_input(x, y, firing, weapon);
+    }
+    pub fn set_auto_input(&mut self, x: f32, y: f32, firing: bool, weapon: u8) {
+        self.world.set_auto_input(x, y, firing, weapon);
     }
     pub fn start_wave(&mut self) -> bool {
         self.world.start_wave()
+    }
+    pub fn choose_perk(&mut self, index: usize) -> bool {
+        self.world.choose_perk(index)
     }
     pub fn buy(&mut self, index: usize) -> bool {
         self.world.buy(index)

@@ -97,6 +97,15 @@ async function readControlState(page) {
   });
 }
 
+async function readSnapshotAndControlState(page) {
+  return page.evaluate(async()=>{
+    const entry=[...document.querySelectorAll('script[type="module"][src*="/src/main.ts"]')][0];
+    if(!entry)throw new Error('Towerium entry module was not found');
+    const main=await import(entry.src);
+    return {snapshot:main.getRenderSnapshot(),control:main.getControlState()};
+  });
+}
+
 function expectAutoBuild(actual,expected,startWave,{beforeFirstSpawn=true}={}) {
   expect(actual.phase).toBe(1);expect(actual.wave).toBe(startWave);expect(actual.pending_start_wave).toBe(0);
   if(beforeFirstSpawn)expect(actual.spawned).toBe(0);
@@ -183,7 +192,7 @@ async function footerButtonIds(page) {
 }
 
 async function expectRunFooter(page,navigationId) {
-  const ids=['shop-effects','shop-music','next-wave','request-restart','shop-help','shop-skins',navigationId].sort();
+  const ids=['buy-now','buy-priorities','shop-effects','shop-music','next-wave','request-restart','shop-help','shop-skins','shop-aim-priorities',navigationId].sort();
   expect(await footerButtonIds(page)).toEqual(ids);
   const navigation=page.locator(`#${navigationId}`);
   await expect(navigation).toHaveClass(/secondary/);
@@ -364,7 +373,7 @@ test('held touch aim snaps to a nearby live enemy without changing raw aim',asyn
   const cdp=await context.newCDPSession(page),aimPoint={id:31,x:pad.x+pad.width/2,y:pad.y+pad.height/2},firePoint={id:32,x:fire.x+fire.width/2,y:fire.y+fire.height/2};
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[aimPoint]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[aimPoint,firePoint]});
-  const snapped=await readControlState(page),nearby=await readSnapshot(page);
+  const {control:snapped,snapshot:nearby}=await readSnapshotAndControlState(page);
   expect(snapped.firing).toBe(true);expect(snapped.aim).toEqual([0,-220]);
   const liveTarget=nearby.enemies.find(enemy=>enemy[4]>0&&Math.hypot(enemy[2]-snapped.aim[0],enemy[3]-snapped.aim[1])<14*nearby.view_extent*2/arena.width);
   expect(liveTarget).toBeTruthy();
@@ -427,7 +436,8 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
   const firstWave=await readSnapshot(page);
   expect(firstWave.wave_report.shots_fired).toBeGreaterThan(0);
   expect(firstWave.wave_report.kills).toBeGreaterThan(0);
-  expect(firstWave.wave_report.coins_earned).toBeGreaterThan(0);
+  expect(firstWave.wave_report.coins_earned).toBeGreaterThanOrEqual(0);
+  expect(firstWave.coins).toBe(balance.starting_coins+firstWave.wave_report.coins_earned);
   expect(firstWave.wave_report.duration_seconds).toBeGreaterThan(0);
   expect(await page.locator('#wave-timer').textContent()).not.toBe('00:00');
   const reportBefore=await expectReportMatchesSnapshot(page,firstWave);
@@ -446,7 +456,8 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
     const documentBounds=await page.evaluate(()=>({scrollHeight:document.documentElement.scrollHeight,innerHeight,bodyHeight:document.body.scrollHeight}));
     expect(documentBounds.scrollHeight<=documentBounds.innerHeight,JSON.stringify({width,height,...documentBounds})).toBe(true);
     expect(await page.locator('.report-section').count()).toBe(2);
-    expect(await page.locator('.report-body').evaluate(body=>body.scrollHeight<=body.clientHeight+1)).toBe(true);
+    const reportBodyBounds=await page.locator('.report-body').evaluate(body=>({scrollHeight:body.scrollHeight,clientHeight:body.clientHeight,rect:body.getBoundingClientRect().toJSON()}));
+    expect(reportBodyBounds.scrollHeight<=reportBodyBounds.clientHeight+1,JSON.stringify({width,height,...reportBodyBounds})).toBe(true);
     expect(await page.locator('.report-stats>div').count()).toBe(15);
     expect(await page.locator('.report-stats>div').evaluateAll(cards=>cards.every(card=>{const r=card.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}))).toBe(true);
     await page.screenshot({path:`test-results/towerium-report-${width}x${height}.png`,fullPage:true});
@@ -522,14 +533,14 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
   await expect(page.getByRole('heading',{name:'Game Over',exact:true})).toBeVisible();
   const gameOverSnapshot=await readSnapshot(page);
   await expectOverallMatchesSnapshot(page,gameOverSnapshot);
-  expect(await footerButtonIds(page)).toEqual(['shop-effects','shop-music','restart','shop-help','shop-skins'].sort());
+  expect(await footerButtonIds(page)).toEqual(['shop-effects','shop-music','restart','shop-help','shop-skins','shop-aim-priorities'].sort());
   await page.locator('#shop-help').click();await page.locator('#close-help').click();
   await expect(page.getByRole('heading',{name:'Game Over',exact:true})).toBeVisible();
   await expectOverallMatchesSnapshot(page,await readSnapshot(page));
   await page.locator('#shop-skins').click();await page.locator('#back-shop').click();
   await expect(page.getByRole('heading',{name:'Game Over',exact:true})).toBeVisible();
   await expectOverallMatchesSnapshot(page,await readSnapshot(page));
-  expect(await footerButtonIds(page)).toEqual(['shop-effects','shop-music','restart','shop-help','shop-skins'].sort());
+  expect(await footerButtonIds(page)).toEqual(['shop-effects','shop-music','restart','shop-help','shop-skins','shop-aim-priorities'].sort());
   await page.screenshot({path:'test-results/towerium-game-over.png',fullPage:true});
   await page.setViewportSize({width:320,height:568});
   await expectOverallMatchesSnapshot(page,gameOverSnapshot);
@@ -588,7 +599,15 @@ test('active power indicators appear only after a real drop activation',async({p
   let activated=false;
   for(let step=0;step<6000;step++){
     if(await page.locator('#powers .active-power').count()>0){activated=true;break;}
-    if(await page.getByRole('heading',{name:/Wave \d+ Cleared/}).count()){await page.locator('#next-wave').click();await page.mouse.down();}
+    if(await page.getByRole('heading',{name:/Wave \d+ Cleared/}).count()){
+      await page.mouse.up();
+      if(await page.locator('[data-perk]').count()){
+        await page.locator('[data-perk]').first().click();
+        await expect(page.locator('[data-perk]')).toHaveCount(0,{timeout:5000});
+      }
+      await expect(page.locator('#next-wave')).toBeEnabled({timeout:5000});
+      await page.locator('#next-wave').click();await page.mouse.down();
+    }
     if(await page.getByRole('heading',{name:'Game Over',exact:true}).count())break;
     const s=await readSnapshot(page);
     const target=(()=>{
@@ -1022,6 +1041,7 @@ test('shop save restores upgrades and Title Case labels without scrolling',async
     'Bounce Chance','Bounce Targets','Orb Speed','Orb Qty','Power Up Chance',
     'Bounce Range','Landmine Chance','Shockwave Size','Shockwave Freq','Powerup Duration',
     'Landmine Radius','Landmine Damage','Wall HP','Wall Rebuild Time','Max Ammo Capacity',
+    'Auto Cannon Efficiency','Targeting Speed','Auto Weapons','Missile Fire Rate','Power Stack Cap',
   ]);
   try{
     await expect.poll(()=>page.locator('.upgrade-title img').evaluateAll(images=>images.every(image=>image.complete&&image.naturalWidth>0))).toBe(true);
@@ -1065,7 +1085,7 @@ test('Powerups shop spends run-local Stones, restores purchases, and fits phone 
   await page.locator('#category-powers').click();
   await expect(page.locator('#category-powers')).toHaveAttribute('aria-pressed','true');
   await expect(page.locator('#category-workshop')).toHaveAttribute('aria-pressed','false');
-  await expect(page.locator('.power-choice')).toHaveCount(22);
+  await expect(page.locator('.power-choice')).toHaveCount(23);
   await expect(page.locator('#modal h2')).toHaveText('Powerups');
   await expect(page.locator('.shop-wallet span[title="Coins"]')).toBeVisible();
   await expect(page.locator('.shop-wallet span[title="Power Stones"]')).toBeVisible();
@@ -1105,7 +1125,7 @@ test('Power workshop exposes six extra powers and saves Radius upgrades for all 
   await stageRunOnNextNavigation(page,saved,'towerium.test-bot-power-shop');
   await page.reload();await expect(page.locator('#restore-run')).toBeVisible();await page.locator('#restore-run').click();
   await page.locator('#open-shop').click();await page.locator('#category-powers').click();
-  await expect(page.locator('.power-choice')).toHaveCount(22);
+  await expect(page.locator('.power-choice')).toHaveCount(23);
   const names=['Gold Bot','Amp Bot','Flame Bot','Thunder Bot'];
   let spent=0;const starting=await readSnapshot(page);
   for(let bot=0;bot<names.length;bot++){
@@ -1189,11 +1209,11 @@ test('Supplies shop uses Coins, restores ammo, and fits portrait and landscape w
   await expect(page.locator('.shop-wallet span[title="Coins"]')).toBeVisible();
   await expect(page.locator('.shop-wallet span[title="Power Stones"]')).toBeVisible();
   await page.locator('#category-powers').click();
-  await expect(page.locator('.power-choice')).toHaveCount(22);
+  await expect(page.locator('.power-choice')).toHaveCount(23);
   await expect(page.locator('.shop-footer')).toBeVisible();await expect(page.locator('.shop-wallet')).toBeVisible();
   await page.locator('#category-supplies').click();
   await expect(page.locator('#modal h2')).toHaveText('Supplies');
-  await expect(page.locator('.supply')).toHaveCount(25);
+  await expect(page.locator('.supply')).toHaveCount(26);
   await expect(page.locator('.shop-footer')).toBeVisible();await expect(page.locator('.shop-wallet')).toBeVisible();
   expect(before.ammo[1]).toBe(ammoCapacity-1);
   await page.locator('[data-supply="0"]').click();
@@ -1339,7 +1359,7 @@ test('Auto Play advances out of focus while a human run pauses on blur',async({p
   await manual.close();
 });
 
-test('all 22 power assets decode and expanded native snapshots render without errors',async({page})=>{
+test('all 23 power assets decode and expanded native snapshots render without errors',async({page})=>{
   const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
   await page.goto('/');
   const saved=await makeClearedWaveSave(page);
@@ -1350,18 +1370,18 @@ test('all 22 power assets decode and expanded native snapshots render without er
     await init();const art=await loadArt();
     const canvas=document.createElement('canvas');canvas.style.width='440px';canvas.style.height='440px';document.body.append(canvas);
     const renderer=new Renderer(canvas,art),record=JSON.parse(saved.state);
-    record.world.extra_power_times=Array(6).fill(20);record.world.extra_orb_angle=0.5;
+    record.world.extra_power_times=Array(7).fill(20);record.world.extra_orb_angle=0.5;
     record.world.bots=Array.from({length:4},(_,index)=>({position:{x:40+index*10,y:30},target:{x:40+index*10,y:30},pulse_in:0,initialized:true}));
     const game=Game.restore(saved.config,JSON.stringify(record)),snapshot=JSON.parse(game.snapshot());
     snapshot.demon_time=10;snapshot.demon_invincible=5;
-    snapshot.drops.push([1001,10,-90,20,10],[1002,11,90,20,10],[1003,12,-60,60,10],[1004,13,-20,80,10],[1005,14,20,80,10],[1006,15,60,60,10]);
+    snapshot.drops.push([1001,10,-90,20,10],[1002,11,90,20,10],[1003,12,-60,60,10],[1004,13,-20,80,10],[1005,14,20,80,10],[1006,15,60,60,10],[1007,22,80,100,10]);
     renderer.draw(snapshot,[0,0],0);
     const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
     const result={
       nuke:{complete:art.powers[10].complete,width:art.powers[10].naturalWidth},
       demonCard:{complete:art.powers[11].complete,width:art.powers[11].naturalWidth},
       modules:art.powers.slice(12,16).map(image=>({complete:image.complete,width:image.naturalWidth,src:new URL(image.src).pathname})),
-      expansion:art.powers.slice(16,22).map(image=>({complete:image.complete,width:image.naturalWidth,src:new URL(image.src).pathname})),
+      expansion:art.powers.slice(16,23).map(image=>({complete:image.complete,width:image.naturalWidth,src:new URL(image.src).pathname})),
       nativeExpansion:{extraPowerTimes:snapshot.extra_power_times,extraOrbs:snapshot.extra_orbs,bots:snapshot.bots},
       demonWing:{complete:art.demonWing.complete,width:art.demonWing.naturalWidth,height:art.demonWing.naturalHeight},
       pixelColors:new Set(Array.from({length:Math.floor(pixels.length/4)},(_,i)=>`${pixels[i*4]},${pixels[i*4+1]},${pixels[i*4+2]}`)).size,
@@ -1376,16 +1396,132 @@ test('all 22 power assets decode and expanded native snapshots render without er
     '/tower-assets/modules/death-penalty-md.webp','/tower-assets/modules/space-displacer-md.webp',
     '/tower-assets/modules/pulsar-harvester-md.webp','/tower-assets/modules/multiverse-nexus-md.webp',
   ]);
-  expect(result.expansion.map(image=>image.complete)).toEqual(Array(6).fill(true));
+  expect(result.expansion.map(image=>image.complete)).toEqual(Array(7).fill(true));
   expect(result.expansion.map(image=>image.width).every(width=>width>0)).toBe(true);
   expect(result.expansion.map(image=>image.src)).toEqual([
     '/tower-assets/cards/extra-orb-md.webp','/tower-assets/cards/aoe-md.webp',
     '/tower-assets/icons/golden-bot-md.webp','/tower-assets/icons/amplify-bot-md.webp',
     '/tower-assets/icons/flame-bot-md.webp','/tower-assets/icons/thunder-bot-md.webp',
+    '/tower-assets/cards/critical-coin-md.webp',
   ]);
-  expect(result.nativeExpansion.extraPowerTimes).toEqual(Array(6).fill(20));
+  expect(result.nativeExpansion.extraPowerTimes).toEqual(Array(7).fill(20));
   expect(result.nativeExpansion.extraOrbs).toHaveLength(3);
   expect(result.nativeExpansion.bots.map(bot=>bot[0])).toEqual([18,19,20,21]);
   expect(result.demonWing.complete).toBe(true);expect(result.demonWing.width).toBeGreaterThan(0);expect(result.demonWing.height).toBeGreaterThan(0);
   expect(result.pixelColors).toBeGreaterThan(20);expect(pageErrors).toEqual([]);
+});
+
+
+test('auto aim priorities persist and manual fire remains available',async({page})=>{
+ await page.goto('/?seed=42');await expect(page.locator('#start')).toBeEnabled();
+ await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: Off');
+ await page.locator('#auto-aim-toggle').click();await expect(page.locator('#auto-aim-toggle')).toHaveAttribute('aria-pressed','true');
+ await page.locator('#start').click();await page.locator('#aim-priorities').click();
+ await expect(page.getByRole('heading',{name:'Aim Priorities',exact:true})).toBeVisible();
+ await expect(page.locator('.priority-list li')).toHaveCount(8);
+ await page.getByRole('button',{name:'Move Powerups Up',exact:true}).click();
+ await page.locator('[data-rule="weakest"]').click();
+ const before=await readControlState(page);expect(before.aimPreferences.rules[3].id).toBe('pickups');
+ await page.screenshot({path:'test-results/aim-priorities-desktop.png'});
+ await page.keyboard.press('Escape');await expect(page.locator('#modal')).not.toBeVisible();
+ await page.locator('#arena').hover();await page.mouse.down();expect((await readControlState(page)).firing).toBe(true);await page.mouse.up();
+ await page.locator('#pause').click();await page.reload();await page.locator('#aim-priorities').click();
+ const after=await readControlState(page);expect(after.aimPreferences).toEqual(before.aimPreferences);
+ await page.locator('#close-priorities').click();await page.locator('#restore-run').click();await page.locator('#resume').click();
+ await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: On');
+});
+
+test('mobile auto aim and new workshop row fit; perk choice survives reload',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});const page=await context.newPage();
+ await page.goto('/?seed=73');await expect(page.locator('#start')).toBeEnabled();
+ await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: On');
+ await page.locator('#aim-priorities').click();await page.locator('[data-rule="strongest"]').scrollIntoViewIfNeeded();
+ await expect(page.locator('#close-priorities')).toBeInViewport();await page.screenshot({path:'test-results/aim-priorities-mobile.png'});await page.locator('#close-priorities').click();
+ const saved=await page.evaluate(async()=>{
+  const {default:init,Game}=await import('/src/wasm/towerium.js');await init();const config=JSON.stringify(await(await fetch('/engine/balance.json')).json());
+  const g=new Game(73,config);g.start_wave();const data=JSON.parse(g.save());g.free();
+  // Valid cleared-wave state: report rendering and save validation remain real engine paths.
+  Object.assign(data.world,{phase:2,wave:5,ticks:1800,wave_ticks:1800,time:30,total:0,remaining:0,spawned:0,coins:10000});
+  data.world.enemies=[];data.world.shots=[];data.world.hostile=[];data.world.overcharge=[];data.world.deathwaves=[];data.world.deathwave_hits=[];
+  data.world.perks.offers=[0,10,4];const valid=Game.restore(config,JSON.stringify(data));const state=valid.save();valid.free();return {seed:73,config,state};
+ });
+ await stageRunOnNextNavigation(page,saved,'perks-mobile-new');await page.reload();await page.locator('#restore-run').click();
+ await expect(page.locator('[data-perk]')).toHaveCount(3);await expect(page.locator('#next-wave')).toBeDisabled();
+ await page.screenshot({path:'test-results/perks-mobile-before.png'});
+ await page.locator('#open-shop').click();await expect(page.locator('[data-upgrade]')).toHaveCount(35);
+ await page.locator('[data-upgrade="30"]').click();await page.locator('[data-upgrade="32"]').click();
+ await expect(page.locator('[data-upgrade="30"]')).toContainText('11%');
+ await page.screenshot({path:'test-results/auto-upgrades-mobile.png'});
+ await page.locator('#wave-report').click();await page.locator('[data-perk="0"]').click();await expect(page.locator('#next-wave')).toBeEnabled();
+ await page.screenshot({path:'test-results/perks-mobile-after.png'});await page.reload();await page.locator('#restore-run').click();
+ await expect(page.locator('[data-perk]')).toHaveCount(0);await expect(page.locator('.perk-picked')).toContainText('Sharp Shots');await expect(page.locator('#next-wave')).toBeEnabled();
+ await context.close();
+});
+
+
+test('Auto Buy is manual when unchecked, holds accelerate, priorities persist and countdown can be cancelled',async({page})=>{
+ await page.goto('/?seed=81');await expect(page.locator('#start')).toBeEnabled();
+ const saved=await makeClearedWaveSave(page,81);
+ const funded=await page.evaluate(async saved=>{
+  const {Game}=await import('/src/wasm/towerium.js');const data=JSON.parse(saved.state);data.world.coins=10000;
+  const g=Game.restore(saved.config,JSON.stringify(data));const state=g.save();g.free();return {...saved,state};
+ },saved);
+ await stageRunOnNextNavigation(page,funded,'automation-fixture');await page.reload();await page.locator('#restore-run').click();
+ await expect(page.locator('#auto-buy-enabled')).not.toBeChecked();
+ await page.locator('#open-shop').click();const initial=await readSnapshot(page);
+ const stat=page.locator('[data-upgrade="0"]');await stat.hover();await page.mouse.down();await page.waitForTimeout(1300);await page.mouse.up();
+ const heldLevels=(await readSnapshot(page)).levels[0];await stat.focus();await stat.press('Enter');
+ expect((await readSnapshot(page)).levels[0]).toBe(heldLevels+1);expect(heldLevels).toBeGreaterThan(initial.levels[0]+1);
+ await page.locator('#buy-priorities').click();await expect(page.locator('[data-auto-limit]')).toHaveCount(35);
+ await page.locator('[data-auto-limit="0"]').fill('2');await page.locator('[data-auto-limit="0"]').dispatchEvent('change');
+ await page.locator('#automation-perk-tab').click();await expect(page.locator('[data-auto-rule]')).toHaveCount(15);
+ await page.locator('#automation-done').click();await expect(page.locator('#modal')).not.toHaveClass(/automation-modal/);
+ await page.locator('#buy-now').click();const purchased=await readSnapshot(page);expect(purchased.coins).toBeLessThan(initial.coins);
+ await page.waitForTimeout(5500);expect((await readSnapshot(page)).phase).toBe(2);
+ await page.locator('#auto-buy-enabled').check();await expect(page.locator('#next-wave')).toContainText('s');
+ await page.waitForTimeout(1500);await page.locator('#auto-buy-enabled').uncheck();await page.waitForTimeout(4500);expect((await readSnapshot(page)).phase).toBe(2);
+ await page.reload();await page.locator('#restore-run').click();await page.locator('#buy-priorities').click();await expect(page.locator('[data-auto-limit="0"]')).toHaveValue('2');
+ await page.locator('#automation-done').click();await page.locator('#auto-buy-enabled').check();
+ await expect.poll(async()=> (await readSnapshot(page)).phase,{timeout:7000}).toBe(1);
+});
+
+
+test('background pixels retain original artwork color outside gameplay overlays',async({page})=>{
+ await page.goto('/');await expect(page.locator('#start')).toBeEnabled();
+ const result=await page.evaluate(async()=>{
+  const {backgroundUrls}=await import('/src/assets.ts'),source=new Image();source.src=backgroundUrls[0];await source.decode();
+  const actual=document.querySelector('#arena'),expected=document.createElement('canvas');expected.width=actual.width;expected.height=actual.height;
+  const c=expected.getContext('2d'),scale=Math.max(expected.width/source.width,expected.height/source.height);c.drawImage(source,(expected.width-source.width*scale)/2,(expected.height-source.height*scale)/2,source.width*scale,source.height*scale);
+  const observed=actual.getContext('2d'),samples=[];
+  for(const [x,y] of [[.08,.08],[.92,.08],[.08,.92],[.92,.92]]){const px=Math.floor(x*actual.width),py=Math.floor(y*actual.height);samples.push([...observed.getImageData(px,py,1,1).data].slice(0,3).map((v,i)=>Math.abs(v-c.getImageData(px,py,1,1).data[i])));}
+  return samples;
+ });expect(Math.max(...result.flat())).toBeLessThanOrEqual(2);
+});
+
+
+test('normal Auto Aim fires independently while manual shots keep their own weapon and aim',async({page})=>{
+  await page.clock.install();await page.goto('/?seed=73');
+  await expect(page.locator('#start')).toBeEnabled();
+  const saved=await page.evaluate(async()=>{
+    const {default:init,Game}=await import('/src/wasm/towerium.js');await init();
+    const config=JSON.stringify(await(await fetch('/engine/balance.json')).json());
+    const g=Game.autoplay_start(73,config,1);
+    for(let i=0;i<40;i++)if(!g.buy(30))throw new Error('Opening efficiency budget rejected');
+    g.start_wave();const state=g.save();g.free();return {seed:73,config,state};
+  });
+  await stageRunOnNextNavigation(page,saved,'concurrent-auto-cannon');await page.reload();
+  await page.locator('#restore-run').click();await page.locator('#resume').click();
+  await page.locator('#auto-aim-toggle').click();
+  await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: On');
+  await page.clock.runFor(6000);const before=await readSnapshot(page);
+  expect(before.overall_report.shots_fired).toBeGreaterThan(0);expect(before.manual_shots_fired).toBe(0);
+  const box=await page.locator('#arena').boundingBox();
+  await page.mouse.move(box.x+box.width*.85,box.y+box.height*.85);await page.mouse.down();
+  await page.clock.runFor(6000);const after=await readSnapshot(page);
+  expect(after.manual_shots_fired).toBeGreaterThan(0);
+  expect(after.overall_report.shots_fired-after.manual_shots_fired).toBeGreaterThan(before.overall_report.shots_fired);
+  const controls=await readControlState(page);expect(controls.weapon).toBe(0);
+  expect(Math.hypot(controls.autoAim[0]-controls.aim[0],controls.autoAim[1]-controls.aim[1])).toBeGreaterThan(20);await page.mouse.up();
+  await page.locator('#pause').click();const paused=await readSnapshot(page);await page.clock.runFor(1000);
+  expect((await readSnapshot(page)).overall_report.shots_fired).toBe(paused.overall_report.shots_fired);
 });

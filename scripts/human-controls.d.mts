@@ -2,5 +2,5 @@ export interface HumanOptions { reactionMs?:number; aimSpeed?:number; switchMs?:
 export const humanDefaults:Readonly<{mouse:Readonly<{reactionMs:number;aimSpeed:number;switchMs:number}>;touch:Readonly<{reactionMs:number;aimSpeed:number;switchMs:number}>}>;
 export class HumanController {
   constructor(options?:HumanOptions);
-  step(state:any,dt:number,decide:(state:any,context:any)=>any):{aim:[number,number];weapon:number;fire:boolean;deathWave:boolean;target:string};
+  step(state:any,dt:number,decide:(state:any,context:any)=>any,enabled?:boolean):{aim:[number,number];weapon:number;fire:boolean;deathWave:boolean;target:string};
 }

@@ -1,4 +1,4 @@
-use crate::power_expansion::{default_bots, BotState, AOE, EXTRA_ORBS, GOLD_BOT};
+use crate::power_expansion::{default_bots, BotState, AOE, CRITICAL_COIN, EXTRA_ORBS, GOLD_BOT};
 use crate::power_shop::POWER_COUNT;
 use crate::{
     config::{Config, EnemyDef, WaveMilestone, UPGRADE_COUNT},
@@ -9,21 +9,40 @@ fn deserialize_power_levels<'de, D: serde::Deserializer<'de>>(
     d: D,
 ) -> Result<[[u32; 2]; POWER_COUNT], D::Error> {
     let v = Vec::<[u32; 2]>::deserialize(d)?;
-    if v.len() != 16 && v.len() != POWER_COUNT {
+    if v.len() != 16 && v.len() != 22 && v.len() != POWER_COUNT {
         return Err(serde::de::Error::custom("Invalid power level count"));
     }
     let mut out = [[0; 2]; POWER_COUNT];
     out[..v.len()].copy_from_slice(&v);
     Ok(out)
 }
+fn deserialize_extra_power_times<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<[f32; 7], D::Error> {
+    let values = Vec::<f32>::deserialize(d)?;
+    if values.len() != 6 && values.len() != 7 {
+        return Err(serde::de::Error::custom(
+            "Invalid expanded power timer count",
+        ));
+    }
+    let mut timers = [0.0; 7];
+    timers[..values.len()].copy_from_slice(&values);
+    Ok(timers)
+}
 use std::f32::consts::{PI, TAU};
 
 pub const DT: f32 = 1.0 / 60.0;
+fn serialize_levels<S: serde::Serializer>(
+    levels: &[u32; UPGRADE_COUNT],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    levels.as_slice().serialize(serializer)
+}
 fn deserialize_levels<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<[u32; UPGRADE_COUNT], D::Error> {
     let values = Vec::<u32>::deserialize(deserializer)?;
-    if values.len() != 25 && values.len() != UPGRADE_COUNT {
+    if values.len() != 25 && values.len() != 30 && values.len() != UPGRADE_COUNT {
         return Err(serde::de::Error::custom("Invalid workshop level count"));
     }
     let mut levels = [0; UPGRADE_COUNT];
@@ -129,6 +148,16 @@ impl Enemy {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Shot {
+    #[serde(default = "default_manual")]
+    pub manual: bool,
+    #[serde(default)]
+    pub bounce_active: bool,
+    #[serde(default)]
+    pub bounce_distance: f32,
+    #[serde(default)]
+    pub launch_aim: Option<V>,
+    #[serde(default = "full_mobility")]
+    pub efficiency: f32,
     pub id: u32,
     pub kind: u8,
     pub p: V,
@@ -242,9 +271,16 @@ impl CombatStats {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct World {
+    #[serde(skip)]
+    pub auto_firing: bool,
+    #[serde(default)]
+    pub aim_assisted: bool,
+    #[serde(default)]
+    pub perks: crate::perks::Perks,
     #[serde(skip, default = "save_config")]
     pub c: Config,
     pub rng: Rng,
+    pub perk_rng: Rng,
     #[serde(default)]
     pub dp_seed: u32,
     #[serde(default)]
@@ -290,8 +326,8 @@ pub struct World {
     pub stones_earned: u32,
     #[serde(default, deserialize_with = "deserialize_power_levels")]
     pub power_levels: [[u32; 2]; POWER_COUNT],
-    #[serde(default)]
-    pub extra_power_times: [f32; 6],
+    #[serde(default, deserialize_with = "deserialize_extra_power_times")]
+    pub extra_power_times: [f32; 7],
     #[serde(default = "default_bots")]
     pub bots: [BotState; 4],
     #[serde(default)]
@@ -303,7 +339,10 @@ pub struct World {
     pub golden_kills: u32,
     pub ammo: [u32; 4],
     pub weapon: u8,
-    #[serde(deserialize_with = "deserialize_levels")]
+    #[serde(
+        deserialize_with = "deserialize_levels",
+        serialize_with = "serialize_levels"
+    )]
     pub levels: [u32; UPGRADE_COUNT],
     pub powers: [f32; 7],
     #[serde(default)]
@@ -347,6 +386,24 @@ pub struct World {
     pub spawn_timer: f32,
     spawn_sectors: [u8; 8],
     pub fire_timer: f32,
+    #[serde(default)]
+    pub auto_aim: V,
+    #[serde(default)]
+    pub auto_cannon_firing: bool,
+    #[serde(default)]
+    pub auto_weapon: u8,
+    #[serde(default)]
+    pub auto_fire_timer: f32,
+    #[serde(default)]
+    pub auto_rapid: f32,
+    #[serde(default)]
+    pub manual_shots_fired: u32,
+    #[serde(default)]
+    pub manual_ammo_spent: [u32; 4],
+    #[serde(default)]
+    pub precision_hit_credit: u8,
+    #[serde(default)]
+    pub precision_grant_cycle: u8,
     pub rapid: f32,
     pub shock_timer: f32,
     pub orb_angle: f32,
@@ -373,6 +430,9 @@ pub struct World {
 fn save_config() -> Config {
     Config::parse(include_str!("../balance.json")).expect("validated bundled config")
 }
+fn default_manual() -> bool {
+    true
+}
 fn default_pressure() -> WaveMilestone {
     save_config().waves.pressure(1)
 }
@@ -386,7 +446,7 @@ struct RunSave {
 
 impl World {
     pub fn save(&self) -> String {
-        serde_json::json!({"version": 1, "world": self}).to_string()
+        serde_json::json!({"version": 2, "world": self}).to_string()
     }
     pub fn restore(c: Config, data: &str) -> Result<Self, String> {
         if data.len() > 5_000_000 {
@@ -402,13 +462,45 @@ impl World {
                 _ => true,
             }
         }
-        let value: serde_json::Value =
+        let mut value: serde_json::Value =
             serde_json::from_str(data).map_err(|_| "Invalid saved run")?;
         if !bounded(&value) {
             return Err("Saved run exceeds state bounds".into());
         }
+        match value["version"].as_u64() {
+            Some(1) => {
+                if let Some(world) = value["world"].as_object_mut() {
+                    if !world.contains_key("perk_rng") {
+                        // Legacy saves retain combat RNG and existing offers; only future offers migrate.
+                        let seed =
+                            world.get("dp_seed").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                        let picks = world
+                            .get("perks")
+                            .and_then(|p| p.get("picks"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0) as u32;
+                        let pending = world
+                            .get("perks")
+                            .and_then(|p| p.get("offers"))
+                            .and_then(|v| v.as_array())
+                            .map_or(0, |v| v.len() as u32);
+                        let stream = Rng::seeded(
+                            seed ^ picks.wrapping_mul(0x9e3779b9) ^ pending,
+                            0x63d83595,
+                        );
+                        world.insert("perk_rng".into(), serde_json::json!(stream));
+                    }
+                }
+            }
+            Some(2) => {}
+            _ => return Err("Invalid saved run state".into()),
+        }
+        let legacy_perks = value["world"].get("perks").is_none();
         let saved: RunSave = serde_json::from_value(value).map_err(|_| "Invalid saved run")?;
         let mut w = saved.world;
+        if legacy_perks {
+            w.perks.origin = w.wave;
+        }
         if !w.hp_scaled {
             let bonus = (w.wave / c.waves.hp_hits_every) as f32 * c.weapons[0].damage;
             for enemy in &mut w.enemies {
@@ -418,12 +510,13 @@ impl World {
             }
             w.hp_scaled = true;
         }
-        if saved.version != 1
+        if !matches!(saved.version, 1 | 2)
             || !w.valid_save_header(&c)
             || !w.valid_save_entities(&c)
             || !w.valid_save_effects()
             || !w.valid_save_counters()
             || !w.valid_expansion_state()
+            || !w.perks.valid(w.wave, w.phase)
             || !w.valid_power_budget(&c)
         {
             return Err("Invalid saved run state".into());
@@ -476,7 +569,9 @@ impl World {
                     || e.charge < 0.0
                     || (e.child && e.kind != SCATTER)
             })
-            || w.shots.iter().any(|s| s.life <= 0.0)
+            || w.shots
+                .iter()
+                .any(|s| s.life <= 0.0 || !(0.1..=1.10001).contains(&s.efficiency))
             || w.drops
                 .iter()
                 .any(|d| d.life <= 0.0 || d.kind >= POWER_COUNT)
@@ -494,16 +589,17 @@ impl World {
         w.c = c;
         // Slot three belonged to the removed Om Chip; Nexus grants power time directly.
         w.module_times[3] = 0.0;
+        let stack_cap = w.power_stack_cap();
         for timer in w
             .powers
             .iter_mut()
             .chain(w.module_times.iter_mut())
             .chain(w.extra_power_times.iter_mut())
         {
-            *timer = timer.min(w.c.powers.timer_cap);
+            *timer = timer.min(stack_cap);
         }
-        w.fallout_time = w.fallout_time.min(w.c.powers.timer_cap);
-        w.demon_time = w.demon_time.min(w.c.powers.timer_cap);
+        w.fallout_time = w.fallout_time.min(stack_cap);
+        w.demon_time = w.demon_time.min(stack_cap);
         w.demon_invincible = w.demon_invincible.min(w.c.powers.timer_cap);
         w.paused = true;
         w.firing = false;
@@ -527,7 +623,11 @@ impl World {
     /// Retry counts and player unlocks belong to the persistent human profile.
     pub fn retry_checkpoint(c: Config, data: &str) -> Result<Self, String> {
         let mut w = Self::restore(c, data)?;
-        if w.phase != 2 || !w.wave.is_multiple_of(10) || w.pending_start_wave != 0 {
+        if w.phase != 2
+            || !w.wave.is_multiple_of(10)
+            || w.pending_start_wave != 0
+            || !w.perks.offers.is_empty()
+        {
             return Err("Retry requires a completed tenth-wave checkpoint".into());
         }
         w.wave -= 1;
@@ -555,6 +655,7 @@ impl World {
         w.phase = 2;
         w.wave = wave;
         w.pending_start_wave = wave;
+        w.perks.origin = wave.saturating_sub(1);
         w.coins = budget;
         w.stones = crate::balance::reference_stones(&w.c, wave - 1);
         w.stones_earned = w.stones;
@@ -565,10 +666,28 @@ impl World {
         !(!matches!(self.phase, 1 | 2)
             || self.wave == 0
             || self.weapon > 3
+            || self.auto_weapon > 3
+            || !self.auto_aim.x.is_finite()
+            || !self.auto_aim.y.is_finite()
+            || self.auto_aim.x.abs() > Self::maximum_aim_extent(c)
+            || self.auto_aim.y.abs() > Self::maximum_aim_extent(c)
+            || !self.auto_fire_timer.is_finite()
+            || !(-DT..=100.0).contains(&self.auto_fire_timer)
+            || !self.auto_rapid.is_finite()
+            || !(0.0..=100.0).contains(&self.auto_rapid)
+            || self.precision_hit_credit >= c.precision_ammo.hits
+            || self.precision_grant_cycle >= c.precision_ammo.hook_every
+            || self.manual_shots_fired > self.overall_stats.shots_fired
+            || self
+                .manual_ammo_spent
+                .iter()
+                .zip(self.weapon_stats)
+                .any(|(a, s)| *a > s.ammo_spent)
             || self.charges > 3
             || self.ray_cycle < 0.0
             || self.ray_cycle >= c.powers.deathray_duration + c.powers.deathray_cooldown
             || self.rng.0 == 0
+            || self.perk_rng.0 == 0
             || (self.pending_start_wave != 0 && !self.valid_milestone_shop())
             || self.ammo.iter().enumerate().any(|(i, a)| {
                 i > 0
@@ -596,6 +715,25 @@ impl World {
                 || e.mobility > 1.0
         }) || self.shots.iter().any(|s| {
             s.kind > CHILD
+                || !s.bounce_distance.is_finite()
+                || s.bounce_distance < 0.0
+                || s.bounce_distance
+                    > (c.upgrades[7].base + c.upgrades[7].step * c.upgrades[7].cap as f32) * 1.1
+                        + 1.0
+                || s.launch_aim.is_some_and(|p| {
+                    !p.x.is_finite()
+                        || !p.y.is_finite()
+                        || p.x.abs() > Self::maximum_aim_extent(c)
+                        || p.y.abs() > Self::maximum_aim_extent(c)
+                })
+                || (s.bounce_active && s.kind != PROJECTILE)
+                || s.bounces
+                    > (self.perks.stat(
+                        8,
+                        c.upgrades[8].base + c.upgrades[8].step * c.upgrades[8].cap as f32,
+                    ) * 1.1)
+                        .ceil() as u32
+                || (s.bounces == 0 && s.bounce_distance != 0.0)
                 || s.id >= self.next_id
                 || s.target
                     .is_some_and(|id| id == 0 || id >= self.next_id || s.kind != BOMB)
@@ -630,13 +768,11 @@ impl World {
         let wave_pressure = c.waves.pressure(1);
         Self {
             c,
-            rng: Rng({
-                // Avalanche small seeds before the first spawn gate; restored RNG state stays exact.
-                let mut mixed = seed ^ 0x9e3779b9;
-                mixed = (mixed ^ (mixed >> 16)).wrapping_mul(0x7feb352d);
-                mixed = (mixed ^ (mixed >> 15)).wrapping_mul(0x846ca68b);
-                (mixed ^ (mixed >> 16)).max(1)
-            }),
+            rng: Rng::seeded(seed, 0x9e3779b9),
+            perk_rng: Rng::seeded(seed, 0xa511e9b3),
+            auto_firing: false,
+            aim_assisted: false,
+            perks: crate::perks::Perks::default(),
             phase: 0,
             paused: false,
             wave: 0,
@@ -659,7 +795,7 @@ impl World {
             stones: 0,
             stones_earned: 0,
             power_levels: [[0; 2]; POWER_COUNT],
-            extra_power_times: [0.0; 6],
+            extra_power_times: [0.0; 7],
             bots: default_bots(),
             extra_orb_angle: 0.0,
             gold_stone_credit: 0.0,
@@ -710,6 +846,15 @@ impl World {
             spawn_timer: 0.0,
             spawn_sectors: [0; 8],
             fire_timer: 0.0,
+            auto_aim: V::ZERO,
+            auto_cannon_firing: false,
+            auto_weapon: PROJECTILE,
+            auto_fire_timer: 0.0,
+            auto_rapid: 0.0,
+            manual_shots_fired: 0,
+            manual_ammo_spent: [0; 4],
+            precision_hit_credit: 0,
+            precision_grant_cycle: 0,
             rapid: 0.0,
             shock_timer,
             orb_angle: 0.0,
@@ -734,11 +879,14 @@ impl World {
     }
     pub fn stat(&self, i: usize) -> f32 {
         let u = &self.c.upgrades[i];
-        if self.disabled_stat == i as i32 && self.sabotage_time > 0.0 {
-            u.base
-        } else {
-            u.base + u.step * self.levels[i] as f32
-        }
+        self.perks.stat(
+            i,
+            if self.disabled_stat == i as i32 && self.sabotage_time > 0.0 {
+                u.base
+            } else {
+                u.base + u.step * self.levels[i] as f32
+            },
+        )
     }
     pub fn power_drop_scale(&self) -> f32 {
         let wave = if self.pending_start_wave > 0 {
@@ -776,7 +924,7 @@ impl World {
         };
     }
     pub fn start_wave(&mut self) -> bool {
-        if self.phase != 0 && self.phase != 2 {
+        if (self.phase != 0 && self.phase != 2) || !self.perks.offers.is_empty() {
             return false;
         }
         self.wave = if self.pending_start_wave > 0 {
@@ -788,6 +936,9 @@ impl World {
         self.paused = false;
         self.accumulator = 0.0;
         self.firing = false;
+        self.auto_cannon_firing = false;
+        self.auto_fire_timer = 0.0;
+        self.auto_rapid = 0.0;
         self.wave_pressure = self.c.waves.pressure(self.wave);
         self.special_queue.clear();
         self.special_spawned = 0;
@@ -812,7 +963,8 @@ impl World {
         {
             self.special_queue.push(4);
         }
-        self.total = self.wave_pressure.count.ceil() as u32
+        self.total = (self.wave_pressure.count * (1.0 + 0.1 * self.perks.levels[9] as f32)).ceil()
+            as u32
             + self.special_queue.len() as u32
             + if self.wave.is_multiple_of(self.c.waves.boss_every) {
                 self.wave_pressure.bosses.round() as u32
@@ -891,7 +1043,30 @@ impl World {
             self.accumulator = 0.0;
         }
     }
+    pub fn assisted_input(&mut self, x: f32, y: f32, fire: bool, weapon: u8) {
+        self.auto_cannon_firing = false;
+        let allowed = weapon <= 3 && weapon as u32 <= self.stat(32) as u32;
+        self.input(x, y, fire && allowed, weapon);
+        self.auto_firing = self.firing;
+        if self.auto_firing {
+            self.aim_assisted = true;
+        }
+    }
+    pub fn set_auto_input(&mut self, x: f32, y: f32, fire: bool, weapon: u8) {
+        let extent = self.view_extent();
+        if !x.is_finite() || !y.is_finite() || x.abs() > extent || y.abs() > extent || weapon > 3 {
+            self.auto_cannon_firing = false;
+            return;
+        }
+        self.auto_aim = V::new(x, y);
+        self.auto_weapon = weapon;
+        self.auto_cannon_firing = fire;
+        if fire {
+            self.aim_assisted = true;
+        }
+    }
     pub fn input(&mut self, x: f32, y: f32, fire: bool, weapon: u8) {
+        self.auto_firing = false;
         if x.is_finite() && y.is_finite() {
             let extent = self.view_extent();
             self.aim = V::new(x.clamp(-extent, extent), y.clamp(-extent, extent));
@@ -906,7 +1081,7 @@ impl World {
         }
         if k < 7 {
             self.powers[k] = (self.powers[k] + self.c.powers.durations[k] + self.stat(20))
-                .min(self.c.powers.timer_cap);
+                .min(self.power_stack_cap());
         } else if k == RECOVERY {
             self.hp = (self.hp + self.stat(11) * self.power_effect(7))
                 .min(self.stat(11) * (1.0 + self.stat(24)));
@@ -917,7 +1092,7 @@ impl World {
         } else if k == NUKE {
             self.fallout_time =
                 (self.fallout_time + self.c.powers.fallout_duration + self.stat(20))
-                    .min(self.c.powers.timer_cap);
+                    .min(self.power_stack_cap());
             for i in 0..self.enemies.len() {
                 if matches!(self.enemies[i].kind, 0 | 1 | 3) && self.enemies[i].hp > 0.0 {
                     self.hit(i, self.enemies[i].hp, NUKE_DAMAGE);
@@ -926,7 +1101,7 @@ impl World {
             self.fx.push(Fx(10, 0.0, 0.0, 550.0, 0.0, 0.7));
         } else if k == DEMON {
             self.demon_time = (self.demon_time + self.c.powers.demon_duration + self.stat(20))
-                .min(self.c.powers.timer_cap);
+                .min(self.power_stack_cap());
             self.demon_invincible = (self.demon_invincible
                 + self.c.powers.demon_invincible_duration)
                 .min(self.c.powers.timer_cap);
@@ -934,13 +1109,13 @@ impl World {
             for power in [BLACKHOLE, SPOTLIGHT, GOLDEN] {
                 self.powers[power] = (self.powers[power]
                     + (self.c.powers.durations[power] + self.stat(20)) * self.power_effect(NEXUS))
-                .min(self.c.powers.timer_cap);
+                .min(self.power_stack_cap());
             }
         } else if (12..15).contains(&k) {
             let module = k - 12;
             self.module_times[module] =
                 (self.module_times[module] + self.c.modules.durations[module] + self.stat(20))
-                    .min(self.c.powers.timer_cap);
+                    .min(self.power_stack_cap());
         }
         if (EXTRA_ORBS..POWER_COUNT).contains(&k) {
             let duration = if k == AOE {
@@ -950,11 +1125,11 @@ impl World {
             };
             self.extra_power_times[k - EXTRA_ORBS] =
                 (self.extra_power_times[k - EXTRA_ORBS] + duration + self.stat(20))
-                    .min(self.c.powers.timer_cap);
+                    .min(self.power_stack_cap());
         }
         if k < POWER_COUNT {
             self.say(if k == DEATHWAVE {
-                format!("Death Wave banked · {}/3 · press Q", self.charges)
+                format!("Death Wave banked Â· {}/3 Â· press Q", self.charges)
             } else {
                 format!("{} active", self.c.power_workshop.upgrades[k].name)
             });
@@ -1127,6 +1302,8 @@ impl World {
             self.sabotage_time = 0.0;
         }
         self.fire_timer -= DT;
+        self.auto_fire_timer = (self.auto_fire_timer - DT).max(-DT);
+        self.auto_rapid = (self.auto_rapid - DT).max(0.0);
         self.shock_timer -= DT;
         if self.hp < self.stat(11) {
             self.hp = (self.hp + self.stat(12) * DT).min(self.stat(11));
@@ -1162,6 +1339,33 @@ impl World {
         if self.firing && self.fire_timer <= 0.0 {
             self.fire();
         }
+        if self.auto_cannon_firing
+            && self.auto_weapon as u32 <= self.stat(32) as u32
+            && self.auto_fire_timer <= 0.0
+        {
+            let manual = (
+                self.aim,
+                self.weapon,
+                self.auto_firing,
+                self.fire_timer,
+                self.rapid,
+            );
+            self.aim = self.auto_aim;
+            self.weapon = self.auto_weapon;
+            self.auto_firing = true;
+            self.fire_timer = self.auto_fire_timer;
+            self.rapid = self.auto_rapid;
+            self.fire();
+            self.auto_fire_timer = self.fire_timer;
+            self.auto_rapid = self.rapid;
+            (
+                self.aim,
+                self.weapon,
+                self.auto_firing,
+                self.fire_timer,
+                self.rapid,
+            ) = manual;
+        }
         self.move_shots();
         self.defenses();
         self.enemy_bullets();
@@ -1175,6 +1379,7 @@ impl World {
             self.hp = 0.0;
             self.phase = 3;
             self.firing = false;
+            self.auto_cannon_firing = false;
             self.say("Tower lost");
         } else if self.remaining == 0
             && self.enemies.is_empty()
@@ -1182,11 +1387,16 @@ impl World {
             && self.wave_ticks as f32 >= self.c.waves.spawn_seconds * 60.0
         {
             self.phase = 2;
+            self.perks.offer(self.wave, &mut self.perk_rng);
             self.firing = false;
+            self.auto_cannon_firing = false;
             self.shots.clear();
             self.deathwaves.clear();
             self.deathwave_hits.clear();
-            self.say(format!("Wave {} cleared · choose your upgrades", self.wave));
+            self.say(format!(
+                "Wave {} cleared Â· choose your upgrades",
+                self.wave
+            ));
         }
     }
     fn blackhole_center(&self, index: usize) -> V {
@@ -1211,6 +1421,11 @@ impl World {
         // Temporary fields may extend offscreen; they must not shrink the combat view.
         650.0_f32.max(self.stat(1) + 60.0)
     }
+    fn maximum_aim_extent(c: &Config) -> f32 {
+        // Range perks and sabotage only reduce range. A saved launch aim may
+        // predate either reduction, so use the supplied configuration's cap.
+        650.0_f32.max(c.upgrades[1].base + c.upgrades[1].step * c.upgrades[1].cap as f32 + 60.0)
+    }
     fn boundary_attacker(kind: usize) -> bool {
         matches!(kind, 3 | VAMPIRE | RAY | SABOTEUR | OVERCHARGE)
     }
@@ -1227,8 +1442,8 @@ impl World {
         } else {
             Vec::new()
         };
-        let speed = self.c.waves.speed_multiplier(self.wave);
-        let mass = self.c.waves.mass_multiplier(self.wave);
+        let speed = self.c.waves.speed_multiplier(self.wave) * self.perks.speed();
+        let mass = self.c.waves.mass_multiplier(self.wave) * self.perks.mass();
         let range = self.stat(1);
         let chrono_radius = self.chrono_radius();
         let blackhole_radius = self.area_radius(self.power_effect(3));
@@ -1574,7 +1789,7 @@ impl World {
     }
     fn shockwave(&mut self) {
         let size = self.area_radius(self.stat(17));
-        let mass = self.c.waves.mass_multiplier(self.wave);
+        let mass = self.c.waves.mass_multiplier(self.wave) * self.perks.mass();
         for e in &mut self.enemies {
             if e.hp > 0.0 && e.p.len() <= size {
                 e.p = e.p.add(e.p.unit().mul(
@@ -1587,6 +1802,15 @@ impl World {
     }
     fn new_shot(&mut self, kind: u8, p: V, angle: f32) -> Shot {
         Shot {
+            manual: !self.auto_firing,
+            bounce_active: false,
+            bounce_distance: 0.0,
+            launch_aim: Some(self.aim),
+            efficiency: if kind == PROJECTILE {
+                self.shot_efficiency()
+            } else {
+                1.0
+            },
             id: self.id(),
             kind,
             p,
@@ -1598,8 +1822,27 @@ impl World {
             counted_shot: false,
         }
     }
+    fn shot_efficiency(&self) -> f32 {
+        if self.auto_firing && self.weapon <= LIGHT {
+            self.stat(30)
+        } else {
+            1.0
+        }
+    }
+    fn firing_stat(&self, i: usize, efficiency: f32) -> f32 {
+        let scaled = self.stat(i) * efficiency;
+        match i {
+            3 => 1.0 + ((self.stat(i) - 1.0) * efficiency).floor(),
+            8 => scaled.ceil(),
+            2 | 4 | 6 | 9 => scaled.min(1.0),
+            _ => scaled,
+        }
+    }
+    pub fn power_stack_cap(&self) -> f32 {
+        self.stat(34)
+    }
     fn can_engage(&self, angle: f32) -> bool {
-        let range = self.stat(1);
+        let range = self.firing_stat(1, self.shot_efficiency());
         self.aim.len() <= range
             || self.enemies.iter().any(|e| {
                 e.hp > 0.0
@@ -1613,6 +1856,7 @@ impl World {
     }
     fn fire(&mut self) {
         let kind = self.weapon;
+        let efficiency = self.shot_efficiency();
         if self.disabled_weapon == kind as i32 && self.sabotage_time > 0.0 {
             self.fire_timer = 0.15;
             return;
@@ -1632,36 +1876,47 @@ impl World {
         }
         if kind > 0 && self.ammo[kind as usize] == 0 {
             self.fire_timer = 0.3;
-            self.say("Ammo empty · select Projectiles [1]");
+            self.say("Ammo empty Â· select Projectiles [1]");
             return;
         }
         if kind > 0 {
             self.ammo[kind as usize] -= 1;
             self.weapon_stats[kind as usize].ammo_spent += 1;
+            if !self.auto_firing {
+                self.manual_ammo_spent[kind as usize] =
+                    self.manual_ammo_spent[kind as usize].saturating_add(1);
+            }
         }
         let spec = self.c.weapons[kind as usize];
         let standard_upgrades = kind == PROJECTILE || kind == LIGHT;
-        if standard_upgrades && self.rapid <= 0.0 && self.proc(RAPID_PROC, self.stat(4)) {
-            self.rapid = self.stat(5);
+        if standard_upgrades
+            && self.rapid <= 0.0
+            && self.proc(RAPID_PROC, self.firing_stat(4, efficiency))
+        {
+            self.rapid = self.firing_stat(5, efficiency);
         }
         self.fire_timer = if kind == MISSILE {
-            spec.interval
+            1.0 / self.stat(33)
         } else {
             spec.interval
-                / self.stat(0)
+                / self.firing_stat(0, efficiency)
                 / if standard_upgrades && self.rapid > 0.0 {
                     self.c.rapid_multiplier
                 } else {
                     1.0
                 }
         };
-        let count = if standard_upgrades && self.proc(MULTISHOT_PROC, self.stat(2)) {
-            self.stat(3) as usize
-        } else {
-            1
-        };
+        let count =
+            if standard_upgrades && self.proc(MULTISHOT_PROC, self.firing_stat(2, efficiency)) {
+                self.firing_stat(3, efficiency) as usize
+            } else {
+                1
+            };
         self.wave_stats.shots_fired += 1;
         self.overall_stats.shots_fired += 1;
+        if !self.auto_firing {
+            self.manual_shots_fired = self.manual_shots_fired.saturating_add(1);
+        }
         for n in 0..count {
             self.weapon_stats[kind as usize].shots += 1;
             let a = angle
@@ -1682,14 +1937,15 @@ impl World {
         self.fx.push(Fx(0, angle, 0.0, 0.0, 0.0, 0.09));
     }
     fn light_shot(&mut self, angle: f32, counted_shot: bool) {
-        let end = V::polar(angle, self.stat(1));
+        let efficiency = self.shot_efficiency();
+        let end = V::polar(angle, self.firing_stat(1, efficiency));
         let target = self
             .enemies
             .iter()
             .enumerate()
             .filter(|(_, e)| {
                 e.hp > 0.0
-                    && e.p.len() <= self.stat(1) + 0.1
+                    && e.p.len() <= self.firing_stat(1, efficiency) + 0.1
                     && segment_distance(e.p, V::ZERO, end)
                         < e.definition(&self.c).radius + 3.0 + self.c.direct_hit_padding
             })
@@ -1702,7 +1958,7 @@ impl World {
             .filter(|(_, d)| segment_distance(d.p, V::ZERO, end) < 18.0 + self.c.direct_hit_padding)
             .min_by(|(_, a), (_, b)| a.p.len().total_cmp(&b.p.len()))
             .map(|(i, d)| (i, d.p.len()));
-        let mut distance = self.stat(1);
+        let mut distance = self.firing_stat(1, efficiency);
         if drop.is_some_and(|(_, d)| target.is_none_or(|(_, e)| d < e)) {
             let (i, d) = drop.unwrap();
             distance = d;
@@ -1718,18 +1974,22 @@ impl World {
             distance = d;
             let mut origin = self.enemies[i].p;
             let mut visited = vec![self.enemies[i].id];
-            self.impact(i, LIGHT, 1.0);
+            self.impact_scaled(i, LIGHT, 1.0, efficiency);
             // One bounded bounce walk per beam; chain effects never create new walks.
-            for _ in 0..self.stat(8) as usize {
-                if !self.proc(BOUNCE_PROC, self.stat(6)) {
-                    break;
-                }
+            let hops = if self.proc(BOUNCE_PROC, self.firing_stat(6, efficiency)) {
+                self.firing_stat(8, efficiency) as usize
+            } else {
+                0
+            };
+            for _ in 0..hops {
                 let next = self
                     .enemies
                     .iter()
                     .enumerate()
                     .filter(|(_, e)| {
-                        e.hp > 0.0 && !visited.contains(&e.id) && e.p.dist(origin) <= self.stat(7)
+                        e.hp > 0.0
+                            && !visited.contains(&e.id)
+                            && e.p.dist(origin) <= self.firing_stat(7, efficiency)
                     })
                     .min_by(|(_, a), (_, b)| a.p.dist(origin).total_cmp(&b.p.dist(origin)))
                     .map(|(index, _)| index);
@@ -1738,8 +1998,8 @@ impl World {
                 };
                 let end = self.enemies[next].p;
                 visited.push(self.enemies[next].id);
-                self.impact(next, LIGHT, 1.0);
-                self.fx.push(Fx(1, origin.x, origin.y, end.x, end.y, 0.14));
+                self.impact_scaled(next, LIGHT, 1.0, efficiency);
+                self.fx.push(Fx(16, origin.x, origin.y, end.x, end.y, 0.3));
                 origin = end;
             }
         }
@@ -1763,7 +2023,8 @@ impl World {
                     .filter(|&i| self.enemies[i].hp > 0.0 && self.enemies[i].p.dist(s.p) < 300.0)
                     .min_by(|&a, &b| {
                         let score = |i: usize| {
-                            self.enemies[i].p.dist(s.p) + self.enemies[i].p.dist(self.aim) * 0.35
+                            self.enemies[i].p.dist(s.p)
+                                + self.enemies[i].p.dist(s.launch_aim.unwrap_or(self.aim)) * 0.35
                         };
                         score(a).total_cmp(&score(b))
                     });
@@ -1790,7 +2051,17 @@ impl World {
             } else {
                 self.c.weapons[s.kind as usize].speed
             };
-            s.p = s.p.add(V::polar(s.angle, speed * DT));
+            let step = if s.bounces > 0 {
+                (self.firing_stat(7, s.efficiency) - s.bounce_distance)
+                    .max(0.0)
+                    .min(speed * DT)
+            } else {
+                speed * DT
+            };
+            s.p = s.p.add(V::polar(s.angle, step));
+            if s.bounces > 0 {
+                s.bounce_distance += step;
+            }
             let travel = old.dist(s.p);
             let radius = if s.kind == BOMB || s.kind == CHILD {
                 self.area_radius(self.c.bomb_radius)
@@ -1840,33 +2111,40 @@ impl World {
                 let eid = self.enemies[i].id;
                 if s.counted_shot && s.hit_ids.is_empty() {
                     self.record_landed_shot();
+                    if s.manual && s.kind == PROJECTILE {
+                        self.precision_hit();
+                    }
                 }
                 s.hit_ids.push(eid);
+                if s.kind == PROJECTILE && s.hit_ids.len() == 1 {
+                    s.bounce_active = self.proc(BOUNCE_PROC, self.firing_stat(6, s.efficiency));
+                }
                 let damage = if s.kind == CHILD {
                     self.c.child_damage
                 } else {
                     self.c.weapons[s.kind as usize].damage
                 };
-                self.impact(i, s.kind, damage);
+                self.impact_scaled(i, s.kind, damage, s.efficiency);
                 if s.kind == BOMB {
-                    self.split_bomb(p, eid);
+                    self.split_bomb_with_provenance(p, eid, s.manual);
                 } else if s.kind == MISSILE {
                     self.fx.push(Fx(8, p.x, p.y, 30.0, 0.0, 0.3));
                 } else if s.kind == CHILD {
                     self.fx.push(Fx(7, p.x, p.y, 45.0, 0.0, 0.3));
                 }
                 if s.kind == PROJECTILE
-                    && s.bounces < (self.stat(8) as u32)
-                    && self.proc(BOUNCE_PROC, self.stat(6))
+                    && s.bounces < (self.firing_stat(8, s.efficiency) as u32)
+                    && s.bounce_active
                 {
-                    self.grid.query(p, self.stat(7), &mut nearby);
+                    self.grid
+                        .query(p, self.firing_stat(7, s.efficiency), &mut nearby);
                     let bounce = nearby
                         .iter()
                         .copied()
                         .filter(|&j| {
                             self.enemies[j].hp > 0.0
                                 && !s.hit_ids.contains(&self.enemies[j].id)
-                                && self.enemies[j].p.dist(p) <= self.stat(7)
+                                && self.enemies[j].p.dist(p) <= self.firing_stat(7, s.efficiency)
                         })
                         .min_by(|&a, &b| {
                             self.enemies[a]
@@ -1877,7 +2155,10 @@ impl World {
                     if let Some(j) = bounce {
                         s.p = p;
                         s.angle = self.enemies[j].p.sub(p).angle();
+                        let end = self.enemies[j].p;
+                        self.fx.push(Fx(16, p.x, p.y, end.x, end.y, 0.3));
                         s.bounces += 1;
+                        s.bounce_distance = 0.0;
                         continue;
                     }
                 }
@@ -1886,35 +2167,77 @@ impl World {
             if s.p.len() > 760.0 {
                 s.life = 0.0;
             }
+            if s.bounces > 0 && s.bounce_distance >= self.firing_stat(7, s.efficiency) {
+                s.life = 0.0;
+            }
         }
         shots.retain(|s| s.life > 0.0);
         shots.append(&mut self.shots);
         self.shots = shots;
         self.nearby = nearby;
     }
+    #[cfg(test)]
     pub fn split_bomb(&mut self, p: V, origin_id: u32) {
+        self.split_bomb_with_provenance(p, origin_id, !self.auto_firing);
+    }
+    fn split_bomb_with_provenance(&mut self, p: V, origin_id: u32, manual: bool) {
         // Fragments emerge from the impact enemy; don't immediately consume all six inside it.
         for i in 0..6 {
             let mut s = self.new_shot(CHILD, p, i as f32 * TAU / 6.0);
+            s.manual = manual;
             s.hit_ids.push(origin_id);
             self.shots.push(s);
         }
         self.fx.push(Fx(7, p.x, p.y, 45.0, 0.0, 0.3));
     }
+    fn grant_ammo_bundle(&mut self, weapon: usize, base: u32) {
+        let quantity = (self.stat(22) * 100.0).round() as u64;
+        let credit = base as u64 * quantity + self.ammo_remainders[weapon] as u64;
+        self.ammo_remainders[weapon] = (credit % 100) as u32;
+        let amount = (credit / 100).min(u32::MAX as u64) as u32;
+        let granted = amount.min(self.ammo_capacity(weapon).saturating_sub(self.ammo[weapon]));
+        self.ammo[weapon] += granted;
+        self.weapon_stats[weapon].ammo_granted = self.weapon_stats[weapon]
+            .ammo_granted
+            .saturating_add(granted);
+        self.weapon_stats[weapon].ammo_discarded = self.weapon_stats[weapon]
+            .ammo_discarded
+            .saturating_add(amount - granted);
+    }
+    fn precision_hit(&mut self) {
+        self.precision_hit_credit += 1;
+        if self.precision_hit_credit < self.c.precision_ammo.hits {
+            return;
+        }
+        self.precision_hit_credit = 0;
+        self.precision_grant_cycle =
+            (self.precision_grant_cycle + 1) % self.c.precision_ammo.hook_every;
+        self.grant_ammo_bundle(LIGHT as usize, self.c.precision_ammo.light);
+        self.grant_ammo_bundle(MISSILE as usize, self.c.precision_ammo.missiles);
+        if self.precision_grant_cycle == 0 {
+            self.grant_ammo_bundle(BOMB as usize, self.c.precision_ammo.hooks);
+        }
+    }
+    #[cfg(test)]
     pub fn impact(&mut self, i: usize, source: u8, damage: f32) {
+        self.impact_scaled(i, source, damage, 1.0);
+    }
+    fn impact_scaled(&mut self, i: usize, source: u8, damage: f32, efficiency: f32) {
         let p = self.enemies[i].p;
         let damage = if source == LIGHT {
             self.light_damage(i)
         } else {
             damage
         };
-        if !self.hit(i, damage, source) {
+        if !self.hit_scaled(i, damage, source, efficiency) {
             return;
         }
         if source <= LIGHT {
-            if self.proc(KNOCKBACK_PROC, self.stat(9)) {
-                let force = self.stat(10) * (1.0 - self.enemies[i].definition(&self.c).resistance)
+            if self.proc(KNOCKBACK_PROC, self.firing_stat(9, efficiency)) {
+                let force = self.firing_stat(10, efficiency)
+                    * (1.0 - self.enemies[i].definition(&self.c).resistance)
                     / (self.c.waves.mass_multiplier(self.wave)
+                        * self.perks.mass()
                         * self.enemies[i].definition(&self.c).mass
                         * self.enemies[i].mobility);
                 self.enemies[i].p = self.enemies[i].p.add(p.unit().mul(force));
@@ -1929,7 +2252,12 @@ impl World {
         let mut visited = vec![first];
         for _ in 0..self.c.powers.chain_count {
             let target = (0..self.enemies.len())
-                .filter(|i| !visited.contains(i) && self.enemies[*i].hp > 0.0)
+                .filter(|i| {
+                    !visited.contains(i)
+                        && self.enemies[*i].hp > 0.0
+                        && self.enemies[*i].kind != 4
+                        && !self.protected(*i)
+                })
                 .min_by(|&a, &b| {
                     self.enemies[a]
                         .p
@@ -1938,7 +2266,12 @@ impl World {
                 });
             if let Some(i) = target {
                 let q = self.enemies[i].p;
-                if !self.hit(i, self.c.powers.chain_damage, OTHER) {
+                let damage = self.c.powers.chain_damage.max(
+                    2.0 * (self.c.weapons[PROJECTILE as usize].damage
+                        + self.perks.levels[0] as f32)
+                        * self.perks.damage(),
+                );
+                if !self.hit(i, damage / self.perks.damage(), OTHER) {
                     break;
                 }
                 self.fx.push(Fx(5, p.x, p.y, q.x, q.y, 0.2));
@@ -1989,14 +2322,21 @@ impl World {
             return 0.0;
         }
         let hp = self.enemy_max_hp(&self.enemies[i]);
-        let normal_hits = (hp / (self.c.weapons[0].damage * multiplier) - 0.00001)
+        let normal_hits = (hp
+            / ((self.c.weapons[0].damage + self.perks.levels[0] as f32)
+                * self.perks.damage()
+                * multiplier)
+            - 0.00001)
             .ceil()
             .max(1.0);
         let hits = (normal_hits - 1.0).max(1.0);
         // One ULP at max HP prevents repeated f32 subtraction needing an extra hit.
         (hp / hits + f32::EPSILON * hp) / multiplier
     }
-    pub fn hit(&mut self, i: usize, mut damage: f32, source: u8) -> bool {
+    pub fn hit(&mut self, i: usize, damage: f32, source: u8) -> bool {
+        self.hit_scaled(i, damage, source, 1.0)
+    }
+    fn hit_scaled(&mut self, i: usize, mut damage: f32, source: u8, efficiency: f32) -> bool {
         if self.enemies[i].hp <= 0.0 || damage <= 0.0 {
             return false;
         }
@@ -2015,6 +2355,20 @@ impl World {
         } else {
             damage *= self.damage_multiplier(i, protected);
         }
+        if source != NUKE_DAMAGE
+            && !(matches!(source, BOMB | CHILD) && !matches!(self.enemies[i].kind, 5 | SUPERBOSS))
+        {
+            if source == PROJECTILE {
+                damage += self.perks.levels[0] as f32;
+            }
+            if source != LIGHT {
+                damage *= self.perks.damage();
+            }
+            if source == ORB_DAMAGE {
+                damage *= 1.0 + self.perks.levels[14] as f32;
+            }
+        }
+        damage *= efficiency;
         if source <= CHILD {
             damage *= self.enemies[i].definition(&self.c).weapon_damage[if source == CHILD {
                 BOMB as usize
@@ -2022,7 +2376,7 @@ impl World {
                 source as usize
             }];
         }
-        if source <= CHILD && p.len() > self.stat(1) + 0.1 {
+        if source <= CHILD && p.len() > self.firing_stat(1, efficiency) + 0.1 {
             damage *= if matches!(self.enemies[i].kind, 5 | SUPERBOSS) {
                 0.25
             } else {
@@ -2089,7 +2443,14 @@ impl World {
             source == ORB_DAMAGE,
             self.enemies[i].deathwave_tag,
         ];
-        let mut amount = self.enemies[i].definition(&self.c).coins * self.stat(19);
+        let base_coins = if self.enemies[i].kind == SCATTER && self.enemies[i].child {
+            self.c.enemies[SCATTER].coins
+        } else if self.enemies[i].kind == 0 && self.expanded_time(CRITICAL_COIN) > 0.0 {
+            self.power_effect(CRITICAL_COIN)
+        } else {
+            self.enemies[i].definition(&self.c).coins
+        };
+        let mut amount = base_coins * self.stat(19) * self.perks.coins();
         let mut mask = 0;
         for (n, active) in bonuses.into_iter().enumerate() {
             if active {
@@ -2146,21 +2507,7 @@ impl World {
                 {
                     continue;
                 }
-                // Carry hundredths so every +20% level benefits small integer bundles.
-                let quantity = (self.stat(22) * 100.0).round() as u64;
-                let credit = self.c.weapons[weapon].pickup as u64 * quantity
-                    + self.ammo_remainders[weapon] as u64;
-                self.ammo_remainders[weapon] = (credit % 100) as u32;
-                let amount = (credit / 100).min(u32::MAX as u64) as u32;
-                let available = self.ammo_capacity(weapon).saturating_sub(self.ammo[weapon]);
-                let granted = amount.min(available);
-                self.ammo[weapon] += granted;
-                self.weapon_stats[weapon].ammo_granted = self.weapon_stats[weapon]
-                    .ammo_granted
-                    .saturating_add(granted);
-                self.weapon_stats[weapon].ammo_discarded = self.weapon_stats[weapon]
-                    .ammo_discarded
-                    .saturating_add(amount - granted);
+                self.grant_ammo_bundle(weapon, self.c.weapons[weapon].pickup);
             }
         }
         if self.proc(POWER_PROC, self.power_drop_chance()) {
@@ -2478,6 +2825,13 @@ pub fn heated_damage(base: f32, heat: f32, hits: u32) -> f32 {
 // One bulk JSON snapshot, compact entity tuples; no per-entity JS/WASM calls.
 #[derive(Serialize)]
 pub struct Snapshot<'a> {
+    pub manual_shots_fired: u32,
+    pub manual_ammo_spent: [u32; 4],
+    pub precision_hit_credit: u8,
+    pub precision_grant_cycle: u8,
+    pub aim_assisted: bool,
+    pub perks: &'a crate::perks::Perks,
+    pub next_perk_wave: u32,
     pub phase: u8,
     pub paused: bool,
     pub wave: u32,
@@ -2550,10 +2904,11 @@ pub struct Snapshot<'a> {
     pub deathwaves: &'a Vec<f32>,
     pub fx: &'a Vec<Fx>,
     pub notice: &'a Notice,
+    #[serde(serialize_with = "serialize_levels")]
     pub levels: [u32; UPGRADE_COUNT],
     pub supply_costs: [f32; crate::supplies::SUPPLY_COUNT],
     pub supply_available: [bool; crate::supplies::SUPPLY_COUNT],
-    pub extra_power_times: [f32; 6],
+    pub extra_power_times: [f32; 7],
     pub extra_orbs: Vec<(f32, f32)>,
     pub bots: Vec<(usize, f32, f32, f32, f32)>,
     pub aoe_scale: f32,
@@ -2573,6 +2928,13 @@ impl World {
             .filter(|e| e.kind == COMMANDER && e.hp > 0.0)
             .collect();
         Snapshot {
+            manual_shots_fired: self.manual_shots_fired,
+            manual_ammo_spent: self.manual_ammo_spent,
+            precision_hit_credit: self.precision_hit_credit,
+            precision_grant_cycle: self.precision_grant_cycle,
+            aim_assisted: self.aim_assisted,
+            perks: &self.perks,
+            next_perk_wave: self.perks.next_wave(),
             phase: self.phase,
             paused: self.paused,
             wave: self.wave,
@@ -2590,8 +2952,8 @@ impl World {
             cleanup_seconds: (self.wave_ticks as f32 / 60.0 - self.c.waves.spawn_seconds).max(0.0),
             golden_kills: self.golden_kills,
             time: self.time,
-            speed_multiplier: self.c.waves.speed_multiplier(self.wave),
-            mass_multiplier: self.c.waves.mass_multiplier(self.wave),
+            speed_multiplier: self.c.waves.speed_multiplier(self.wave) * self.perks.speed(),
+            mass_multiplier: self.c.waves.mass_multiplier(self.wave) * self.perks.mass(),
             chrono_radius: self.chrono_radius(),
             disabled_weapon: self.disabled_weapon,
             disabled_stat: self.disabled_stat,
@@ -2764,5 +3126,498 @@ impl World {
                 .collect(),
             costs: (0..UPGRADE_COUNT).map(|i| self.cost(i)).collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod automatic_cannon_tests {
+    use super::*;
+    #[test]
+    fn efficiency_scales_every_cannon_stat_and_preserves_manual() {
+        let mut w = World::new(Config::standard(), 42);
+        w.start_wave();
+        assert!((w.stat(30) - 0.1).abs() < 0.0001);
+        for i in [0, 1, 2, 4, 5, 6, 7, 9, 10] {
+            assert!((w.firing_stat(i, 0.1) - w.stat(i) * 0.1).abs() < 0.0001);
+        }
+        assert_eq!(w.firing_stat(3, 0.1), 1.0);
+        w.assisted_input(100.0, 0.0, true, PROJECTILE);
+        assert_eq!(w.shot_efficiency(), 0.1);
+        assert!(w.aim_assisted);
+        let shot = w.new_shot(PROJECTILE, V::ZERO, 0.0);
+        assert_eq!(shot.efficiency, 0.1);
+        w.input(100.0, 0.0, true, PROJECTILE);
+        assert_eq!(w.shot_efficiency(), 1.0);
+        assert_eq!(shot.efficiency, 0.1);
+        w.levels[30] = 100;
+        w.assisted_input(100.0, 0.0, true, PROJECTILE);
+        assert!((w.shot_efficiency() - 1.1).abs() < 0.0001);
+        let early: f32 = w.c.upgrades[30].costs[..40].iter().sum();
+        let late: f32 = w.c.upgrades[30].costs[80..].iter().sum();
+        assert!(late > early * 30.0);
+    }
+    #[test]
+    fn automatic_integer_upgrades_keep_a_main_shot_and_reachable_ricochets() {
+        let mut w = World::new(Config::standard(), 42);
+        let quantity = w.stat(3);
+        for efficiency in [0.1, 0.5, 1.0, 1.1] {
+            assert_eq!(
+                w.firing_stat(3, efficiency),
+                1.0 + ((quantity - 1.0) * efficiency).floor()
+            );
+            assert_eq!(
+                w.firing_stat(8, efficiency),
+                (w.stat(8) * efficiency).ceil()
+            );
+        }
+        assert_eq!(w.firing_stat(3, 1.0), quantity);
+        assert_eq!(w.firing_stat(8, 1.0), w.stat(8));
+        w.levels[3] = 1;
+        w.levels[8] = 1;
+        assert!(w.firing_stat(3, 0.5) > 1.0);
+        assert!(w.firing_stat(8, 0.5) >= 1.0);
+    }
+    #[test]
+    fn unlocks_rate_cap_and_old_save_defaults_are_enforced() {
+        let mut w = World::new(Config::standard(), 42);
+        w.start_wave();
+        w.assisted_input(100.0, 0.0, true, LIGHT);
+        assert!(!w.firing);
+        assert!(!w.auto_firing);
+        for level in 1..=3 {
+            w.levels[32] = level;
+            w.assisted_input(100.0, 0.0, true, level as u8);
+            assert!(w.firing);
+        }
+        w.input(100.0, 0.0, false, 0);
+        let base = w.power_stack_cap();
+        w.levels[34] = 20;
+        assert_eq!(w.power_stack_cap(), base + 20.0);
+        for _ in 0..6 {
+            w.activate(CHAIN);
+        }
+        assert!((w.powers[CHAIN] - 70.0).abs() < 0.0001);
+        w.levels[33] = 20;
+        w.input(100.0, 0.0, true, MISSILE);
+        w.fire();
+        assert!((w.fire_timer - 0.25).abs() < 0.0001);
+        let mut old: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+        old["world"]["levels"].as_array_mut().unwrap().truncate(30);
+        let restored = World::restore(Config::standard(), &old.to_string()).unwrap();
+        assert_eq!(&restored.levels[30..], &[0; 5]);
+        assert_eq!(restored.power_stack_cap(), 50.0);
+    }
+}
+
+#[cfg(test)]
+mod independent_cannon_tests {
+    use super::*;
+    fn active() -> World {
+        let mut w = World::new(Config::standard(), 42);
+        w.start_wave();
+        w.remaining = 0;
+        w.spawned = w.total;
+        w.enemies.clear();
+        w
+    }
+    fn contact(w: &mut World, manual: bool, counted: bool, kind: u8) {
+        w.enemies.clear();
+        w.spawn(0, V::new(110.0, 0.0));
+        w.enemies[0].hp = 1000.0;
+        w.rebuild_grid();
+        let mut s = w.new_shot(kind, V::new(100.0, 0.0), 0.0);
+        s.manual = manual;
+        s.counted_shot = counted;
+        w.shots = vec![s];
+        w.move_shots();
+    }
+    #[test]
+    fn simultaneous_manual_and_auto_have_independent_cadence_and_provenance() {
+        let mut w = active();
+        w.input(300.0, 0.0, true, PROJECTILE);
+        w.set_auto_input(0.0, 300.0, true, PROJECTILE);
+        w.advance(DT);
+        assert_eq!(w.manual_shots_fired, 1);
+        assert_eq!(w.overall_stats.shots_fired, 2);
+        assert!(w
+            .shots
+            .iter()
+            .any(|s| s.manual && s.efficiency == 1.0 && s.angle.abs() < 0.01));
+        assert!(w
+            .shots
+            .iter()
+            .any(|s| !s.manual && (s.efficiency - 0.1).abs() < 0.001 && s.angle > 1.5));
+        assert!(w.auto_fire_timer > w.fire_timer * 5.0);
+        let auto_timer = w.auto_fire_timer;
+        for _ in 0..30 {
+            w.advance(DT);
+        }
+        assert!(w.manual_shots_fired > 1);
+        assert!(w.auto_fire_timer < auto_timer);
+        assert_eq!(w.overall_stats.shots_fired, w.manual_shots_fired + 1);
+        let shots = w.overall_stats.shots_fired;
+        let timer = w.auto_fire_timer;
+        w.pause(true);
+        w.advance(0.1);
+        assert_eq!(w.overall_stats.shots_fired, shots);
+        assert_eq!(w.auto_fire_timer, timer);
+        w.pause(false);
+        w.advance(DT);
+        assert!(w.auto_fire_timer < timer);
+        w.assisted_input(0.0, 0.0, true, 0);
+        assert!(!w.auto_cannon_firing);
+    }
+    #[test]
+    fn manual_launch_has_priority_for_shared_last_round_and_auto_unlocks() {
+        let mut w = active();
+        w.levels[32] = 2;
+        w.ammo[MISSILE as usize] = 1;
+        w.input(100.0, 0.0, true, MISSILE);
+        w.set_auto_input(0.0, 100.0, true, MISSILE);
+        w.advance(DT);
+        assert_eq!(w.ammo[MISSILE as usize], 0);
+        assert_eq!(w.manual_ammo_spent[MISSILE as usize], 1);
+        assert_eq!(w.weapon_stats[MISSILE as usize].ammo_spent, 1);
+        assert!(w.shots.iter().all(|s| s.manual));
+        w.input(0.0, 0.0, false, PROJECTILE);
+        w.levels[32] = 0;
+        w.ammo[MISSILE as usize] = 2;
+        w.auto_fire_timer = 0.0;
+        w.advance(DT);
+        assert_eq!(w.ammo[MISSILE as usize], 2);
+        w.levels[32] = 2;
+        w.advance(DT);
+        assert_eq!(w.ammo[MISSILE as usize], 1);
+        assert_eq!(w.manual_ammo_spent[MISSILE as usize], 1);
+    }
+    #[test]
+    fn precision_is_original_manual_projectile_enemy_contact_only() {
+        let mut w = active();
+        for (manual, counted, kind) in [
+            (false, true, PROJECTILE),
+            (true, false, PROJECTILE),
+            (true, true, MISSILE),
+            (true, true, BOMB),
+            (false, true, BOMB),
+            (true, false, CHILD),
+        ] {
+            contact(&mut w, manual, counted, kind);
+            assert_eq!(w.precision_hit_credit, 0);
+            if kind == BOMB {
+                assert!(w.shots.iter().any(|s| s.kind == CHILD));
+                assert!(w
+                    .shots
+                    .iter()
+                    .filter(|s| s.kind == CHILD)
+                    .all(|s| s.manual == manual));
+            }
+        }
+        w.enemies.clear();
+        w.rebuild_grid();
+        let mut missed = w.new_shot(PROJECTILE, V::new(0.0, 600.0), 0.0);
+        missed.counted_shot = true;
+        w.shots = vec![missed];
+        w.move_shots();
+        assert_eq!(w.precision_hit_credit, 0);
+        w.drops.push(Drop {
+            id: w.next_id,
+            kind: CHAIN,
+            p: V::new(110.0, 0.0),
+            life: 10.0,
+        });
+        w.next_id += 1;
+        let mut pickup = w.new_shot(PROJECTILE, V::new(100.0, 0.0), 0.0);
+        pickup.counted_shot = true;
+        w.shots = vec![pickup];
+        w.move_shots();
+        assert_eq!(w.precision_hit_credit, 0);
+        w.powers[CHAIN] = 0.0;
+        w.ammo = [0; 4];
+        for _ in 0..12 {
+            contact(&mut w, true, true, PROJECTILE);
+        }
+        assert_eq!(w.precision_hit_credit, 0);
+        assert_eq!(w.ammo, [0, 4, 1, 0]);
+        assert_eq!(w.ammo_pickups, 0);
+        for _ in 0..36 {
+            contact(&mut w, true, true, PROJECTILE);
+        }
+        assert_eq!(w.ammo, [0, 16, 4, 1]);
+        assert_eq!(w.precision_grant_cycle, 0);
+    }
+    #[test]
+    fn precision_quantity_carry_capacity_and_save_domains() {
+        let mut w = active();
+        w.levels[22] = 1;
+        w.ammo = [0; 4];
+        for _ in 0..5 {
+            for _ in 0..12 {
+                w.precision_hit();
+            }
+        }
+        assert_eq!(w.ammo[LIGHT as usize], 24);
+        assert_eq!(w.ammo[MISSILE as usize], 6);
+        assert_eq!(w.ammo_remainders[MISSILE as usize], 0);
+        w.ammo[LIGHT as usize] = w.ammo_capacity(LIGHT as usize);
+        let before = w.weapon_stats[LIGHT as usize].ammo_discarded;
+        for _ in 0..12 {
+            w.precision_hit();
+        }
+        assert!(w.weapon_stats[LIGHT as usize].ammo_discarded > before);
+        w.precision_hit_credit = 11;
+        w.precision_grant_cycle = 3;
+        w.set_auto_input(100.0, 0.0, true, PROJECTILE);
+        let restored = World::restore(Config::standard(), &w.save()).unwrap();
+        assert_eq!(restored.precision_hit_credit, 11);
+        assert_eq!(restored.precision_grant_cycle, 3);
+        assert!(restored.auto_cannon_firing);
+        for (key, value) in [
+            ("precision_hit_credit", serde_json::json!(12)),
+            ("precision_grant_cycle", serde_json::json!(4)),
+            ("auto_weapon", serde_json::json!(4)),
+            ("auto_fire_timer", serde_json::json!(101)),
+            ("auto_rapid", serde_json::json!(-1)),
+        ] {
+            let mut save: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+            save["world"][key] = value;
+            assert!(
+                World::restore(Config::standard(), &save.to_string()).is_err(),
+                "{key}"
+            );
+        }
+        let mut legacy: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+        let obj = legacy["world"].as_object_mut().unwrap();
+        for key in [
+            "auto_aim",
+            "auto_cannon_firing",
+            "auto_weapon",
+            "auto_fire_timer",
+            "auto_rapid",
+            "manual_shots_fired",
+            "manual_ammo_spent",
+            "precision_hit_credit",
+            "precision_grant_cycle",
+        ] {
+            obj.remove(key);
+        }
+        let restored = World::restore(Config::standard(), &legacy.to_string()).unwrap();
+        assert!(!restored.auto_cannon_firing);
+        assert_eq!(restored.precision_hit_credit, 0);
+        assert_eq!(restored.manual_ammo_spent, [0; 4]);
+        w.input(100.0, 0.0, true, PROJECTILE);
+        w.fire();
+        let mut legacy: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+        for shot in legacy["world"]["shots"].as_array_mut().unwrap() {
+            for key in ["manual", "bounce_active", "bounce_distance", "launch_aim"] {
+                shot.as_object_mut().unwrap().remove(key);
+            }
+        }
+        let restored = World::restore(Config::standard(), &legacy.to_string()).unwrap();
+        assert!(restored.shots.iter().all(|s| s.manual));
+        w.set_auto_input(f32::NAN, 0.0, true, PROJECTILE);
+        assert!(!w.auto_cannon_firing);
+        w.set_auto_input(w.view_extent() + 1.0, 0.0, true, PROJECTILE);
+        assert!(!w.auto_cannon_firing);
+    }
+    #[test]
+    fn projectile_and_light_bounce_once_then_walk_unique_bounded_hops() {
+        for kind in [PROJECTILE, LIGHT] {
+            let mut w = active();
+            w.levels[8] = 2;
+            for x in [110.0, 160.0, 210.0, 260.0, 600.0] {
+                w.spawn(0, V::new(x, 0.0));
+                w.enemies.last_mut().unwrap().hp = 1000.0;
+            }
+            w.rebuild_grid();
+            w.proc_meters[BOUNCE_PROC] = 999_999;
+            if kind == LIGHT {
+                w.light_shot(0.0, true);
+            } else {
+                let mut s = w.new_shot(PROJECTILE, V::new(100.0, 0.0), 0.0);
+                s.counted_shot = true;
+                w.shots.push(s);
+                for _ in 0..100 {
+                    w.move_shots();
+                }
+            }
+            assert_eq!(w.enemies.iter().filter(|e| e.hp < 1000.0).count(), 4);
+            assert_eq!(w.proc_meters[BOUNCE_PROC], 149_999);
+            assert_eq!(
+                w.precision_hit_credit,
+                if kind == PROJECTILE { 1 } else { 0 }
+            );
+            assert_eq!(w.overall_stats.shots_landed, 1);
+            assert_eq!(w.enemies[4].hp, 1000.0);
+        }
+    }
+    #[test]
+    fn failed_initial_bounce_proc_is_not_retried_and_shielded_chain_target_is_skipped() {
+        let mut w = active();
+        w.spawn(0, V::new(110.0, 0.0));
+        w.spawn(0, V::new(160.0, 0.0));
+        w.enemies.iter_mut().for_each(|e| e.hp = 1000.0);
+        w.rebuild_grid();
+        let mut shot = w.new_shot(PROJECTILE, V::new(100.0, 0.0), 0.0);
+        shot.counted_shot = true;
+        w.shots.push(shot);
+        for _ in 0..40 {
+            w.move_shots();
+        }
+        assert_eq!(w.enemies.iter().filter(|e| e.hp < 1000.0).count(), 1);
+        assert_eq!(w.proc_meters[BOUNCE_PROC], 150_000);
+        w.enemies.clear();
+        for (kind, p) in [
+            (0, V::new(50.0, 0.0)),
+            (4, V::new(160.0, 0.0)),
+            (0, V::new(180.0, 0.0)),
+            (0, V::new(450.0, 0.0)),
+        ] {
+            w.spawn(kind, p);
+        }
+        w.enemies.iter_mut().for_each(|e| e.hp = 1000.0);
+        w.rebuild_protectors();
+        w.chain_from(0, w.enemies[0].p);
+        assert_eq!(w.enemies[1].hp, 1000.0);
+        assert_eq!(w.enemies[2].hp, 1000.0);
+        assert!(w.enemies[3].hp < 1000.0);
+    }
+    #[test]
+    fn saved_aim_survives_range_sabotage_perks_and_supplied_custom_config() {
+        for custom in [false, true] {
+            let mut c = Config::standard();
+            if custom {
+                c.upgrades[1].base = 1200.0;
+                c.upgrades[1].step = 55.0;
+            }
+            let mut w = World::new(c.clone(), 42);
+            w.start_wave();
+            w.wave = 5;
+            w.levels[1] = c.upgrades[1].cap;
+            let aim = w.view_extent() - 1.0;
+            w.input(aim, 0.0, true, PROJECTILE);
+            w.set_auto_input(aim, 0.0, true, PROJECTILE);
+            w.fire();
+            w.disabled_stat = 1;
+            w.sabotage_time = 10.0;
+            w.perks.levels[13] = 1;
+            w.perks.picks = 1;
+            assert!(aim > w.view_extent());
+            let loaded = World::restore(c.clone(), &w.save()).unwrap();
+            assert_eq!(loaded.auto_aim.x, aim);
+            assert_eq!(loaded.shots[0].launch_aim.unwrap().x, aim);
+            let mut save: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+            save["world"]["auto_aim"]["x"] = serde_json::json!(World::maximum_aim_extent(&c) + 1.0);
+            assert!(World::restore(c, &save.to_string()).is_err());
+        }
+    }
+    #[test]
+    fn enhanced_automatic_ricochets_survive_midflight_save() {
+        let mut w = active();
+        w.levels[8] = w.c.upgrades[8].cap;
+        w.overall_stats.shots_fired = 1;
+        w.wave_stats.shots_fired = 1;
+        let mut shot = w.new_shot(PROJECTILE, V::new(100.0, 0.0), 0.0);
+        shot.manual = false;
+        shot.efficiency = 1.1;
+        shot.bounce_active = true;
+        shot.bounces = w.firing_stat(8, shot.efficiency) as u32;
+        shot.counted_shot = true;
+        w.shots.push(shot);
+        let loaded = World::restore(w.c.clone(), &w.save()).unwrap();
+        assert_eq!(loaded.shots[0].bounces, 6);
+        let mut save: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+        save["world"]["shots"][0]["bounces"] = serde_json::json!(7);
+        assert!(World::restore(w.c.clone(), &save.to_string()).is_err());
+    }
+    #[test]
+    fn max_purchased_bounce_with_ricochet_perk_survives_midflight_save() {
+        let mut w = active();
+        w.wave = 5;
+        w.levels[8] = w.c.upgrades[8].cap;
+        w.perks.levels[5] = 1;
+        w.perks.picks = 1;
+        assert_eq!(w.stat(8), 6.0);
+        for n in 0..7 {
+            w.spawn(0, V::new(110.0 + 40.0 * n as f32, 0.0));
+            w.enemies.last_mut().unwrap().hp = 1000.0;
+        }
+        w.rebuild_grid();
+        w.proc_meters[BOUNCE_PROC] = 999_999;
+        w.wave_stats.shots_fired = 1;
+        w.overall_stats.shots_fired = 1;
+        let mut shot = w.new_shot(PROJECTILE, V::new(100.0, 0.0), 0.0);
+        shot.counted_shot = true;
+        w.shots.push(shot);
+        for _ in 0..200 {
+            w.move_shots();
+            if w.shots.iter().any(|s| s.bounces == 6) {
+                break;
+            }
+        }
+        assert!(w.shots.iter().any(|s| s.bounces == 6));
+        let loaded = World::restore(Config::standard(), &w.save()).unwrap();
+        assert!(loaded.shots.iter().any(|s| s.bounces == 6));
+    }
+    #[test]
+    fn both_channels_missiles_bounces_and_rapid_timers_continue_exactly_after_restore() {
+        let mut w = active();
+        w.levels[32] = 3;
+        for p in [V::new(300.0, 0.0), V::new(0.0, 300.0)] {
+            w.spawn(0, p);
+            w.enemies.last_mut().unwrap().hp = 1000.0;
+            w.enemies.last_mut().unwrap().stun = 60.0;
+        }
+        w.input(300.0, 0.0, true, MISSILE);
+        w.set_auto_input(0.0, 300.0, true, BOMB);
+        w.advance(DT);
+        assert!(w.shots.iter().any(|s| s.kind == MISSILE && s.manual));
+        assert!(w.shots.iter().any(|s| s.kind == BOMB && !s.manual));
+        let mut bounce = w.new_shot(PROJECTILE, V::new(280.0, 0.0), 0.0);
+        bounce.bounces = 1;
+        bounce.bounce_active = true;
+        w.shots.push(bounce);
+        w.fire_timer = 0.2;
+        w.auto_fire_timer = 0.4;
+        w.rapid = 1.1;
+        w.auto_rapid = 1.8;
+        let mut loaded = World::restore(Config::standard(), &w.save()).unwrap();
+        w.pause(false);
+        loaded.pause(false);
+        w.input(300.0, 0.0, true, MISSILE);
+        loaded.input(300.0, 0.0, true, MISSILE);
+        for _ in 0..90 {
+            w.advance(DT);
+            loaded.advance(DT);
+        }
+        assert_eq!(w.save(), loaded.save());
+        assert!(w
+            .shots
+            .iter()
+            .filter(|s| s.kind == CHILD)
+            .all(|s| !s.manual));
+    }
+    #[test]
+    fn supplied_precision_config_controls_grants_and_saved_credit_bounds() {
+        let mut c = Config::standard();
+        c.precision_ammo.hits = 3;
+        c.precision_ammo.light = 7;
+        c.precision_ammo.missiles = 2;
+        c.precision_ammo.hook_every = 2;
+        c.precision_ammo.hooks = 3;
+        let mut w = World::new(c.clone(), 42);
+        w.start_wave();
+        w.ammo = [0; 4];
+        for _ in 0..6 {
+            w.precision_hit();
+        }
+        assert_eq!(w.ammo, [0, 14, 4, 3]);
+        w.precision_hit_credit = 2;
+        w.precision_grant_cycle = 1;
+        assert!(World::restore(c.clone(), &w.save()).is_ok());
+        w.precision_hit_credit = 3;
+        assert!(World::restore(c.clone(), &w.save()).is_err());
+        w.precision_hit_credit = 0;
+        w.precision_grant_cycle = 2;
+        assert!(World::restore(c, &w.save()).is_err());
     }
 }

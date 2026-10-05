@@ -54,24 +54,32 @@ pub fn reference_income(c: &Config, waves: u32) -> IncomeReport {
             if i < 4 && e.unlock <= wave {
                 weight += pressure.weights[i];
                 // Assumes Scatter families are cleared with weapons, including all children.
-                let family_coins = e.coins
-                    + if i == crate::sim::SCATTER {
-                        c.specials.scatter_children as f32 * c.enemies[1].coins
-                    } else {
-                        0.0
-                    };
+                let family_coins = if i == 0 {
+                    r.critical_coin_uptime * c.power_workshop.upgrades[22].effect_base
+                } else {
+                    e.coins
+                } + if i == crate::sim::SCATTER {
+                    c.specials.scatter_children as f32 * c.enemies[crate::sim::SCATTER].coins
+                } else {
+                    0.0
+                };
                 coins += pressure.weights[i] * family_coins;
             }
         }
         let elite_coins = (c.enemies[6].coins
             + c.enemies[7].coins
             + c.enemies[8].coins
-            + c.specials.scatter_children as f32 * c.enemies[1].coins)
+            + c.specials.scatter_children as f32 * c.enemies[crate::sim::SCATTER].coins)
             / 3.0;
         let fleet_coins: f32 = c.enemies[9..12].iter().map(|e| e.coins).sum();
         let base = count * coins / weight
             + pressure.elite_per_wave * elite_coins
             + pressure.fleet_per_wave * fleet_coins
+            + if c.enemies[4].unlock <= wave {
+                pressure.protector_chance * c.enemies[4].coins
+            } else {
+                0.0
+            }
             + bosses * c.enemies[5].coins
             + superboss * c.enemies[crate::sim::SUPERBOSS].coins;
         income += base * (economy.base + economy.step * level as f32) * overlap_multiplier;

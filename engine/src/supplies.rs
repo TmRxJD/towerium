@@ -48,7 +48,7 @@ impl World {
         if item < 3 {
             return self.ammo[item + 1] < self.ammo_capacity(item + 1);
         }
-        let cap = self.c.powers.timer_cap;
+        let cap = self.power_stack_cap();
         match item - 3 {
             k @ 0..=6 => self.powers[k] < cap,
             7 => self.hp < self.stat(11) * (1.0 + self.stat(24)),

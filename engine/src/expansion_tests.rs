@@ -138,7 +138,7 @@ fn legacy_power_levels_pad_and_bot_state_replays_exactly() {
     }
     let old = World::restore(Config::standard(), &old.to_string()).unwrap();
     assert_eq!(old.power_levels.len(), POWER_COUNT);
-    assert_eq!(old.extra_power_times, [0.0; 6]);
+    assert_eq!(old.extra_power_times, [0.0; 7]);
 }
 #[test]
 fn bot_radius_upgrade_and_expanded_supplies_obey_caps() {
@@ -377,4 +377,54 @@ fn nuke_clears_all_three_common_classes_but_preserves_tougher_enemies() {
         assert_eq!(enemy.hp, if i < 3 { 0.0 } else { 1000.0 });
     }
     assert_eq!(w.fallout_time, w.c.powers.fallout_duration);
+}
+
+#[test]
+fn critical_coin_grants_basic_reward_only_while_active_and_stacks_with_economy() {
+    let mut w = World::new(Config::standard(), 42);
+    w.start_wave();
+    w.spawn(0, V::new(100.0, 0.0));
+    let before = w.earned;
+    w.hit(0, 1000.0, PROJECTILE);
+    assert_eq!(w.earned, before);
+    w.activate(CRITICAL_COIN);
+    w.activate(GOLDEN);
+    w.spawn(0, V::new(100.0, 0.0));
+    w.hit(1, 1000.0, PROJECTILE);
+    assert!((w.earned - before - w.stat(19) * w.power_effect(GOLDEN)).abs() < 0.001);
+    w.extra_power_times[6] = 0.0;
+    w.spawn(0, V::new(100.0, 0.0));
+    let earned = w.earned;
+    w.hit(2, 1000.0, PROJECTILE);
+    assert_eq!(w.earned, earned);
+    w.firing = false;
+    w.advance(1.0 / 60.0);
+    let mut old: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+    old["world"]["extra_power_times"]
+        .as_array_mut()
+        .unwrap()
+        .truncate(6);
+    old["world"]["power_levels"]
+        .as_array_mut()
+        .unwrap()
+        .truncate(22);
+    assert_eq!(
+        World::restore(w.c.clone(), &old.to_string())
+            .unwrap()
+            .extra_power_times[6],
+        0.0
+    );
+}
+
+#[test]
+fn extracted_fleet_and_scatter_child_coin_rewards_are_four() {
+    let mut w = active();
+    for kind in [9, 10, 11, SCATTER] {
+        w.spawn(kind, V::new(200.0, 0.0));
+        let index = w.enemies.len() - 1;
+        w.enemies[index].child = kind == SCATTER;
+        let before = w.earned;
+        w.hit(index, 1000.0, PROJECTILE);
+        assert!((w.earned - before - 4.0 * w.stat(19)).abs() < 0.001);
+    }
 }

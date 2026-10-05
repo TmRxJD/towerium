@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const ENEMY_COUNT: usize = 13;
-pub const UPGRADE_COUNT: usize = 30;
+pub const UPGRADE_COUNT: usize = 35;
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -238,6 +238,7 @@ pub struct EliteReference {
     pub waves: u32,
     pub cleanup_seconds: f32,
     pub economy_budget_fraction: f32,
+    pub critical_coin_uptime: f32,
     pub overlap_fractions: [f32; 32],
 }
 #[derive(Clone, Deserialize)]
@@ -250,6 +251,15 @@ pub struct Modules {
     pub pulsar_chance: f32,
     pub pulsar_reduction: f32,
     pub pulsar_min_multiplier: f32,
+}
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PrecisionAmmo {
+    pub hits: u8,
+    pub light: u32,
+    pub missiles: u32,
+    pub hook_every: u8,
+    pub hooks: u32,
 }
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -270,6 +280,7 @@ pub struct Config {
     pub bomb_radius: f32,
     pub rapid_multiplier: f32,
     pub starting_coins: f32,
+    pub precision_ammo: PrecisionAmmo,
     pub elite_reference: EliteReference,
     pub modules: Modules,
     pub coin_multipliers: [f32; 5],
@@ -427,6 +438,18 @@ fn validate_stat_domains(c: &Config) -> Result<(), String> {
             return Err(format!("{} must use bounded whole quantities", u.name));
         }
     }
+    if (endpoints(30)[0] - 0.1).abs() > 0.00001
+        || (endpoints(30)[1] - 1.1).abs() > 0.00001
+        || c.upgrades[30].cap != 100
+        || endpoints(31).iter().any(|v| !(50.0..=5000.0).contains(v))
+        || endpoints(32) != [0.0, 3.0]
+        || c.upgrades[32].step != 1.0
+        || c.upgrades[32].cap != 3
+        || endpoints(33).iter().any(|v| !(2.0..=5.0).contains(v))
+        || endpoints(34).iter().any(|v| !(50.0..=90.0).contains(v))
+    {
+        return Err("Invalid automatic cannon or power cap upgrades".into());
+    }
     if endpoints(4).iter().any(|v| *v > 0.1 + f32::EPSILON) {
         return Err("Rapid Fire chance cannot exceed 10%".into());
     }
@@ -447,6 +470,15 @@ fn validate_stat_domains(c: &Config) -> Result<(), String> {
 }
 
 fn validate_effects(c: &Config) -> Result<(), String> {
+    let precision = &c.precision_ammo;
+    if !(1..=100).contains(&precision.hits)
+        || !(1..=20).contains(&precision.hook_every)
+        || [precision.light, precision.missiles, precision.hooks]
+            .iter()
+            .any(|v| !(1..=1000).contains(v))
+    {
+        return Err("Invalid precision ammo rewards".into());
+    }
     let p = &c.powers;
     let d = &c.defense;
     let w = &c.waves;
@@ -524,6 +556,15 @@ fn validate_effects(c: &Config) -> Result<(), String> {
 }
 
 fn validate_timing(c: &Config) -> Result<(), String> {
+    let precision = &c.precision_ammo;
+    if !(1..=100).contains(&precision.hits)
+        || !(1..=20).contains(&precision.hook_every)
+        || [precision.light, precision.missiles, precision.hooks]
+            .iter()
+            .any(|v| !(1..=1000).contains(v))
+    {
+        return Err("Invalid precision ammo rewards".into());
+    }
     let p = &c.powers;
     let d = &c.defense;
     let w = &c.waves;
@@ -610,10 +651,35 @@ fn validate_income(c: &Config) -> Result<(), String> {
     if r.waves == 0
         || r.cleanup_seconds < 0.0
         || !(0.0..=1.0).contains(&r.economy_budget_fraction)
+        || !(0.0..=1.0).contains(&r.critical_coin_uptime)
         || r.overlap_fractions.iter().any(|v| !(0.0..=1.0).contains(v))
         || (r.overlap_fractions.iter().sum::<f32>() - 1.0).abs() > 0.0001
     {
         return Err("Invalid reference income assumptions".into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod precision_config_tests {
+    use super::Config;
+    #[test]
+    fn precision_rewards_reject_zero_cycles_unknown_fields_and_oversized_bundles() {
+        let base: serde_json::Value =
+            serde_json::from_str(include_str!("../balance.json")).unwrap();
+        for (field, value) in [
+            ("hits", 0),
+            ("hook_every", 0),
+            ("light", 0),
+            ("missiles", 1001),
+            ("hooks", 1001),
+        ] {
+            let mut invalid = base.clone();
+            invalid["precision_ammo"][field] = value.into();
+            assert!(Config::parse(&invalid.to_string()).is_err(), "{field}");
+        }
+        let mut unknown = base;
+        unknown["precision_ammo"]["reward_every_miss"] = true.into();
+        assert!(Config::parse(&unknown.to_string()).is_err());
+    }
 }

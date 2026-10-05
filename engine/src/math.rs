@@ -54,6 +54,12 @@ pub fn segment_distance(p: V, a: V, b: V) -> f32 {
 #[derive(Serialize, Deserialize)]
 pub struct Rng(pub u32);
 impl Rng {
+    pub fn seeded(seed: u32, domain: u32) -> Self {
+        let mut mixed = seed ^ domain;
+        mixed = (mixed ^ (mixed >> 16)).wrapping_mul(0x7feb352d);
+        mixed = (mixed ^ (mixed >> 15)).wrapping_mul(0x846ca68b);
+        Self((mixed ^ (mixed >> 16)).max(1))
+    }
     pub fn next(&mut self) -> f32 {
         let mut x = self.0;
         x ^= x << 13;

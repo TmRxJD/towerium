@@ -1,4 +1,4 @@
-export const powers = ['Chain Lightning', 'Chrono Field', 'Poison Swamp', 'Black Hole', 'Spotlight', 'Death Ray', 'Golden Tower', 'Recovery Package', 'Death Wave', 'Energy Shield', 'Nuke', 'Demon Mode', 'Death Penalty', 'Space Displacer', 'Pulsar Harvester', 'Multiverse Nexus','Extra Orbs','Area Of Effect','Gold Bot','Amp Bot','Flame Bot','Thunder Bot'];
+export const powers = ['Chain Lightning', 'Chrono Field', 'Poison Swamp', 'Black Hole', 'Spotlight', 'Death Ray', 'Golden Tower', 'Recovery Package', 'Death Wave', 'Energy Shield', 'Nuke', 'Demon Mode', 'Death Penalty', 'Space Displacer', 'Pulsar Harvester', 'Multiverse Nexus','Extra Orbs','Area Of Effect','Gold Bot','Amp Bot','Flame Bot','Thunder Bot','Critical Coin'];
 export const weapons = ['Projectiles', 'Light Speed', 'Smart Missiles', 'Hook Bomb'];
 const round = n => Math.round(n * 100) / 100;
 
@@ -77,12 +77,15 @@ export function weaponDamage(state,config,target,weapon,position=target) {
   const protectedEnemy=target.shielded??state.enemies.some(e=>e[4]>0&&e[1]===4&&Math.hypot(e[2]-position.x,e[3]-position.y)<=config.defense.protector_radius);
   const spotlight=state.powers[4]>0&&(state.spotlights??[]).some(a=>Math.abs(angleDelta(a,Math.atan2(position.y,position.x)))<config.powers.spotlight_angle*Math.PI/360);
   const multiplier=(spotlight?state.power_effects[4]:1)*(target.kind!==4&&protectedEnemy?1-config.defense.protector_reduction:1);
+  const perks=state.perks?.levels??[];
+  const perkDamage=(1+.5*(perks[10]??0))*(1-.15*(perks[12]??0));
+  const cannon=(config.weapons[0].damage*multiplier+(perks[0]??0))*perkDamage;
   let damage;
   if((weapon===3||weapon===4)&&!bossKinds.has(target.kind))damage=target.maxHp;
   else if(weapon===1){
-    const normalHits=Math.max(1,Math.ceil(target.maxHp/(config.weapons[0].damage*multiplier)-.00001));
+    const normalHits=Math.max(1,Math.ceil(target.maxHp/((config.weapons[0].damage+(perks[0]??0))*perkDamage*multiplier)-.00001));
     damage=target.maxHp/Math.max(1,normalHits-1);
-  }else damage=(weapon===4?config.child_damage:config.weapons[weapon].damage)*multiplier;
+  }else damage=weapon===0?cannon:(weapon===4?config.child_damage:config.weapons[weapon].damage)*multiplier*perkDamage;
   damage*=spec.weapon_damage[weapon===4?3:weapon];
   if(distance>state.range+.1)damage*=bossKinds.has(target.kind)?.25:.5;
   const amplified=(state.bots??[]).some(b=>b[0]===19&&Math.hypot(position.x-b[1],position.y-b[2])<b[3]);
@@ -202,25 +205,28 @@ export function baselineAction(state, config, candidates, aim='nearest', circleS
   const open=candidates.filter(t=>(committed.get(t.key)??0)+.00001<(t.drop===undefined?t.hp:1));
   const angle=t=>Math.atan2(t.y,t.x),currentAngle=Math.atan2(context.aim?.[1]??0,context.aim?.[0]??1);
   const groupSize=t=>state.enemies.filter(e=>e[4]>0&&visible(e[2],e[3],0,state.view_extent??650)&&Math.abs(angleDelta(Math.atan2(e[3],e[2]),angle(t)))<.22).length;
-  const choose=list=>aim!=='crowd'?list[0]:list.map(t=>({t,score:(1+Math.min(6,groupSize(t))*.3)/(1+Math.abs(angleDelta(angle(t),currentAngle))*3)*(t.key===context.lastTarget&&groupSize(t)>1?.65:1)})).sort((a,b)=>b.score-a.score||a.t.id-b.t.id)[0]?.t;
+  const choose=list=>aim!=='crowd'?list[0]:list.map(t=>({t,score:(1+Math.min(6,groupSize(t))*.3)/(1+Math.abs(angleDelta(angle(t),currentAngle))*3)*(t.key===context.lastTarget?1.12:1)})).sort((a,b)=>b.score-a.score||a.t.id-b.t.id)[0]?.t;
   const imminent=choose(open.filter(t=>t.drop===undefined&&!bossKinds.has(t.kind)&&t.danger<6));
   const pickup=open.find(t=>t.drop===7&&state.hp<state.max_hp)||open.find(t=>t.drop===11&&state.hp<state.max_hp*.65)||open.find(t=>t.drop===8&&state.charges<3)||open.find(t=>t.drop!==undefined);
   const boss=open.find(t=>t.kind===12);
-  const priority=['priority','crowd'].includes(aim)?open.find(t=>t.kind===7&&t.charge>.6)||open.find(t=>[6,10,11].includes(t.kind)&&t.danger<1)||(aim==='priority'?open.find(t=>t.kind===4)||open.find(t=>t.kind===9):undefined):undefined;
+  const protector=open.filter(t=>t.kind===4).map(t=>({t,covered:state.enemies.filter(e=>e[4]>0&&e[1]!==4&&Math.hypot(e[2]-t.x,e[3]-t.y)<=config.defense.protector_radius).length})).filter(p=>p.covered>=3).sort((a,b)=>b.covered-a.covered||a.t.danger-b.t.danger)[0]?.t;
+  const priority=['priority','crowd'].includes(aim)?open.find(t=>t.kind===7&&t.charge>.6)||open.find(t=>[6,10,11].includes(t.kind)&&t.danger<1)||protector||(aim==='priority'?open.find(t=>t.kind===4)||open.find(t=>t.kind===9):undefined):undefined;
   const lit=state.powers[4]>0?choose(open.filter(t=>t.drop===undefined&&t.danger<8&&(state.spotlights??[]).some(a=>Math.abs(angleDelta(angle(t),a))<config.powers.spotlight_angle*Math.PI/360))):undefined;
-  const urgent=choose(open.filter(t=>t.drop===undefined&&t.danger<1.5));
+  const urgent=choose(open.filter(t=>t.drop===undefined&&t.danger<1.5&&(!boundaryKinds.has(t.kind)||t.distance<=config.tower_radius+t.radius+20)));
   const pressured=state.enemies.filter(e=>e[4]>0&&Math.hypot(e[2],e[3])<state.range).length>=3;
   const rescuePickup=pressured?open.find(t=>t.drop!==undefined&&usefulPowerPickup(state,t.drop)):undefined;
   const premiumAllowed=(context.weaponMode??'all')!=='projectile'&&(context.weaponMode??'all')!=='light';
   const bossOpportunity=boss&&premiumAllowed&&boss.distance<=state.range&&boss.hp-(committed.get(boss.key)??0)>weaponDamage(state,config,boss,0)*2&&([2,3].some(i=>state.ammo[i]>0&&state.disabled_weapon!==i))?boss:undefined;
-  const target=priority||rescuePickup||urgent||bossOpportunity||lit||imminent||pickup||(aim==='priority'?boss:undefined)||choose(open.filter(t=>t.drop===undefined));
+  const lethal=choose(open.filter(t=>t.drop===undefined&&t.danger<.5&&t.spec.damage>=state.hp));
+  const crowdEmergency=open.filter(t=>t.drop===undefined&&!bossKinds.has(t.kind)&&!boundaryKinds.has(t.kind)&&t.danger<2).length>=3;
+  const target=lethal||(crowdEmergency?(rescuePickup||urgent):undefined)||priority||rescuePickup||urgent||bossOpportunity||lit||imminent||pickup||(aim==='priority'?boss:undefined)||choose(open.filter(t=>t.drop===undefined));
   let weapon=0;
   const available=i=>state.ammo[i]>0&&state.disabled_weapon!==i&&(i!==1||target?.distance<=state.range+.1);
   if(target?.drop===undefined&&target) {
     const hp=Math.max(.00001,target.hp-(committed.get(target.key)??0));
     const hits=i=>Math.ceil(hp/Math.max(.00001,weaponDamage(state,config,target,i))-.00001);
     const matchup=target.spec.weapon_damage;
-    const cluster=open.filter(t=>t.drop===undefined&&Math.hypot(t.x-target.x,t.y-target.y)<100).length;
+    const cluster=state.enemies.filter(e=>e[4]>0&&visible(e[2],e[3],0,state.view_extent??650)&&Math.hypot(e[2]-target.x,e[3]-target.y)<100).length;
     if(available(3)&&target.distance<=state.range+.1&&(bossKinds.has(target.kind)||state.ammo[3]>3&&cluster>=4)&&hp>weaponDamage(state,config,target,0)*2)weapon=3;
     else if(available(2)&&hits(0)>3&&(!bossKinds.has(target.kind)||target.distance<=state.range+.1)&&(bossKinds.has(target.kind)||state.ammo[2]>8&&(matchup[2]>matchup[1]||target.kind===2)))weapon=2;
     else if(available(1)&&(hits(1)<hits(0)||state.ammo[1]>=(state.ammo_caps?.[1]??config.weapons[1].capacity)*.4)&&!(target.kind===8&&!target.child&&matchup[0]>matchup[1]))weapon=1;
@@ -246,15 +252,19 @@ export function baselineAction(state, config, candidates, aim='nearest', circleS
   const close=state.enemies.filter(e=>e[4]>0&&visible(e[2],e[3],0,state.view_extent??650)&&Math.hypot(e[2],e[3])-config.tower_radius-config.enemies[e[1]].radius<config.enemies[e[1]].speed*(state.speed_multiplier??1)*3).length;
   const bossBurst=!!boss&&boss.distance<=state.range&&boss.hp>state.power_effects[8]*.75;
   const sweep=aim==='crowd'&&weapon<2&&target?.drop===undefined&&!!target&&state.values[2]>0&&state.values[3]>1&&groupSize(target)>1&&Math.abs(angleDelta(angle(target),currentAngle))<.45;
-  return {target:target?.key||'hold',pointer,weapon,fire:!!target,sweep,hitDamage:target?weaponDamage(state,config,target,weapon):0,flightSeconds:weapon===1?0:(target?.distance??0)/config.weapons[weapon].speed,waitingForImpact:!target&&candidates.length>0&&committed.size>0,deathWave:state.charges>0&&!(state.deathwaves?.length)&&(close>=8||bossBurst||state.hp<state.max_hp*.35&&close>=3)};
+  const transitTargets=aim==='crowd'&&weapon<2?state.enemies.filter(e=>e[4]>0&&visible(e[2],e[3],0,state.view_extent??650)&&(weapon!==1||Math.hypot(e[2],e[3])<=state.range)).map(e=>[e[2],e[3],((state.enemy_radii??[]).find(r=>r[0]===e[0])?.[1]??config.enemies[e[1]].radius)+(weapon===1?3:4)+config.direct_hit_padding]):undefined;
+  const transitFanAngles=transitTargets?Array.from({length:state.values[2]>0?Math.floor(state.values[3]):1},(_,n)=>n===0?0:Math.ceil(n/2)*.14*(n%2===0?1:-1)):undefined;
+  return {target:target?.key||'hold',pointer,weapon,transitTargets,transitFanAngles,transitChance:Math.min(1,Math.max(0,state.values[2])),urgent:!!lethal||target===rescuePickup&&[7,11].includes(target?.drop)&&state.hp<state.max_hp*.35,premiumInterval:target&&bossKinds.has(target.kind)?(weapon===3?config.weapons[3].interval/state.values[0]:weapon===2?1/state.values[33]:undefined):undefined,fire:!!target,sweep,hitDamage:target?weaponDamage(state,config,target,weapon):0,flightSeconds:weapon===1?0:(target?.distance??0)/config.weapons[weapon].speed,waitingForImpact:!target&&candidates.length>0&&committed.size>0,deathWave:state.charges>0&&!(state.deathwaves?.length)&&(close>=8||bossBurst||state.hp<state.max_hp*.35&&close>=3)};
 }
 
-export function baselinePurchase(state, config, strategy, excluded=-1) {
+export function baselinePurchase(state, config, strategy, excluded=-1, assisted=false) {
   if(strategy==='none')return -1;
   const dependencies={3:2,5:4,7:6,8:6,15:14,25:16,26:16,28:27};
   const eligible=i=>i!==excluded&&state.levels[i]<config.upgrades[i].cap&&(!(i in dependencies)||state.values[dependencies[i]]>0);
   const affordable=i=>eligible(i)&&state.costs[i]<=state.coins;
   const health=state.hp/state.max_hp,hits=state.wave_report?.hits_taken??0;
+  const autoGoal=Math.min(90,40+Math.floor(state.wave*.5));
+  if(assisted&&state.levels[30]<40&&affordable(30))return 30;
   // Establish income while the opening is safe. Never finance it through a dying tower.
   if(health<.55){
     if(affordable(11))return 11;
@@ -291,6 +301,10 @@ export function baselinePurchase(state, config, strategy, excluded=-1) {
     step(25)/v[25]*v[16]*.4,step(26)/v[26]*v[16]*.4,
     step(27)/state.max_hp*(health<.8?.7:.12),-step(28)/v[28]*Math.min(1,v[27]/state.max_hp)*.3,
     step(29)/v[29]*((state.weapon_report??[]).some(w=>w.ammo_discarded>0)?.15:.01),
+    assisted&&state.levels[30]<autoGoal?2*step(30)/v[30]:0,
+    assisted?step(31)/v[31]*.35:0,
+    assisted?(state.levels[32]===0?.4:state.levels[32]===1?.12:.04):0,
+    step(33)/v[33]*.2,step(34)/v[34]*.05,
   ];
   const specialties={offense:new Set([0,2,3,4,5,6,7,8,22,23]),defense:new Set([9,10,11,12,13,14,15,16,17,18,24]),economy:new Set([19])};
   const choices=config.upgrades.map((_,i)=>({index:i,score:utility[i]*(specialties[strategy]?.has(i)?1.65:1)/Math.max(1,state.costs[i])}))
@@ -313,7 +327,7 @@ export function baselineWeapon(state, preferred, mode='all') {
 
 export function baselinePowerPurchase(state,config,strategy='balanced') {
   if(strategy==='none')return;
-  const builds={offense:[4,19,0,20,5,12],defense:[1,21,9,16,7,13],economy:[6,18,3,4,14],balanced:[4,0,1,19,9,18]};
+  const builds={offense:[4,19,0,20,5,12],defense:[1,21,9,16,7,13],economy:[22,6,18,3,4,15],balanced:[4,0,1,19,9,22]};
   const preferred=builds[strategy]??builds.balanced;
   const choices=[];
   for(const [rank,power] of preferred.entries())for(let path=0;path<2;path++){

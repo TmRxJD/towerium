@@ -10,6 +10,8 @@ export interface WaveReport {
   coins_earned:number; stones_earned:number; kills:number; duration_seconds:number;
 }
 export interface Snapshot {
+  aim_assisted:boolean;manual_shots_fired:number;manual_ammo_spent:number[];precision_hit_credit:number;precision_grant_cycle:number;
+  perks:{levels:number[];offers:number[];picks:number;last:number;origin:number};next_perk_wave:number;
   phase:Phase; paused:boolean; wave:number; time:number; hp:number; max_hp:number;
   wave_time:number; cleanup_seconds:number; golden_kills:number;
   weapon_report:{shots:number;hits:number;kills:number;damage:number;ammo_spent:number;ammo_granted:number;ammo_discarded:number}[];ammo_pickups:number;

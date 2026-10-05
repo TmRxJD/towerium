@@ -37,7 +37,7 @@ Ammo pickups are not the same as ammunition spent: cap overflow and pickup caden
 
 ## Current balance framing
 
-The balance target is an endurance run: approximately wave 300 is exceptional and wave 400+ is extreme. The current profile maps SDK waves 1–10,000 into Towerium 1–400, adds one cannon hit of health every tenth wave, and supports separate run-local coin and Power Stone shops. Reference accounting targets workshop completion beyond wave 400; it is not evidence that a human can reach that wave. Auto Play spends both currencies according to its selected build.
+Current endurance goals are roughly 100–150 waves for low effort, 500 for skilled play, 700–800 for pro play, 900 for the best humans and 1,000 for a perfect controller. SDK waves 1–10,000 map into Towerium 1–400; health gains one cannon hit every tenth wave. Reference accounting places full workshop affordability near wave 900. These are tuning goals, not demonstrated human outcomes. Auto Play spends both run-local currencies according to its selected build.
 
 The historical runs below predate SDK progression, health bands, Power Stones, modules and overlap income; they do not validate the current candidate.
 
@@ -117,3 +117,53 @@ The six-power expansion changes drop weights and introduces roaming support/cont
 Configuration `f6e66bf6` and WASM `80f7cbc1` cleared a funded wave 160–170 start on seed 100: 10 waves, 463.83 simulated seconds, 763.82 remaining HP, 6,403 kills, 73.74% accuracy, 47 ammo pickups and 80 powers. Exact replay passed (`e2a89c10540fb18c5fc29bac5bf38747c0d05e85439a64c651a2e57fb5d49002`). The policy bought 44 Power upgrades and no Supplies. Cleanup median was 11.17 seconds, p95 16.97, with two waves above 15 seconds; late-wave cleanup needs more playtesting. This bounded automated run does not establish human endurance or weapon balance.
 
 All 22 timer slots were captured in a telemetry-only replay with the same final-state hash. Extra Orbs peaked at 45 seconds; Gold, Amp, Flame and Thunder also peaked at 45. Area Of Effect was not collected in this seed span. Chrono, Spotlight, Death Penalty and Space Displacer reached the 50-second cap; no recorded bank exceeded it. A separate perfect-collection generation audit measures the new powers at 31.7–32.9% average uptime under maximum equal investment, excluding Supplies.
+
+
+## Current Auto Aim / Perks / Critical Coin Audit
+
+The v4 audit uses the actual WASM engine and freezes the engine binary, configuration and controller source per batch. It starts from wave 1, earns its purchases and chooses seeded perks. Coin rewards match the SDK and v29 extraction, including 4-coin Fleet enemies and Scatter children; Basics require Critical Coin.
+
+Continuous manual input is compared at 350 ms / 1,600 units per second, 180 ms / 2,400, and 100 ms / 3,600. These are controller proxies, not measured human skill. Automatic-only and fractional-effort input are separate diagnostics: mixing them into the reaction comparison gave misleading results. Controller speed is in battlefield coordinates; camera size affects its apparent screen speed. No fatigue or random aim error is modeled.
+
+Seed 101 Hybrid died at waves 211, 221 and 242 for those three timings. Economy died at 30, 30 and 206; Regen at 80, 202 and 40. Thus neither a faster reaction time nor an accounting budget establishes survival. The perfect-controller runs were censored at 240 wall-clock seconds (waves 193, 132 and 136); none establishes the proposed 1,000-wave theoretical outcome.
+
+Blind circle sweeps died at wave 10 on seeds 101 and 102, with about 14% accuracy. Idle controls died at wave 2 with no income or damage. Separate Glass, Health and Devo batches cover both seeds. Casual Glass died at 20/20, Health at 95/96, and Devo at 40 with one run censored at 165. Pro Glass died at 32/30, Health at 151/44, and Devo at 50/120. Together the current batches contain 28 cases: 24 deaths and four wall-clock censored runs. The large build and seed variance requires further controller and purchase-policy calibration. Raw reports are under `playtest-results/balance-audit-v4-*`. Build omission and Devo overlap waits are explicit in the frozen policy.
+
+**Balance is not signed off.** The latest 100–1,000-wave survival targets remain unproven. Economy opening purchases and premium-weapon policy need calibration; representative manual and physical-mobile play remain necessary. Mathematical workshop affordability, censored runs and this single baseline controller must not be reported as human clears.
+
+## Crowd-Control Rebalance (2026-10-05)
+
+Frozen candidate 1: `playtest-results/rebalance-candidate1-hybrid`. Seven of ten jobs completed before the audit process exited 11 without stderr. Casual Hybrid died at 246/304, Skilled Hybrid at 240; automatic-only died at 9/10 and quarter-effort at 10/10. The three missing jobs have no result. Circle-only controls died at 10/10 and idle controls at 3/3 (`rebalance-candidate1-controls-*`); these disable the independent cannon to isolate movement cheese.
+
+Candidate 2 strengthens crowd coverage and displacement, preserves SDK enemies and exact coin rewards, and retains the 35-round LSS bundle. The opening-mix native ammo test targets sustainable 70–85% accuracy with investment while heavy waste consumes reserves. This fixture does not demonstrate late-wave LSS sustainability.
+
+The audit now isolates each run in a child process, waits for process closure, records stderr/exit/signal failures, preserves progress and memory observations, and serializes aggregate writes. A parent watchdog bounds hangs. Infrastructure failures remain errors; they are never classified as deaths or censored survival. The earlier exit 11 cause is unresolved. Per-job JSON files are the canonical evidence; harness/config/WASM copies preserve each revision.
+
+Manual shot/ammo counters distinguish active input from the independent cannon. Precision contacts are reconstructed from modulo progress and are a lower bound; aggregate report accuracy includes both cannons. Perk levels are recorded alongside workshop and power upgrades. Reaction profiles have no random aim errors or fatigue; their labels are tuning proxies, not measurements of human ability.
+
+The pre-controller-fix candidate-2 Skilled/Hybrid seed 101 died at wave 282 (480,612 earned, 224 wall seconds). This frozen run used the temporary 30-round LSS bundle and the old target-switching policy; it is diagnostic evidence, not the final 35-round candidate. The audit's three-job valid smoke completed all jobs. Three intentionally invalid configs returned explicit errors (`Invalid workshop or hitbox bounds`) and a failing batch exit, preserving all three records.
+
+The first switch-commit revision was rejected by actual WASM runs: a Hold action could wait forever for a launch, freezing manual shot counters and producing deaths at waves 10–20. Those eight cases are controller-regression evidence, not valid balance measurements. Hold/resume, urgent interruption, empty ammo and target-death regressions now cover the correction. The corrected pre-emergency Skilled/Hybrid seed 101 reached wave 560 before dying (2,300,762 earned, 429 wall seconds). Final crowd-priority and UI-parity measurements remain separate.
+
+Crowd Sweeps keeps standard weapons firing through observed enemies while moving toward the next target, including Multishot fan coverage weighted by its current proc chance. Cursor movement stays bounded and direct; it pauses firing through empty sectors, and keeps premium weapons settled-only. Transit geometry is cached at reaction boundaries; intermediate shots cannot reserve damage against the destination, even when shot-counter snapshots arrive late. LSS route targets stay inside its range.
+
+
+The first continuous-sweep prototype (`rebalance-continuous-v1`) died at waves 488 (Skilled, seed 101) and 566 (Pro, seed 101), compared with 548 and 631 in `rebalance-final-priority-v1`. It earned 1,425,142 and 1,920,616 Coins. This is a diagnostic variant: its frozen primary pointer was clamped to the range boundary, and its initial fan gate overestimated occluded side-ray contacts. The current implementation preserves the unrestricted projectile cursor, counts only the nearest enemy per potential side ray, weights coverage by Multishot chance, and keeps transit attribution guarded until the snapshot includes the launch. The corrected matched measurements remain pending; these prototype results do not justify reducing combat power.
+
+
+The guarded fan-gating revision with forced arcs (`rebalance-continuous-final-v2`) died at 364 (Skilled) and 575 (Pro), seed 101. Non-boss cleanup median/p95 was 6.55/23.93 seconds and 4.27/8.70 seconds. A matched funded-wave-160 probe isolated the movement defect: restoring direct finite-speed cursor travel reduced clear time from 51.22 to 37.77 seconds on seed 101 and 47.92 to 45.30 on seed 102, with accuracy improving from 38.07% to 44.34% and 47.87% to 50.78%. It retained firing during approximately half of moving frames. The forced arc branch was removed; continuous route firing, expected nearest-per-ray Multishot coverage and the delayed-snapshot reservation guard remain. No game-balance values changed in this correction. The probes are bounded funded starts, not endurance evidence; `rebalance-continuous-final-v3` records the final wave-one comparison.
+
+
+The direct-movement revision (`rebalance-continuous-final-v3`) died at 424 (Skilled) and 285 (Pro), seed 101. These are not matched damage-build comparisons: the original Pro run had four damage-perk levels while this run had one, a 2.5x original-cannon damage difference. Combat and perk offers previously shared RNG, so changing shot timing changed later offers. Separate saved perk RNG now prevents that confounder for identical seeds and preceding perk choices. Version-1 saves preserve selected/pending perks and combat RNG; version-2 saves require the independent state. Historical survival trajectories cannot be compared directly to the new engine. No combat balance was reduced in response to these diagnostic results.
+
+
+## Matched Continuous-Fire Comparison (Independent Perk RNG)
+
+Same engine/config, Pro/Hybrid profile, seed 101, wave-one start, 600-second wall limit. The baseline uses the pre-sweep controller/policy; the candidate uses direct finite-speed movement and observed-route firing. Both jobs completed cleanly. All 359 common completed-wave rows have identical perk levels.
+
+| Controller | Outcome | Coins Earned | Aggregate Accuracy | Wall Seconds |
+|---|---:|---:|---:|---:|
+| Pre-sweep | Died at 360; cleared 359 | 947,309 | 54.12% | 192.32 |
+| Continuous sweep | Died at 687; cleared 686 | 3,454,185 | 54.76% | 480.99 |
+
+Raw reports: `playtest-results/perk-rng-baseline-pro101` and `playtest-results/perk-rng-sweep-pro101`. Configuration SHA begins `8c5d3eaec3c59fa5`; WASM SHA begins `e20e4d`. Accuracy includes both cannons. Combat/drop trajectories can still diverge; one matched seed does not validate human outcomes, all builds, or the proposed 900–1,000-wave ceiling. The result supports the controller fix; combat buffs were retained.
