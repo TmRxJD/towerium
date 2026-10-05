@@ -1,5 +1,5 @@
 // Released configurations are identified exactly; gameplay resumes under current rules.
-const releasedHashes=new Set(['041c19ffba1e51ff7c7ed8b7a0f63b2cb89fa8ed9f3b2bcef11c52dc28c81519','971ceb021e03d8ac4bb4fa64c44c10835e74d1ffd0a0fc19a06f62ca547303a1','7fb46c3a73fe44a64a4b93edc698ba6c40df1299dcddb4e967a3c08eeb378377']);
+const releasedHashes=new Set(['f4c2225c0fff25a291b142d2f5ba6a17d0c43d940a2c3aded648db35506738e9','041c19ffba1e51ff7c7ed8b7a0f63b2cb89fa8ed9f3b2bcef11c52dc28c81519','971ceb021e03d8ac4bb4fa64c44c10835e74d1ffd0a0fc19a06f62ca547303a1','7fb46c3a73fe44a64a4b93edc698ba6c40df1299dcddb4e967a3c08eeb378377']);
 export async function createSaveCompatibility(current:string,keys:readonly string[]) {
   const accepted=new Set([current]);
   const candidates=new Set<string>();

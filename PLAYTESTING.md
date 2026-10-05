@@ -112,7 +112,7 @@ A separate funded start at wave 160 died at wave 163 after clearing 162 (160.53 
 The six-power expansion changes drop weights and introduces roaming support/control. The preceding runs use the pre-expansion catalog; they must not be reported as current endurance evidence.
 
 
-## Six-Power Expansion
+## Six-Power Expansion (Before Camera And Bot-Speed Follow-Up)
 
 Configuration `f6e66bf6` and WASM `80f7cbc1` cleared a funded wave 160–170 start on seed 100: 10 waves, 463.83 simulated seconds, 763.82 remaining HP, 6,403 kills, 73.74% accuracy, 47 ammo pickups and 80 powers. Exact replay passed (`e2a89c10540fb18c5fc29bac5bf38747c0d05e85439a64c651a2e57fb5d49002`). The policy bought 44 Power upgrades and no Supplies. Cleanup median was 11.17 seconds, p95 16.97, with two waves above 15 seconds; late-wave cleanup needs more playtesting. This bounded automated run does not establish human endurance or weapon balance.
 

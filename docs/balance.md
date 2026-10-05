@@ -14,7 +14,7 @@ Each workshop stat has an explicit curve. Earlier effects remain unchanged; the 
 
 Kill coins equal base reward × Coins/Kill × overlapping bonuses. GT, BH, SL, Orbs and DW each contribute 1.15× at baseline. Gold Bot adds a separate 1.2× spatial bonus and 5% deterministic extra-Stone supply for non-child kills; reference income excludes this bonus. GT applies while active; BH/SL require death within their fields; Orbs require the killing hit; DW marks its target. Duplicate fields do not multiply the same bonus twice. The reference reinvests up to 25% in Coins/Kill, assumes ten seconds of cleanup and uses the configured joint overlap fractions.
 
-Supplies sells fixed bundles of 80 LSS, 8 missiles or 1 Hook Bomb, Death Wave charges and ready powers. Prices rise with the upcoming wave. Charges cap at three; ammo obeys capacity. Timers do not drain during shopping. The Fallout supply buys Nuke's attack slow, while the Basic clear is pickup-only. The bot buys needed supplies after maximizing its workshop.
+Supplies sells fixed bundles of 80 LSS, 8 missiles or 1 Hook Bomb, Death Wave charges and ready powers. Prices rise with the upcoming wave. Charges cap at three; ammo obeys capacity. Timers do not drain during shopping. The Fallout supply buys Nuke's attack slow, while the Basic/Fast/Ranged clear is pickup-only. The bot buys needed supplies after maximizing its workshop.
 
 ## Stones And Powers
 
@@ -36,6 +36,12 @@ Finite reaction and aiming profiles are automated evidence, not human skill meas
 
 Six additional pickup identities extend the catalog to 22. Extra Orbs creates three Orbs at the 245-unit Black Hole orbit, counter-rotating at twice workshop Orb Speed. They hit for normal Orb damage plus one cannon hit, with independent hit cooldowns. While active, Orb coin reward starts at 1.25× instead of 1.15×; Stones upgrade that multiplier.
 
-AOE doubles Hook contact radius, mine and Swamp radius/damage, Flame pulse radius/burn damage, and BH/Chrono/Shockwave reach. Missile direct hits and Orb paths are unchanged. Its Effect upgrade adds duration; the 50-second bank limit applies. Out-of-range Hook hits remain capped at half normal-enemy maximum HP after buffs.
+AOE doubles Hook contact radius/damage, mine and Swamp radius/damage, Flame pulse radius/burn damage, Black Hole radius/damage, and Shockwave reach. Chrono reach increases by 15%. Missile direct hits and Orb paths are unchanged. Its Effect upgrade adds duration; the 50-second bank limit applies. Out-of-range Hook hits remain capped at half normal-enemy maximum HP after buffs.
 
-Bots use seeded, saved random paths at 25 units/s. Centers remain within tower range minus 24 units and half their base aura radius. Radius upgrades run 140→190 in ten +5 steps, between base Swamp (120) and Black Hole (200). Gold and Amp are support-only: +20% kill income/extra Stones or 2× incoming damage. Flame pulses every 5s, with five one-second burn ticks worth 1/2/3/4/5 cannon hits; refreshes do not create duplicate stacks. Thunder pulses every 8s with 3s stun then 5s half speed. Boss control immunity and Protector shields apply.
+Bots use seeded, saved random paths at 100 units/s. Centers remain within tower range minus 24 units and half their base aura radius. Radius upgrades run 140→190 in ten +5 steps, between base Swamp (120) and Black Hole (200). Gold and Amp are support-only: +20% kill income/extra Stones or 2× incoming damage. Flame pulses every 5s, with five one-second burn ticks worth 1/2/3/4/5 cannon hits; refreshes do not create duplicate stacks. Thunder stuns enemies immediately on radius contact for 3s, followed by 5s half speed. Remaining inside does not repeatedly renew the stun; leaving and re-entering can trigger it again. Boss control immunity and Protector shields apply.
+
+The camera fits tower range with a 60-unit margin (650–660 world-unit half-width); temporary area effects never change zoom. Area Of Effect extends Chrono Field by 15%, while other affected fields retain their doubled reach.
+
+Death Ray instantly clears unshielded Basics, Fasts and Ranged on beam contact. Other enemies take two extra cannon-hit equivalents once per contact, plus continuous damage. Protector shields still block it. Black Hole pull is 315 (formerly 105); captured enemies travel with their field, cannot move farther from its center, while enemies inside take one cannon-hit equivalent per second. Control-immune bosses take this damage without being captured.
+
+Nuke clears Basics, Fasts and Ranged, including shielded targets; tougher classes survive and receive the unchanged enemy-attack slow.

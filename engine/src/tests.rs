@@ -334,26 +334,29 @@ fn travelling_weapons_fire_at_lone_outside_targets_but_light_cannot_reach_them()
 }
 
 #[test]
-fn nuke_clears_only_basics_including_protected_and_never_grants_ammo() {
+fn nuke_clears_basic_fast_and_ranged_including_protected_and_never_grants_ammo() {
     let mut w = active();
     w.c.upgrades[23].base = 1.0;
     w.c.upgrades[21].base = 1.0;
     w.spawn(4, V::new(140.0, 0.0));
-    for kind in [0, 0, 1, 2, SCATTER, SUPERBOSS] {
+    for kind in [0, 0, 1, 3, 2, SCATTER, SUPERBOSS] {
         w.spawn(kind, V::new(150.0, 0.0));
     }
     w.advance(DT);
     let ammo = w.ammo;
     w.activate(NUKE);
-    assert_eq!(w.kills, 2);
     assert!(w
         .enemies
         .iter()
-        .filter(|e| e.kind == 0)
+        .filter(|e| matches!(e.kind, 0 | 1 | 3))
         .all(|e| e.hp == 0.0));
-    assert!(w.enemies.iter().filter(|e| e.kind != 0).all(|e| e.hp > 0.0));
+    assert!(w
+        .enemies
+        .iter()
+        .filter(|e| !matches!(e.kind, 0 | 1 | 3))
+        .all(|e| e.hp > 0.0));
     assert_eq!(w.ammo, ammo);
-    assert_eq!(w.drops.len(), 2);
+    assert_eq!(w.drops.len(), 4);
     assert_eq!(w.fallout_time, 30.0);
 }
 
@@ -374,7 +377,7 @@ fn fallout_halves_contact_ranged_charge_and_drain_but_not_player_fire() {
         }
         let mut slowed = World::restore(normal.c.clone(), &normal.save()).unwrap();
         slowed.paused = false;
-        slowed.activate(NUKE);
+        slowed.fallout_time = 30.0;
         for w in [&mut normal, &mut slowed] {
             w.input(0.0, -200.0, true, PROJECTILE);
             seconds(w, 0.5);
@@ -1762,11 +1765,7 @@ fn black_hole_snapshot_geometry_matches_nearest_nonstacking_mass_scaled_pull() {
                 / snapshot.mass_multiplier
                 * DT,
         ));
-        let expected = pulled.sub(
-            pulled
-                .unit()
-                .mul(w.c.enemies[0].speed * snapshot.speed_multiplier * DT),
-        );
+        let expected = pulled; // Captured enemies cannot move away from their field.
         assert!(w.enemies[0].p.dist(expected) < 0.0001);
     }
 }

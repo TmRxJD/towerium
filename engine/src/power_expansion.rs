@@ -18,6 +18,7 @@ pub const THUNDER_BOT: usize = 21;
 pub struct Expansion {
     pub durations: [f32; 6],
     pub aoe_multiplier: f32,
+    pub chrono_aoe_multiplier: f32,
     pub extra_orb_coin_multiplier: f32,
     pub bot_radius: f32,
     pub bot_speed: f32,
@@ -26,7 +27,6 @@ pub struct Expansion {
     pub gold_stone_chance: f32,
     pub flame_interval: f32,
     pub burn_seconds: u32,
-    pub thunder_interval: f32,
     pub thunder_stun: f32,
     pub thunder_slow_duration: f32,
     pub thunder_slow: f32,
@@ -39,6 +39,7 @@ impl Expansion {
             || self.bot_radius <= c.powers.swamp_radius
             || self.bot_radius >= c.powers.blackhole_radius
             || !(1.0..=100.0).contains(&self.bot_speed)
+            || !(1.0..=1.25).contains(&self.chrono_aoe_multiplier)
             || !(16.0..=60.0).contains(&self.bot_padding)
             || !(1.0..=1.5).contains(&self.gold_coin_multiplier)
             || !(0.0..=0.1).contains(&self.gold_stone_chance)
@@ -46,8 +47,6 @@ impl Expansion {
             || !(1..=10).contains(&self.burn_seconds)
             || !(1.0..=3.0).contains(&self.thunder_stun)
             || !(1.0..=10.0).contains(&self.thunder_slow_duration)
-            || self.thunder_interval < self.thunder_stun + self.thunder_slow_duration
-            || self.thunder_interval > 20.0
             || !(0.1..=0.8).contains(&self.thunder_slow)
         {
             return Err("Invalid expanded power definitions".into());
@@ -127,14 +126,17 @@ impl World {
                     && b.target.len() <= self.stat(1) + 0.1
                     && b.pulse_in >= 0.0
                     && b.pulse_in
-                        <= self
-                            .c
-                            .expansion
-                            .thunder_interval
+                        <= (self.c.expansion.thunder_stun + self.c.expansion.thunder_slow_duration)
                             .max(self.c.expansion.flame_interval)
             })
             && self.enemies.iter().all(|e| {
-                e.extra_orb_cd >= 0.0
+                e.blackhole
+                    .is_none_or(|i| i < self.c.powers.blackhole_count)
+                    && e.blackhole_distance >= 0.0
+                    && e.blackhole_distance
+                        <= self.power_effect(3) * self.c.expansion.aoe_multiplier + 0.1
+                    && (0.0..=1.0).contains(&e.blackhole_hit_time)
+                    && e.extra_orb_cd >= 0.0
                     && e.extra_orb_cd <= self.c.defense.orb_hit_interval
                     && e.burn_left >= 0.0
                     && e.burn_left <= self.c.expansion.burn_seconds as f32
@@ -165,6 +167,11 @@ impl World {
         for bot in 0..4 {
             let power = GOLD_BOT + bot;
             if self.expanded_time(power) <= 0.0 {
+                if power == THUNDER_BOT {
+                    for enemy in &mut self.enemies {
+                        enemy.thunder_inside = false;
+                    }
+                }
                 continue;
             }
             // Keep centers comfortably inside the range; splash can reach beyond it.
@@ -195,25 +202,41 @@ impl World {
             if power < FLAME_BOT {
                 continue;
             }
+            if power == THUNDER_BOT {
+                let p = self.bots[bot].position;
+                let radius = self.area_radius(self.power_effect(power));
+                let mut triggered = false;
+                for i in 0..self.enemies.len() {
+                    let inside = self.enemies[i].hp > 0.0
+                        && self.enemies[i].p.dist(p)
+                            <= radius + self.enemies[i].definition(&self.c).radius
+                        && self.enemies[i].definition(&self.c).resistance < 1.0
+                        && !self.protected(i);
+                    if inside && !self.enemies[i].thunder_inside {
+                        self.enemies[i].stun =
+                            self.enemies[i].stun.max(self.c.expansion.thunder_stun);
+                        self.enemies[i].thunder_slow_time =
+                            self.c.expansion.thunder_stun + self.c.expansion.thunder_slow_duration;
+                        triggered = true;
+                    }
+                    self.enemies[i].thunder_inside = inside;
+                }
+                self.bots[bot].pulse_in = 0.0;
+                if triggered {
+                    self.fx
+                        .push(crate::sim::Fx(15, p.x, p.y, radius, 0.0, 0.65));
+                }
+                continue;
+            }
             self.bots[bot].pulse_in -= DT;
             if self.bots[bot].pulse_in > 0.0 {
                 continue;
             }
-            self.bots[bot].pulse_in = if power == FLAME_BOT {
-                self.c.expansion.flame_interval
-            } else {
-                self.c.expansion.thunder_interval
-            };
+            self.bots[bot].pulse_in = self.c.expansion.flame_interval;
             let p = self.bots[bot].position;
             let radius = self.area_radius(self.power_effect(power));
-            self.fx.push(crate::sim::Fx(
-                if power == FLAME_BOT { 14 } else { 15 },
-                p.x,
-                p.y,
-                radius,
-                0.0,
-                0.65,
-            ));
+            self.fx
+                .push(crate::sim::Fx(14, p.x, p.y, radius, 0.0, 0.65));
             for i in 0..self.enemies.len() {
                 if self.enemies[i].hp <= 0.0
                     || self.enemies[i].p.dist(p) >= radius
@@ -221,19 +244,11 @@ impl World {
                 {
                     continue;
                 }
-                if power == FLAME_BOT {
-                    if self.enemies[i].burn_left <= 0.0 {
-                        self.enemies[i].burn_tick = 1.0;
-                        self.enemies[i].burn_stage = 0;
-                    }
-                    self.enemies[i].burn_left = self.c.expansion.burn_seconds as f32;
-                } else if power == THUNDER_BOT
-                    && self.enemies[i].definition(&self.c).resistance < 1.0
-                {
-                    self.enemies[i].stun = self.enemies[i].stun.max(self.c.expansion.thunder_stun);
-                    self.enemies[i].thunder_slow_time =
-                        self.c.expansion.thunder_stun + self.c.expansion.thunder_slow_duration;
+                if self.enemies[i].burn_left <= 0.0 {
+                    self.enemies[i].burn_tick = 1.0;
+                    self.enemies[i].burn_stage = 0;
                 }
+                self.enemies[i].burn_left = self.c.expansion.burn_seconds as f32;
             }
         }
     }

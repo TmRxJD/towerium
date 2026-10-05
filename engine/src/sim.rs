@@ -98,6 +98,16 @@ pub struct Enemy {
     pub burn_stage: u32,
     #[serde(default)]
     pub thunder_slow_time: f32,
+    #[serde(default)]
+    pub thunder_inside: bool,
+    #[serde(default)]
+    pub deathray_inside: bool,
+    #[serde(default)]
+    pub blackhole: Option<usize>,
+    #[serde(default)]
+    pub blackhole_distance: f32,
+    #[serde(default)]
+    pub blackhole_hit_time: f32,
     pub charge: f32,
     pub spin: f32,
     pub child: bool,
@@ -909,7 +919,7 @@ impl World {
                 (self.fallout_time + self.c.powers.fallout_duration + self.stat(20))
                     .min(self.c.powers.timer_cap);
             for i in 0..self.enemies.len() {
-                if self.enemies[i].kind == 0 && self.enemies[i].hp > 0.0 {
+                if matches!(self.enemies[i].kind, 0 | 1 | 3) && self.enemies[i].hp > 0.0 {
                     self.hit(i, self.enemies[i].hp, NUKE_DAMAGE);
                 }
             }
@@ -988,6 +998,11 @@ impl World {
             burn_tick: 0.0,
             burn_stage: 0,
             thunder_slow_time: 0.0,
+            thunder_inside: false,
+            deathray_inside: false,
+            blackhole: None,
+            blackhole_distance: 0.0,
+            blackhole_hit_time: 0.0,
             charge: 0.0,
             spin: 0.0,
             child: false,
@@ -1140,6 +1155,7 @@ impl World {
         self.rebuild_grid();
         if self.shock_timer <= 0.0 {
             self.shockwave();
+            self.constrain_blackholes();
             self.shock_timer = self.stat(18);
             self.rebuild_grid();
         }
@@ -1150,6 +1166,7 @@ impl World {
         self.defenses();
         self.enemy_bullets();
         self.overcharge_bullets();
+        self.constrain_blackholes();
         self.resolve_deaths();
         self.enemies.retain(|e| e.hp > 0.0);
         self.rebuild_protectors();
@@ -1183,12 +1200,16 @@ impl World {
             .rem_euclid(TAU)
     }
     pub fn chrono_radius(&self) -> f32 {
-        self.area_radius(self.stat(1) + self.c.powers.chrono_margin)
+        let multiplier = if self.expanded_time(AOE) > 0.0 {
+            self.c.expansion.chrono_aoe_multiplier
+        } else {
+            1.0
+        };
+        (self.stat(1) + self.c.powers.chrono_margin) * multiplier
     }
     pub fn view_extent(&self) -> f32 {
-        650.0_f32
-            .max(self.stat(1) * 1.25)
-            .max(self.chrono_radius() * 1.08)
+        // Temporary fields may extend offscreen; they must not shrink the combat view.
+        650.0_f32.max(self.stat(1) + 60.0)
     }
     fn boundary_attacker(kind: usize) -> bool {
         matches!(kind, 3 | VAMPIRE | RAY | SABOTEUR | OVERCHARGE)
@@ -1241,6 +1262,45 @@ impl World {
             e.swamp_cd = (e.swamp_cd - DT).max(0.0);
             e.swamp_hit_cd = (e.swamp_hit_cd - DT).max(0.0);
             e.stun = (e.stun - DT).max(0.0);
+            let resistance = def.resistance;
+            let previous_capture = e.blackhole;
+            e.blackhole = if resistance < 1.0 {
+                previous_capture
+                    .filter(|&j| j < blackholes.len())
+                    .or_else(|| {
+                        blackholes
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, p)| e.p.dist(**p) < blackhole_radius)
+                            .min_by(|(_, a), (_, b)| e.p.dist(**a).total_cmp(&e.p.dist(**b)))
+                            .map(|(j, _)| j)
+                    })
+            } else {
+                None
+            };
+            if let Some(j) = e.blackhole {
+                let center = blackholes[j];
+                if previous_capture == Some(j) {
+                    let previous = V::polar(
+                        (self.time - DT) * 0.18
+                            + j as f32 * TAU / self.c.powers.blackhole_count as f32,
+                        self.c.powers.blackhole_orbit_radius,
+                    );
+                    e.p = e.p.add(center.sub(previous));
+                } else {
+                    e.blackhole_distance = e.p.dist(center);
+                    e.blackhole_hit_time = 0.0;
+                }
+                let offset = e.p.sub(center);
+                let distance = offset.len().min(e.blackhole_distance).min(blackhole_radius);
+                let pull = self.c.powers.blackhole_force * (1.0 - resistance)
+                    / (mass * def.mass * e.mobility)
+                    * DT;
+                e.blackhole_distance = (distance - pull).max(0.0);
+                e.p = center.add(offset.unit().mul(e.blackhole_distance));
+            } else {
+                e.blackhole_distance = 0.0;
+            }
             if e.stun > 0.0 {
                 continue;
             }
@@ -1251,21 +1311,6 @@ impl World {
                 } else {
                     1.0
                 };
-            let resistance = def.resistance;
-            // Equal-strength fields choose the nearest center; overlapping holes
-            // neither multiply pull nor cancel each other with opposing vectors.
-            if let Some(bh) = blackholes
-                .iter()
-                .copied()
-                .filter(|p| e.p.dist(*p) < blackhole_radius)
-                .min_by(|a, b| e.p.dist(*a).total_cmp(&e.p.dist(*b)))
-            {
-                e.p = e.p.add(bh.sub(e.p).unit().mul(
-                    self.c.powers.blackhole_force * (1.0 - resistance)
-                        / (mass * def.mass * e.mobility)
-                        * DT,
-                ));
-            }
             let slow = if self.powers[CHRONO] > 0.0 && e.p.len() < chrono_radius {
                 1.0 - chrono_slow * (1.0 - resistance)
             } else {
@@ -1276,7 +1321,7 @@ impl World {
             } else {
                 self.c.tower_radius + def.radius + if self.wall_hp > 0.0 { 5.0 } else { 0.0 }
             };
-            if e.p.len() > stop {
+            if e.blackhole.is_none() && e.p.len() > stop {
                 e.p = e.p.sub(
                     e.p.unit().mul(
                         (def.speed
@@ -1294,7 +1339,7 @@ impl World {
                     ),
                 );
             }
-            if !Self::boundary_attacker(e.kind) && e.p.len() < stop {
+            if e.blackhole.is_none() && !Self::boundary_attacker(e.kind) && e.p.len() < stop {
                 let outward = if e.p.len() > 0.001 {
                     e.p.unit()
                 } else {
@@ -1873,6 +1918,7 @@ impl World {
                         * self.enemies[i].definition(&self.c).mass
                         * self.enemies[i].mobility);
                 self.enemies[i].p = self.enemies[i].p.add(p.unit().mul(force));
+                self.constrain_blackhole(i);
             }
             if self.powers[CHAIN] > 0.0 && self.proc(CHAIN_PROC, self.power_effect(0)) {
                 self.chain_from(i, p);
@@ -2189,6 +2235,70 @@ impl World {
         deaths.clear();
         self.deaths = deaths;
     }
+    pub(crate) fn deathray_hits(&mut self) {
+        let active = self.deathray_active();
+        let end = V::polar(self.ray_angle, 710.0);
+        for i in 0..self.enemies.len() {
+            let inside = active
+                && self.enemies[i].hp > 0.0
+                && segment_distance(self.enemies[i].p, V::ZERO, end)
+                    < self.enemies[i].definition(&self.c).radius + 5.0;
+            let mut affected = false;
+            if inside {
+                let damage = if matches!(self.enemies[i].kind, 0 | 1 | 3) {
+                    self.enemies[i].hp
+                } else {
+                    self.power_effect(DEATHRAY) * DT
+                        + if !self.enemies[i].deathray_inside {
+                            2.0 * self.c.weapons[0].damage
+                        } else {
+                            0.0
+                        }
+                };
+                affected = self.hit(i, damage, OTHER);
+            }
+            self.enemies[i].deathray_inside = affected;
+        }
+    }
+    pub(crate) fn blackhole_hits(&mut self) {
+        let centers: Vec<_> = if self.powers[BLACKHOLE] > 0.0 {
+            (0..self.c.powers.blackhole_count)
+                .map(|i| self.blackhole_center(i))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let radius = self.area_radius(self.power_effect(BLACKHOLE));
+        for i in 0..self.enemies.len() {
+            if !centers.iter().any(|p| self.enemies[i].p.dist(*p) <= radius) {
+                self.enemies[i].blackhole_hit_time = 0.0;
+                continue;
+            }
+            self.enemies[i].blackhole_hit_time += DT;
+            if self.enemies[i].blackhole_hit_time + 0.00001 >= 1.0 {
+                self.enemies[i].blackhole_hit_time =
+                    (self.enemies[i].blackhole_hit_time - 1.0).max(0.0);
+                self.hit(i, self.c.weapons[0].damage, AREA_DAMAGE);
+            }
+        }
+    }
+    fn constrain_blackhole(&mut self, i: usize) {
+        if self.powers[BLACKHOLE] <= 0.0 {
+            return;
+        }
+        if let Some(index) = self.enemies[i].blackhole {
+            let center = self.blackhole_center(index);
+            let e = &mut self.enemies[i];
+            let offset = e.p.sub(center);
+            e.blackhole_distance = offset.len().min(e.blackhole_distance);
+            e.p = center.add(offset.unit().mul(e.blackhole_distance));
+        }
+    }
+    fn constrain_blackholes(&mut self) {
+        for i in 0..self.enemies.len() {
+            self.constrain_blackhole(i);
+        }
+    }
     pub fn deathray_active(&self) -> bool {
         self.powers[DEATHRAY] > 0.0 && self.ray_cycle < self.c.powers.deathray_duration
     }
@@ -2305,16 +2415,8 @@ impl World {
         areas.append(&mut self.areas);
         self.areas = areas;
         self.poisoned = poisoned;
-        if self.deathray_active() {
-            let end = V::polar(self.ray_angle, 710.0);
-            for i in 0..self.enemies.len() {
-                if segment_distance(self.enemies[i].p, V::ZERO, end)
-                    < self.enemies[i].definition(&self.c).radius + 5.0
-                {
-                    self.hit(i, self.power_effect(5) * DT, OTHER);
-                }
-            }
-        }
+        self.blackhole_hits();
+        self.deathray_hits();
         if self.powers[DEATHRAY] > 0.0 {
             self.ray_cycle += DT;
             if self.ray_cycle >= self.c.powers.deathray_duration + self.c.powers.deathray_cooldown {

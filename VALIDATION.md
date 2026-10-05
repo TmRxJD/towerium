@@ -1,19 +1,19 @@
 # Validation status
 
-Recorded 2026-10-05 against the funded Auto Play, Multiverse Nexus, short Rapid Fire, Supplies and six-power expansion build.
+Recorded 2026-10-05 against the camera, bot movement, Thunder contact, Black Hole, Death Ray and Nuke follow-up.
 
 ## Automated checks
 
-- Rust engine: 146 passed, 0 failed, 1 ignored (`dense_endurance_profile`, the manual release-profile stress workload). An earlier manual workload completed 120 ticks with 750, 3,000, and 13,000 enemies; these are native timings, not browser FPS or playable wave results.
+- Rust engine: 154 passed, 0 failed, 1 ignored (`dense_endurance_profile`, the manual release-profile stress workload). An earlier manual workload completed 120 ticks with 750, 3,000, and 13,000 enemies; these are native timings, not browser FPS or playable wave results.
 - Rust formatting: `cargo fmt --check` passed.
 - Clippy: passed with `-D warnings`.
 - Policy/controller/aim-assist tests: 43 passed, including finite movement, crowd sweeps, premium-shot conservation and charged-Ray priority.
 - Content validation: passed for 13 enemies, 30 Workshop entries, 22 Power upgrades, 400 SDK wave rows, 11 skins, 3 backgrounds, 8 music tracks, and 85 Tower assets.
 - TypeScript typecheck and production build: passed, including generated WASM bindings and Vite bundle.
-- Playwright browser suite: 28 passed, 0 failed; a focused bot capture check also passed.
+- Historical expansion browser suite: 28 passed, 0 failed. Follow-up active-power and legacy-save checks: 2 passed, 0 failed; camera/save smoke verification is recorded below.
 - Historical pre-Rapid-Fire-revision endurance: the balanced priority policy cleared 300 waves on seed 100 without errors; accurate primary-only and blind circle controls both died at wave 10. Full outcomes and balance caveats are in [PLAYTESTING.md](PLAYTESTING.md).
 
-The ignored native stress workload was not repeated for this change. Power supply was audited across 40 generation-only cases at waves 160/300. With the 50-second cap, max-equal Chrono uptime was 44.9–45.6%, Death Penalty 54.2–56.0%, and Pulsar Harvester 55.0–56.0%; focused modules reached 76.5–77.9%. The six new powers averaged 31.7–32.9% uptime under max-equal investment. Purchased Supplies are excluded. This does not establish human endurance.
+The ignored native stress workload was not repeated for this change. Before the combat follow-up, power supply was audited across 40 generation-only cases at waves 160/300. With the 50-second cap, max-equal Chrono uptime was 44.9–45.6%, Death Penalty 54.2–56.0%, and Pulsar Harvester 55.0–56.0%; focused modules reached 76.5–77.9%. The six new powers averaged 31.7–32.9% uptime under max-equal investment. Purchased Supplies are excluded. This does not establish human endurance.
 
 The browser suite covers separate touch aim/fire pointers, touch settings persistence and fallback, desktop control hiding, coins versus Power Stone spending, purchase restore after reload, three module timers, legacy fourth-slot clearing and Nexus art, Supplies stock limits and Coin-only purchases, tenth-wave retries, fresh Wave 50 progression, Auto Play persistence/focus behavior, asset decode/render checks, and compact viewport bounds.
 
@@ -45,3 +45,9 @@ npm run test:playtest
 npm run test:browser
 npm run build
 ```
+
+## Camera And Combat Follow-Up
+
+Native regressions cover stable zoom across all Range levels and AOE states, faster bounded bot paths, immediate Thunder contact and lingering slow, saved contact state, Death Ray common-enemy clears and once-per-contact bonus, monotonic Black Hole capture through stun/knockback/shockwaves and resume, one-second damage including control-immune bosses, and Nuke class selection. No new human endurance or physical-phone result is claimed.
+
+The previous published save resumed on desktop (1440�1080) and mobile (390�844), retaining 10,000 coins and maximum Range 600. Camera extent remained 660 with AOE and Chrono Field both off and on; Chrono radius changed from 630 to 724.5 without zooming. Real pointer aiming reached the range boundary. Four full-viewport captures are saved as `.local/camera-range-{desktop-1440x1080,mobile-390x844}-aoe-cf-{off,on}.png`. Visual review accepted the framing and mobile controls; intermittent range-ring contrast against the nebula remains minor polish.
