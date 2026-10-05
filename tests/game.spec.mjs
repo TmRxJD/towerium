@@ -1336,6 +1336,23 @@ test('Auto Play buys upgrades and advances without changing personal progress',a
   expect(await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])))).toEqual(personal);
 });
 
+test('Auto Play exposes and fires its independent automatic cannon',async({page})=>{
+  await page.goto('/?seed=42');await expect(page.locator('#start')).toBeEnabled();
+  await expect(page.locator('#auto-aim-toggle')).toHaveText('Autocannon: Off');
+  await page.locator('#auto-play').click();await page.locator('#watch-auto-play').click();
+  await expect(page.locator('#auto-aim-toggle')).toHaveText('Autocannon: On');
+  await expect.poll(async()=>{
+    const s=await readSnapshot(page);return s.overall_report.shots_fired-s.manual_shots_fired;
+  },{timeout:30000}).toBeGreaterThan(0);
+  const controls=await page.evaluate(async()=>{
+    const entry=document.querySelector('script[type="module"][src*="/src/main.ts"]');
+    return (await import(entry.src)).getControlState();
+  });
+  expect(controls.autoAim).not.toBeNull();expect(Number.isInteger(controls.autoTargetId)).toBe(true);
+  await page.locator('#pause').click();await page.locator('#stop-auto-play').click();
+  await expect(page.locator('#auto-aim-toggle')).toHaveText('Autocannon: Off');
+});
+
 test('Auto Play advances out of focus while a human run pauses on blur',async({page})=>{
   await page.clock.install();await page.goto('/?seed=42');
   await page.locator('#auto-play').click();await page.locator('#watch-auto-play').click();
@@ -1412,12 +1429,12 @@ test('all 23 power assets decode and expanded native snapshots render without er
 });
 
 
-test('auto aim priorities persist and manual fire remains available',async({page})=>{
+test('auto target priority persist and manual fire remains available',async({page})=>{
  await page.goto('/?seed=42');await expect(page.locator('#start')).toBeEnabled();
- await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: Off');
+ await expect(page.locator('#auto-aim-toggle')).toHaveText('Autocannon: Off');
  await page.locator('#auto-aim-toggle').click();await expect(page.locator('#auto-aim-toggle')).toHaveAttribute('aria-pressed','true');
  await page.locator('#start').click();await page.locator('#aim-priorities').click();
- await expect(page.getByRole('heading',{name:'Aim Priorities',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Target Priority',exact:true})).toBeVisible();
  await expect(page.locator('.priority-list li')).toHaveCount(8);
  await page.getByRole('button',{name:'Move Powerups Up',exact:true}).click();
  await page.locator('[data-rule="weakest"]').click();
@@ -1428,13 +1445,13 @@ test('auto aim priorities persist and manual fire remains available',async({page
  await page.locator('#pause').click();await page.reload();await page.locator('#aim-priorities').click();
  const after=await readControlState(page);expect(after.aimPreferences).toEqual(before.aimPreferences);
  await page.locator('#close-priorities').click();await page.locator('#restore-run').click();await page.locator('#resume').click();
- await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: On');
+ await expect(page.locator('#auto-aim-toggle')).toHaveText('Autocannon: On');
 });
 
 test('mobile auto aim and new workshop row fit; perk choice survives reload',async({browser})=>{
  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});const page=await context.newPage();
  await page.goto('/?seed=73');await expect(page.locator('#start')).toBeEnabled();
- await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: On');
+ await expect(page.locator('#auto-aim-toggle')).toHaveText('Autocannon: On');
  await page.locator('#aim-priorities').click();await page.locator('[data-rule="strongest"]').scrollIntoViewIfNeeded();
  await expect(page.locator('#close-priorities')).toBeInViewport();await page.screenshot({path:'test-results/aim-priorities-mobile.png'});await page.locator('#close-priorities').click();
  const saved=await page.evaluate(async()=>{
@@ -1447,14 +1464,28 @@ test('mobile auto aim and new workshop row fit; perk choice survives reload',asy
  });
  await stageRunOnNextNavigation(page,saved,'perks-mobile-new');await page.reload();await page.locator('#restore-run').click();
  await expect(page.locator('[data-perk]')).toHaveCount(3);await expect(page.locator('#next-wave')).toBeDisabled();
+ await expect(page.locator('#next-perk')).toHaveText('Perk Ready');
+ await expect(page.locator('[data-perk] img')).toHaveCount(3);
+ await expect.poll(()=>page.locator('[data-perk] img').evaluateAll(images=>images.every(i=>i.complete&&i.naturalWidth>0))).toBe(true);
+ await page.setViewportSize({width:568,height:320});await page.locator('.perk-selection').scrollIntoViewIfNeeded();
+ const compactCards=await page.locator('.perk-card').evaluateAll(cards=>{
+  const footer=document.querySelector('.shop-footer').getBoundingClientRect();
+  return cards.map(card=>{const b=card.getBoundingClientRect(),parts=[...card.querySelectorAll('strong,.perk-effect,small')].map(n=>n.getBoundingClientRect());return {inside:parts.every(r=>r.left>=b.left&&r.right<=b.right&&r.top>=b.top&&r.bottom<=b.bottom),visible:b.top>=0&&b.bottom<=innerHeight,aboveFooter:b.bottom<=footer.top};});
+ });
+ expect(compactCards).toHaveLength(3);expect(compactCards.every(card=>card.inside&&card.visible&&card.aboveFooter)).toBe(true);
+ await expect(page.locator('#next-wave')).toBeInViewport();
+ await page.screenshot({path:'test-results/perks-offer-landscape-568x320.png'});
+ await page.setViewportSize({width:390,height:844});
  await page.screenshot({path:'test-results/perks-mobile-before.png'});
- await page.locator('#open-shop').click();await expect(page.locator('[data-upgrade]')).toHaveCount(35);
+ await page.locator('#open-shop').click();await expect(page.locator('[data-upgrade]')).toHaveCount(35);await expect(page.locator('#shop-aim-priorities')).toHaveText('Target Priority');await expect(page.locator('#shop-aim-priorities')).toHaveAttribute('aria-label','Target Priority');
  await page.locator('[data-upgrade="30"]').click();await page.locator('[data-upgrade="32"]').click();
  await expect(page.locator('[data-upgrade="30"]')).toContainText('11%');
  await page.screenshot({path:'test-results/auto-upgrades-mobile.png'});
  await page.locator('#wave-report').click();await page.locator('[data-perk="0"]').click();await expect(page.locator('#next-wave')).toBeEnabled();
  await page.screenshot({path:'test-results/perks-mobile-after.png'});await page.reload();await page.locator('#restore-run').click();
  await expect(page.locator('[data-perk]')).toHaveCount(0);await expect(page.locator('.perk-picked')).toContainText('Sharp Shots');await expect(page.locator('#next-wave')).toBeEnabled();
+ await expect(page.locator('.owned-perk')).toHaveCount(1);await expect(page.locator('.owned-perk')).toContainText('Sharp Shots');await expect(page.locator('.perk-level')).toHaveText('1/5');
+ await expect(page.locator('#next-perk')).toHaveText('Next Perk · W15');
  await context.close();
 });
 
@@ -1499,7 +1530,7 @@ test('background pixels retain original artwork color outside gameplay overlays'
 });
 
 
-test('normal Auto Aim fires independently while manual shots keep their own weapon and aim',async({page})=>{
+test('normal Autocannon fires independently while manual shots keep their own weapon and aim',async({page})=>{
   await page.clock.install();await page.goto('/?seed=73');
   await expect(page.locator('#start')).toBeEnabled();
   const saved=await page.evaluate(async()=>{
@@ -1512,7 +1543,7 @@ test('normal Auto Aim fires independently while manual shots keep their own weap
   await stageRunOnNextNavigation(page,saved,'concurrent-auto-cannon');await page.reload();
   await page.locator('#restore-run').click();await page.locator('#resume').click();
   await page.locator('#auto-aim-toggle').click();
-  await expect(page.locator('#auto-aim-toggle')).toHaveText('Auto Aim: On');
+  await expect(page.locator('#auto-aim-toggle')).toHaveText('Autocannon: On');
   await page.clock.runFor(6000);const before=await readSnapshot(page);
   expect(before.overall_report.shots_fired).toBeGreaterThan(0);expect(before.manual_shots_fired).toBe(0);
   const box=await page.locator('#arena').boundingBox();
@@ -1525,3 +1556,16 @@ test('normal Auto Aim fires independently while manual shots keep their own weap
   await page.locator('#pause').click();const paused=await readSnapshot(page);await page.clock.runFor(1000);
   expect((await readSnapshot(page)).overall_report.shots_fired).toBe(paused.overall_report.shots_fired);
 });
+
+ test('spectator manual decisions reserve a different target from the automatic cannon',async({page})=>{
+  await page.goto('/?seed=42');await expect(page.locator('#start')).toBeEnabled();
+  const decision=await page.evaluate(async()=>{
+   const [{AutoPlayer},{default:init,Game}]=await Promise.all([import('/src/autoplay.ts'),import('/src/wasm/towerium.js')]);
+   await init();const config=JSON.stringify(await(await fetch('/engine/balance.json')).json());
+   const game=new Game(42,config);game.start_wave();const s=JSON.parse(game.snapshot());game.free();
+   s.enemies=[[1,3,220,0,3,3,0],[2,0,-120,0,2,2,0]];
+   const bot=new AutoPlayer('balanced','crowd','all',{reactionMs:180,aimSpeed:2400,switchMs:160});
+   const action=bot.update(s,1/60);return {automatic:action.autoTargetId,manual:bot.manualTarget};
+  });
+  expect(decision.automatic).toBe(2);expect(decision.manual).toBe('enemy_1');
+ });

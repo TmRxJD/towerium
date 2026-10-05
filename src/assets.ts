@@ -1,6 +1,7 @@
 import { gameAssetPath, towerAssetUrl } from 'thetowersdk/assets';
 import catalog from './cosmetic-catalog.json';
 import workshopCatalog from './workshop-catalog.json';
+import perkArt from './perk-art-catalog.json';
 import balance from '../engine/balance.json';
 export const workshop=workshopCatalog;
 export const skins=catalog.skins;
@@ -16,6 +17,7 @@ export const assetUrl = (name:string, domain:string, size:'md'|'lg'='md'):string
 export const enemyUrls = enemyNames.map(name => assetUrl(name==='Super Boss'?'Enemy Boss Ultimate':`Enemy ${name}`, 'enemies'));
 export const powerUrls = powerArt.map((name,i) => assetUrl(name,i===22?'cards':i>=18?'icons':i>=16?'cards':i>=12?'modules':i===9?'icons':i===5||i>=10 ? 'cards' : i===7 ? 'workshop' : 'ultimate-weapons'));
 export const workshopUrls=workshop.map(item=>assetUrl(item.asset,item.domain));
+export const perkUrls=perkArt.map(item=>assetUrl(item.asset,item.domain));
 export const coinUrl=assetUrl('Coin','icons');
 export const stoneUrl=assetUrl('coin_ultimate','icons');
 export const towerUrl = assetUrl('Cyber Tower','tower-skins');

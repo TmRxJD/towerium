@@ -46,15 +46,15 @@ budget = 3
 primary = true
 
 [[tasks]]
-name = "enable auto aim"
-goal = "Turn automatic aiming on for normal gameplay"
-done = { text = "Auto Aim: On" }
+name = "disable autocannon"
+goal = "Turn the Autocannon off for manual-only gameplay"
+done = { text = "Autocannon: Off" }
 budget = 1
 primary = true
 
 [[tasks]]
 name = "configure target priorities"
-goal = "Find the ranked target priorities for automatic aiming"
+goal = "Find the ranked Target Priority settings for the Autocannon"
 done = { control = "^Move Powerups Up$" }
 budget = 1
 primary = true

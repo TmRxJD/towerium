@@ -115,3 +115,7 @@ const perks = await readJson('../engine/perks.json');
 assert.equal(perks.length,15);assertUnique(perks.map(p=>p.name),'perks');
 for(const [i,p] of perks.entries()) {assertKeys(p,['name','effect','cap','tradeoff'],'perk');assertNonEmpty(p.name,'perk name');assertNonEmpty(p.effect,'perk effect');assert.ok(Number.isInteger(p.cap)&&p.cap>=1&&p.cap<=5);assert.equal(p.tradeoff,i>=10);if(p.tradeoff)assert.equal(p.cap,1);}
 console.log('Perk catalog: 15 definitions, 5 tradeoffs validated');
+
+const perkArt=await readJson("../src/perk-art-catalog.json");
+assert.equal(perkArt.length,perks.length);
+for(const item of perkArt){assertKeys(item,["asset","domain"],"perk art");assertSafeAssetName(item.asset,"perk art");assertSafeSegment(item.domain,"perk art domain");await assertAssetExists(gameAssetPath(item.asset,{domain:item.domain,size:"md"}),`perk/${item.asset}`);}

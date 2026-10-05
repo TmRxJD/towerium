@@ -1,12 +1,13 @@
 import balance from '../engine/balance.json';
 import { targets, baselineAction, baselinePurchase, baselinePowerPurchase, baselineSupplyPurchase } from '../scripts/playtest-policy.mjs';
 import { HumanController, type HumanOptions } from '../scripts/human-controls.mjs';
-import { AutoAimController,defaultAimPreferences } from '../scripts/auto-aim.mjs';
+import { AutoAimController,defaultAimPreferences,manualTargetPlan } from '../scripts/auto-aim.mjs';
 import type { Snapshot } from './types';
 type PurchaseAction = {kind:'buy';index:number} | {kind:'buy-power';power:number;path:number} | {kind:'buy-supply';item:number};
-export type AutoAction = {kind:'combat';aim:[number,number];weapon:number;deathWave:boolean;fire:boolean;autoAim:[number,number];autoWeapon:number;autoFire:boolean} | PurchaseAction | {kind:'next'};
+export type AutoAction = {kind:'combat';aim:[number,number];weapon:number;deathWave:boolean;fire:boolean;autoAim:[number,number];autoWeapon:number;autoFire:boolean;autoTargetId:number} | PurchaseAction | {kind:'next'};
 /** Pure spectator decisions; persistence and mode ownership remain in the UI. */
 export class AutoPlayer {
+  manualTarget='hold';
   private controller:HumanController;
   private automatic=new AutoAimController();
   private rules=defaultAimPreferences(true).rules;
@@ -28,9 +29,13 @@ export class AutoPlayer {
     if(state.phase===1){
       this.shopTime=0;this.lastPurchase=0;this.readyTime=0;
       const automatic=this.automatic.step(state,balance,this.rules,dt);
-      return {kind:'combat',autoAim:automatic.aim as [number,number],autoWeapon:automatic.weapon,autoFire:automatic.fire,...this.controller.step(state,dt,(observed,context)=>{
-        return baselineAction(observed,balance,targets(observed,balance,this.aim),this.aim,2,{...context,weaponMode:this.weapons});
-      })};
+      const manual=this.controller.step(state,dt,(observed,context)=>{
+        const candidates=targets(observed,balance,this.aim);
+        const plan=this.aim==='circle'?{state:observed,targets:candidates}:manualTargetPlan(observed,candidates,automatic.targetId);
+        return baselineAction(plan.state,balance,plan.targets,this.aim,2,{...context,weaponMode:this.weapons});
+      });
+      this.manualTarget=manual.target??'hold';
+      return {kind:'combat',autoAim:automatic.aim as [number,number],autoWeapon:automatic.weapon,autoFire:automatic.fire,autoTargetId:automatic.targetId,...manual};
     }
     if(state.phase!==2)return;
     this.shopTime+=dt;

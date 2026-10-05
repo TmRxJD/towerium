@@ -10,6 +10,7 @@ const target = resolve('public/tower-assets');
 const catalog=JSON.parse(readFileSync(new URL('../src/cosmetic-catalog.json',import.meta.url),'utf8'));
 const workshop=JSON.parse(readFileSync(new URL('../src/workshop-catalog.json',import.meta.url),'utf8'));
 const entries = [
+  ['perk-damage','Damage Meter','workshop'],
   ...['Basic', 'Fast', 'Tank', 'Ranged', 'Protector', 'Boss', 'Vampire', 'Ray', 'Scatter', 'Commander', 'Saboteur', 'Overcharge', 'Boss Ultimate'].map(name => [`enemy-${name.toLowerCase()}`, `Enemy ${name}`, 'enemies']),
   ['tower', 'Cyber Tower', 'tower-skins'],
   ['chain', 'Weapon Chain Lightning', 'ultimate-weapons'],

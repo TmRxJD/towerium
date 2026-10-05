@@ -19,7 +19,7 @@ import { createSaveCompatibility } from './save-compatibility';
 import { defaultAutomation, validateAutomation, priorityPurchase, priorityPerk, holdInterval, RoundCountdown } from '../scripts/automation.mjs';
 import { perks } from './perks';
 import { AutoAimController, priorityRules, validateAimPreferences, type AimPreferences } from '../scripts/auto-aim.mjs';
-import { perkChoices, selectAutoPerk } from './perks';
+import { perkChoices, perkBuild, nextPerkText, selectAutoPerk } from './perks';
 import { assistAim } from '../scripts/aim-assist.mjs';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
@@ -132,7 +132,7 @@ function runAutoPlayer(dt:number){
   if(snapshot.phase===2&&snapshot.perks.offers.length){game.choose_perk(selectAutoPerk(snapshot,autoPlayer.strategy)!);read();renderReport();return;}
   const action=autoPlayer.update(snapshot,dt);if(!action)return;
   if(action.kind==='combat'){
-    aim=action.aim;weapon=action.weapon;firing=action.fire;input();game.set_auto_input(...action.autoAim,action.autoFire,action.autoWeapon);
+    aim=action.aim;weapon=action.weapon;firing=action.fire;assistedAim=action.autoAim;autoWeapon=action.autoWeapon;autoTargetId=action.autoTargetId;autoFireReady=action.autoFire;input();game.set_auto_input(...action.autoAim,action.autoFire,action.autoWeapon);
     if(action.deathWave)game.death_wave();
   }else if(action.kind==='buy-supply'){
     shopCategory='supplies';if(game.buy_supply(action.item)){read();renderShop();}
@@ -190,7 +190,7 @@ app.innerHTML=`
     <main class="layout">
       <section class="play-column" aria-label="Towerium game">
         <span id="run-mode" class="auto-badge" hidden>Auto Play</span><div class="hud">
-          <div class="wave-stat"><span class="eyebrow">WAVE</span><strong id="wave">01</strong><span id="wave-timer" aria-label="Wave Timer">00:00</span></div>
+          <div class="wave-progress"><div class="wave-stat"><span class="eyebrow">WAVE</span><strong id="wave">01</strong><span id="wave-timer" aria-label="Wave Timer">00:00</span></div><span id="next-perk" class="next-perk">Next Perk · W5</span></div>
           <div class="health-stat"><div class="stat-label"><span>HP</span><strong id="health-text">100 / 100</strong></div><div class="health-track" role="meter" aria-label="Tower health" aria-valuemin="0" aria-valuemax="200" aria-valuenow="100"><span id="health-fill"></span><span id="overheal-fill"></span></div></div>
           <div class="coin-stat" title="Coins">${coinIcon}<strong id="coins" aria-label="Coins">0</strong><span class="stone-balance" title="Power Stones">${stoneIcon}<strong id="stones" aria-label="Power Stones">0</strong></span></div>
         </div>
@@ -200,7 +200,7 @@ app.innerHTML=`
           <section id="intro" class="intro" aria-label="Start Towerium"><img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2><button id="start" class="primary">Play</button></section>
           <div id="notice" class="run-status" role="status" aria-live="polite"></div>
         </div>
-        <div class="aim-tools"><button id="auto-aim-toggle" class="secondary" aria-pressed="false">Auto Aim: Off</button><button id="aim-priorities" class="secondary">Aim Priorities</button></div>
+        <div class="aim-tools"><button id="auto-aim-toggle" class="secondary" aria-pressed="false">Autocannon: Off</button><button id="aim-priorities" class="secondary">Target Priority</button></div>
         <div class="weapon-bar" aria-label="Weapon selection">${weaponNames.map((name,i)=>`<button class="weapon${i===0?' selected':''}" data-weapon="${i}" aria-label="${name}" aria-pressed="${i===0}" title="${name} · ${i+1}">${weaponIcons[i]}<b id="ammo-${i}" aria-hidden="true">${i===0?'∞':balance.weapons[i].ammo}</b></button>`).join('')}<button id="death-wave" class="weapon death-weapon" aria-label="Death Wave" title="Death Wave · Q · No charges" disabled>${weaponIcons[4]}<b id="charge-count" aria-hidden="true">0/3</b></button></div>
         <div id="touch-controls" class="touch-controls" hidden></div>
       </section>
@@ -230,7 +230,7 @@ function post(type:string,payload:Record<string,unknown>={}) {
 function read() {snapshot=JSON.parse(game.snapshot()) as Snapshot;return snapshot;}
 // Read-only diagnostics for integration tests. No test-only simulation controls.
 export function getRenderSnapshot():Snapshot {return JSON.parse(game.snapshot()) as Snapshot;}
-export function getControlState(){return {aim:[...aim],effectiveAim:[...displayedAim()],firing,weapon,autoFireReady,autoWeapon,autoTargetId,autoAim:assistedAim?[...assistedAim]:null,aimPreferences:structuredClone(aimPreferences)};}
+export function getControlState(){return {aim:[...aim],effectiveAim:[...displayedAim()],firing,weapon,manualTarget:autoPlayer?.manualTarget??null,autoFireReady,autoWeapon,autoTargetId,autoAim:assistedAim?[...assistedAim]:null,aimPreferences:structuredClone(aimPreferences)};}
 function displayedAim():[number,number] {if(assistedAim&&!firing&&!autoPlayer)return assistedAim;return touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;}
 function input() {
  const manualAim=touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;
@@ -238,7 +238,7 @@ function input() {
  if(!autoPlayer)game.set_auto_input(...(assistedAim??aim),!!assistedAim&&autoFireReady&&aimPreferences.enabled,autoWeapon);
 }
 function renderPriorities(){
- modalContent(`<div class="modal-top"><h2 id="modal-title">Aim Priorities</h2><button id="priorities-auto-aim" class="secondary" aria-pressed="${aimPreferences.enabled}">Auto Aim: ${aimPreferences.enabled?'On':'Off'}</button></div><div class="priority-body"><p>Higher rules win. The automatic cannon fires alongside manual shots. Manual aim stays independent. Workshop upgrades unlock automatic weapons; Death Wave stays manual.</p><ol class="priority-list">${aimPreferences.rules.map((r,i)=>{const name=priorityRules.find(p=>p.id===r.id)!.label;return `<li><span>${i+1}</span><button data-rule="${r.id}" aria-pressed="${r.enabled}" aria-label="${name}, ${r.enabled?'enabled':'disabled'}">${name}<small>${r.enabled?'On':'Off'}</small></button><button data-move-rule="${i}" data-direction="-1" aria-label="Move ${name} Up" ${i===0?'disabled':''}>↑</button><button data-move-rule="${i}" data-direction="1" aria-label="Move ${name} Down" ${i===aimPreferences.rules.length-1?'disabled':''}>↓</button></li>`;}).join('')}</ol></div><div class="modal-actions"><button id="reset-priorities" class="quiet">Reset</button><button id="close-priorities" class="primary">${snapshot.phase===1&&!prioritiesWasPaused?'Resume':'Done'}</button></div>`);
+ modalContent(`<div class="modal-top"><h2 id="modal-title">Target Priority</h2><button id="priorities-auto-aim" class="secondary" aria-pressed="${aimPreferences.enabled}">Autocannon: ${aimPreferences.enabled?'On':'Off'}</button></div><div class="priority-body"><p>Higher rules win. Manual aim stays independent.</p><ol class="priority-list">${aimPreferences.rules.map((r,i)=>{const name=priorityRules.find(p=>p.id===r.id)!.label;return `<li><span>${i+1}</span><button data-rule="${r.id}" aria-pressed="${r.enabled}" aria-label="${name}, ${r.enabled?'enabled':'disabled'}">${name}<small>${r.enabled?'On':'Off'}</small></button><button data-move-rule="${i}" data-direction="-1" aria-label="Move ${name} Up" ${i===0?'disabled':''}>↑</button><button data-move-rule="${i}" data-direction="1" aria-label="Move ${name} Down" ${i===aimPreferences.rules.length-1?'disabled':''}>↓</button></li>`;}).join('')}</ol></div><div class="modal-actions"><button id="reset-priorities" class="quiet">Reset</button><button id="close-priorities" class="primary">${snapshot.phase===1&&!prioritiesWasPaused?'Resume':'Done'}</button></div>`);
 }
 function openPriorities(){prioritiesWasPaused=snapshot.paused;prioritiesOpen=true;if(snapshot.phase===1)pause(false);renderPriorities();}
 function closePriorities(){prioritiesOpen=false;assistedAim=null;if(snapshot.phase===1&&!prioritiesWasPaused)resume();else if(snapshot.phase===1)pause();else if(snapshot.phase>=2)returnRunScreen();else closeModal();}
@@ -311,7 +311,7 @@ function runFooter(ended=false) {
   if(ended&&!autoPlayer&&runRetries.available&&runRetries.checkpoint?.seed===seed)actions=`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint.wave} · ${3-runRetries.used} Left</button>`+actions;
   if(ended&&!autoPlayer&&cosmetics.completed>=50)actions=`<button id="milestone-run" class="secondary">Fresh Wave ${Math.floor(cosmetics.completed/50)*50}</button>`+actions;
   if(!ended&&snapshot.pending_start_wave>0)actions=`<button id="next-wave" class="primary" ${autoPlayer?'disabled':''}>Start Wave ${snapshot.pending_start_wave} →</button>`;
-  return `<div class="shop-footer"><div class="shop-tools">${shopSoundButtons()}${pauseOrRestart}<button id="shop-aim-priorities" class="quiet" ${autoPlayer?'disabled':''}>Aim</button><button id="shop-help" class="quiet">Help</button><button id="shop-skins" ${autoPlayer?'disabled':''} class="quiet skin-button" title="${autoPlayer?'Skins Are Read Only During Auto Play':'Tower Skins'}" aria-label="Skins${cosmetics.fresh?', new skin unlocked':''}">${skinIcon(cosmetics.selected)}<span${cosmetics.fresh?' class="new-skin"':''}>Skins</span></button></div><p id="purchase-status" class="sr-only" role="status">${snapshot.notice.text.includes('upgraded')?esc(snapshot.notice.text):''}</p><div class="report-actions">${actions}</div></div>`;
+  return `<div class="shop-footer"><div class="shop-tools">${shopSoundButtons()}${pauseOrRestart}<button id="shop-aim-priorities" class="quiet" title="Target Priority" aria-label="Target Priority" ${autoPlayer?'disabled':''}>Target Priority</button><button id="shop-help" class="quiet">Help</button><button id="shop-skins" ${autoPlayer?'disabled':''} class="quiet skin-button" title="${autoPlayer?'Skins Are Read Only During Auto Play':'Tower Skins'}" aria-label="Skins${cosmetics.fresh?', new skin unlocked':''}">${skinIcon(cosmetics.selected)}<span${cosmetics.fresh?' class="new-skin"':''}>Skins</span></button></div><p id="purchase-status" class="sr-only" role="status">${snapshot.notice.text.includes('upgraded')?esc(snapshot.notice.text):''}</p><div class="report-actions">${actions}</div></div>`;
 }
 function returnRunScreen() {
   if(snapshot.phase===3)gameOver();else if(snapshot.pending_start_wave>0||postWaveView==='shop')renderShop();else renderReport();
@@ -353,7 +353,7 @@ function gameOver() {
   const cleared=Math.max(0,snapshot.wave-1);
   if(!autoPlayer&&cleared>best){best=cleared;try{localStorage.setItem('towerium.best-wave',String(best));}catch{/* Optional local best. */}}
   if(!autoPlayer&&!resultSent){audio.tone(180,.5,'triangle',.025,40);post('towerium:result',{payload:{version:1,aimAssisted:snapshot.aim_assisted,seed,waveReached:snapshot.wave,wavesCleared:cleared,kills:snapshot.kills,coinsEarned:snapshot.earned,durationSeconds:Math.round(snapshot.time)}});resultSent=true;}
-  modalContent(`<div class="shop-heading"><h2 id="modal-title">Game Over</h2><span class="run-result">Wave ${snapshot.wave} · ${cleared} Cleared</span></div><div class="report-body">${snapshot.aim_assisted?'<p class="perk-picked">Assisted Aim</p>':'<p class="perk-picked">Manual Aim</p>'}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter(true)}`);
+  modalContent(`<div class="shop-heading"><h2 id="modal-title">Game Over</h2><span class="run-result">Wave ${snapshot.wave} · ${cleared} Cleared</span></div><div class="report-body">${snapshot.aim_assisted?'<p class="perk-picked">Autocannon Used</p>':'<p class="perk-picked">Manual Aim</p>'}${perkBuild(snapshot)}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter(true)}`);
   modal.classList.add('report-modal');
 }
 function syncPhase() {
@@ -379,11 +379,13 @@ function updateHud() {
   el('touch-controls').hidden=!mobile;
   document.querySelector('.shell')!.classList.toggle('touch-mode',mobile);
   touchControls.update(mobile&&snapshot.phase===1&&!snapshot.paused&&!modal.open,canFireWeapon());
-  const toggle=el<HTMLButtonElement>('auto-aim-toggle');toggle.textContent=`Auto Aim: ${aimPreferences.enabled?'On':'Off'}`;toggle.setAttribute('aria-pressed',String(aimPreferences.enabled));toggle.disabled=!!autoPlayer;el<HTMLButtonElement>('aim-priorities').disabled=!!autoPlayer;
+  const toggle=el<HTMLButtonElement>('auto-aim-toggle');toggle.textContent=`Autocannon: ${autoPlayer||aimPreferences.enabled?'On':'Off'}`;toggle.setAttribute('aria-pressed',String(!!autoPlayer||aimPreferences.enabled));toggle.disabled=!!autoPlayer;toggle.title=autoPlayer?'Auto Play Controls The Autocannon':'Toggle The Autocannon';el<HTMLButtonElement>('aim-priorities').disabled=!!autoPlayer;
   const s=snapshot;
   el('run-mode').hidden=!autoPlayer;
   setText('wave',String(s.wave||1).padStart(2,'0'));setText('coins',number(s.coins));setText('stones',number(s.stones));
   const cleanup=s.wave_time>=balance.waves.spawn_seconds;
+  setText('next-perk',nextPerkText(s).replace('Wave ','W'));
+  el('next-perk').title=s.perks.offers.length?'Choose A Perk In The Report':nextPerkText(s)==='Perks Maxed'?'All Perks Are Maxed':`Next Perk After Clearing Wave ${s.next_perk_wave}`;
   setText('wave-timer',cleanup?`+${clock(s.cleanup_seconds)}`:clock(s.wave_time));
   el('wave-timer').title=cleanup?'Cleanup':'Wave Timer';
   el('wave-timer').setAttribute('aria-label',cleanup?`Cleanup ${clock(s.cleanup_seconds)}`:`Wave Timer ${clock(s.wave_time)} of ${clock(balance.waves.spawn_seconds)}`);
@@ -513,7 +515,7 @@ window.setInterval(()=>{
 function frame(now:number) {
   if(autoPlayer&&document.hidden){last=0;animation=requestAnimationFrame(frame);return;}
   const dt=last?Math.min((now-last)/1000,0.1):0;last=now;
-  updateAutomation(dt);stepGame(dt);renderer.draw(snapshot,displayedAim(),dt);audio.update(snapshot);
+  updateAutomation(dt);stepGame(dt);renderer.draw(snapshot,displayedAim(),dt,assistedAim);audio.update(snapshot);
   touchControls.finishShot();
   if(now-lastSave>1000){saveRun();lastSave=now;}
   if(now-lastHud>100){updateHud();lastHud=now;}

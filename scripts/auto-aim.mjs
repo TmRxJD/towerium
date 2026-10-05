@@ -62,3 +62,15 @@ export class AutoAimController {
     return {aim:[...this.position],weapon,fire:this.wait===0&&travel<8,targetId:target.id};
   }
 }
+
+/** Reserve the automatic cannon's selected target; a lone target can use both guns. */
+export function manualTargets(candidates, automaticTargetId) {
+  const alternatives=candidates.filter(target=>target.id!==automaticTargetId);
+  return alternatives.length?alternatives:candidates;
+}
+
+export function manualTargetPlan(state,candidates,automaticTargetId) {
+  const targets=manualTargets(candidates,automaticTargetId);
+  const observed=targets.length<candidates.length?{...state,enemies:state.enemies.filter(e=>e[0]!==automaticTargetId),drops:state.drops.filter(d=>d[0]!==automaticTargetId)}:state;
+  return {state:observed,targets};
+}

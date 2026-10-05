@@ -119,7 +119,7 @@ Configuration `f6e66bf6` and WASM `80f7cbc1` cleared a funded wave 160–170 sta
 All 22 timer slots were captured in a telemetry-only replay with the same final-state hash. Extra Orbs peaked at 45 seconds; Gold, Amp, Flame and Thunder also peaked at 45. Area Of Effect was not collected in this seed span. Chrono, Spotlight, Death Penalty and Space Displacer reached the 50-second cap; no recorded bank exceeded it. A separate perfect-collection generation audit measures the new powers at 31.7–32.9% average uptime under maximum equal investment, excluding Supplies.
 
 
-## Current Auto Aim / Perks / Critical Coin Audit
+## Current Autocannon / Perks / Critical Coin Audit
 
 The v4 audit uses the actual WASM engine and freezes the engine binary, configuration and controller source per batch. It starts from wave 1, earns its purchases and chooses seeded perks. Coin rewards match the SDK and v29 extraction, including 4-coin Fleet enemies and Scatter children; Basics require Critical Coin.
 

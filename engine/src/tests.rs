@@ -2953,7 +2953,7 @@ fn diagnostic_weapon_damage_counts_actual_hp_and_child_bombs() {
 }
 
 #[test]
-fn accurate_lss_sustains_opening_mix_but_waste_costs_ammo() {
+fn accurate_lss_sustains_invested_opening_mix_but_waste_costs_ammo() {
     for (quantity, accuracy, sustainable, pickups) in [
         (5, 85, true, 40),
         (6, 80, true, 40),
@@ -2965,6 +2965,9 @@ fn accurate_lss_sustains_opening_mix_but_waste_costs_ammo() {
         w.spawn_timer = 1e9;
         w.hp = 1_000_000.0;
         w.levels[22] = quantity;
+        // Sustained LSS is an invested build, not a starting-cannon entitlement.
+        w.levels[2] = 3;
+        w.levels[3] = 2;
         w.c.weapons[LIGHT as usize].capacity = 1_000_000;
         w.ammo[LIGHT as usize] = 100_000;
         w.c.upgrades[21].base = 0.0;

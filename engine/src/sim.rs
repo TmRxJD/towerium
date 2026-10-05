@@ -3133,6 +3133,23 @@ impl World {
 mod automatic_cannon_tests {
     use super::*;
     #[test]
+    fn opening_fans_are_small_and_late_specialization_keeps_eight_projectiles() {
+        let mut w = World::new(Config::standard(), 42);
+        w.start_wave();
+        w.input(100.0, 0.0, true, PROJECTILE);
+        for _ in 0..20 {
+            w.fire();
+        }
+        assert_eq!(w.overall_stats.shots_fired, 20);
+        assert_eq!(w.shots.len(), 22);
+        assert_eq!(w.shots.iter().filter(|s| s.counted_shot).count(), 20);
+        w.levels[2] = w.c.upgrades[2].cap;
+        w.levels[3] = w.c.upgrades[3].cap;
+        assert!((w.stat(2) - 0.8).abs() < 0.0001);
+        assert_eq!(w.stat(3), 8.0);
+    }
+
+    #[test]
     fn efficiency_scales_every_cannon_stat_and_preserves_manual() {
         let mut w = World::new(Config::standard(), 42);
         w.start_wave();

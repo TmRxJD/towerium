@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {AutoAimController,aimTarget,defaultAimPreferences,validateAimPreferences} from '../scripts/auto-aim.mjs';
+import {AutoAimController,manualTargets,manualTargetPlan,aimTarget,defaultAimPreferences,validateAimPreferences} from '../scripts/auto-aim.mjs';
 const enemy=(id,kind,x,hp=10)=>[id,kind,x,0,hp,10,0];
 const state={range:300,enemies:[enemy(1,0,250),enemy(2,3,290),enemy(3,1,220),enemy(4,12,280)],drops:[]};
 test('ranked categories reorder live; danger wins defaults',()=>{
@@ -45,4 +45,21 @@ test('approaching enemies take priority over ranged attackers before reaching th
  const safe={...s,enemies:[s.enemies[0],enemy(2,0,300),enemy(3,0,310),enemy(4,0,320)]};
  assert.equal(aimTarget(safe,defaultAimPreferences().rules,0,c).id,1);
  assert.equal(aimTarget(s,[{id:'ranged',enabled:true},{id:'danger',enabled:true}],0,c).id,1);
+});
+
+test('manual target selection reserves the automatic focus without losing lone targets',()=>{
+ const candidates=[{id:1,kind:3},{id:2,kind:0},{id:3,drop:5}];
+ assert.deepEqual(manualTargets(candidates,1),candidates.slice(1));
+ assert.deepEqual(manualTargets(candidates,3),candidates.slice(0,2));
+ assert.deepEqual(candidates.map(t=>t.id),[1,2,3]);
+ assert.equal(manualTargets([candidates[0]],1)[0],candidates[0]);
+ assert.deepEqual(manualTargets([],1),[]);
+});
+
+test('target reservation preserves full crowd observations outside the nominated choices',()=>{
+ const s={enemies:[enemy(1,3,200),enemy(2,0,100),enemy(3,0,120),enemy(4,2,180)],drops:[[5,0,100,0,15]]};
+ const plan=manualTargetPlan(s,[{id:1},{id:2}],1);
+ assert.deepEqual(plan.targets,[{id:2}]);assert.deepEqual(plan.state.enemies.map(e=>e[0]),[2,3,4]);
+ assert.deepEqual(plan.state.drops,s.drops);assert.equal(s.enemies.length,4);
+ assert.equal(manualTargetPlan(s,[{id:1}],1).state,s);
 });

@@ -4,7 +4,7 @@ import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import init,{Game} from '../src/wasm/towerium.js';
 import {HumanController} from './human-controls.mjs';
-import {AutoAimController,defaultAimPreferences} from './auto-aim.mjs';
+import {AutoAimController,defaultAimPreferences,manualTargetPlan} from './auto-aim.mjs';
 import {auditBuilds,auditProfiles,auditPerk,auditPurchase,auditPowerPurchase,auditAction,economyHold} from './balance-audit-policy.mjs';
 import {targets,baselineSupplyPurchase} from './playtest-policy.mjs';
 const root=resolve(import.meta.dirname,'..'),hash=s=>createHash('sha256').update(s).digest('hex');
@@ -39,10 +39,13 @@ async function run(job){
    if(holdAuto)withheld+=sampleFrames/60;
   }
   for(let frame=0;frame<sampleFrames&&s.phase===1;frame++){
-   const action=human.step(s,1/60,(observed,context)=>auditAction(observed,config,job.build,{...context,human:!settings.reference},job.aim),manualSlot);
+   const auto=automatic.step(s,config,rules,1/60);
+   const action=human.step(s,1/60,(observed,context)=>{
+    const plan=assisted&&!holdAuto?manualTargetPlan(observed,targets(observed,config,job.aim),auto.targetId):{state:observed};
+    return auditAction(plan.state,config,job.build,{...context,human:!settings.reference},job.aim);
+   },manualSlot);
    game.input(...action.aim,manualSlot&&action.fire,action.weapon);
    if(manualSlot){if(action.deathWave)game.death_wave();manualFrames++;}
-   const auto=automatic.step(s,config,rules,1/60);
    game.set_auto_input(...auto.aim,assisted&&!holdAuto&&auto.fire,auto.weapon);
    if(assisted&&!holdAuto&&auto.fire)autoFrames++;
    game.advance(1/60);frames++;

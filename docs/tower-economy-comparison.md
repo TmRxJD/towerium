@@ -15,8 +15,8 @@ Chance increments below are percentage points. A multiplier increment adds to th
 | Health | 5 | 5 | 10 | 160 | 14 | 9 |
 | Regen | 0.0005 | 0.0395 | 5 | 1.2/s | 0.3/s | 11 |
 | Coins/Kill | 1× | 0.01× | 10 | 1× | 0.01× | 8 |
-| Multishot Chance | 0% | 0.5 pp | 10 | 20% | 3 pp | 17 |
-| Multishot Quantity | 2 | 1 | 125 | 5 | 1 | 75 |
+| Multishot Chance | 0% | 0.5 pp | 10 | 10% | 3.5 pp | 17 |
+| Multishot Quantity | 2 | 1 | 125 | 2 | 2 | 75 |
 | Thorns | 0% | 1 pp | 10 | 1 hits | 1 hits | 35 |
 | Overheal | 1.5× | 0.03× | 30 | 1× | 0.1× | 12 |
 | Rapid Fire Chance | 0% | 0.4 pp | 20 | 2% | 0.8 pp | 30 |
@@ -44,7 +44,7 @@ Tower's first Attack Speed cash prices are 5, 7, 10; its last purchase costs 9,1
 
 Tower Multishot Targets costs 125, 350, 800, 2,000, 8,000, 20,000 and 40,000. Towerium's three purchases cost 75, 530, 177,091. Orb Quantity costs 113, 172, 9,313, 589,185. Multishot, Bounce and Orb Quantity together account for 28.9% of total Workshop cost. Total-workshop affordability therefore does not measure combat development directly.
 
-Each stat has explicit prices and late specialization costs. Auto Cannon Efficiency reaches 50% for 100 coins, while its final 20 levels stay expensive. Current reference affordability and gameplay evidence appear in [balance rules](balance.md); a reference budget does not prove survival.
+Each stat has explicit prices and late specialization costs. Autocannon Efficiency reaches 50% for 100 coins, while its final 20 levels stay expensive. Current reference affordability and gameplay evidence appear in [balance rules](balance.md); a reference budget does not prove survival.
 
 ## Enemy Rewards
 

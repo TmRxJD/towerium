@@ -25,7 +25,7 @@ export class Renderer {
     if(!Number.isFinite(r)||r<=0)return;
     const c=this.ctx;c.beginPath();c.arc(x,y,r,0,TAU);if(fill){c.fillStyle=fill;c.fill();}c.strokeStyle=stroke;c.lineWidth=width;c.stroke();
   }
-  draw(s:Snapshot,aim:[number,number],frameDelta:number) {
+  draw(s:Snapshot,aim:[number,number],frameDelta:number,autoAim:[number,number]|null=null) {
     const c=this.ctx;
     const width=this.canvas.clientWidth,ratio=window.devicePixelRatio || 1;
     if(width!==this.size || ratio!==this.ratio) {this.size=width;this.ratio=ratio;this.canvas.width=Math.round(width*ratio);this.canvas.height=this.canvas.width;}
@@ -129,16 +129,20 @@ export class Renderer {
     }
     this.circle(0,0,balance.tower_radius,'#69cbbb88','#122934',2);this.circle(0,0,34,'#65d5c55a',undefined,2);
     c.save();c.rotate(angle);c.fillStyle='#b6fff2';c.fillRect(10,-3,34,6);c.restore();
+    if(autoAim&&s.phase===1){c.save();c.rotate(Math.atan2(autoAim[1],autoAim[0]));c.fillStyle='#7dcaff';c.fillRect(12,5,27,4);c.restore();}
     const skin=this.art.skins?.[this.skin];
     if(skin){const scale=60/Math.max(skin.width,skin.height);c.drawImage(skin,-skin.width*scale/2,-skin.height*scale/2,skin.width*scale,skin.height*scale);}
     else{c.beginPath();for(let i=0;i<6;i++){const a=i*TAU/6;const x=Math.cos(a)*25,y=Math.sin(a)*25;if(i===0)c.moveTo(x,y);else c.lineTo(x,y);}c.closePath();c.fillStyle='#122934';c.fill();c.strokeStyle='#b6fff2';c.lineWidth=3;c.stroke();}
     if(s.hp>s.max_hp)this.circle(0,0,46,'#b899fa99',undefined,3);
     if(s.phase===1 && !s.paused){
-      const [x,y]=aim,scale=this.touchAim?extent*2/width:1,radius=this.touchAim?7*scale:10;
-      if(this.touchAim)this.circle(x,y,radius,'#080d14',undefined,5*scale);
-      this.circle(x,y,radius,'#c5f7e4',undefined,this.touchAim?2*scale:1);
-      c.strokeStyle='#c5f7e4';c.lineWidth=this.touchAim?2*scale:1;
-      for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){c.beginPath();c.moveTo(x+Math.cos(a)*(radius+4*scale),y+Math.sin(a)*(radius+4*scale));c.lineTo(x+Math.cos(a)*(radius+9*scale),y+Math.sin(a)*(radius+9*scale));c.stroke();}
+      const [x,y]=aim,scale=screenPixel,radius=this.touchAim?10*scale:12*scale;
+      this.circle(x,y,radius,'#071018',undefined,5*scale);
+      this.circle(x,y,radius,'#effff7',undefined,2*scale);
+      for(const color of ['#071018','#effff7']){
+        c.strokeStyle=color;c.lineWidth=(color==='#071018'?5:2)*scale;
+        for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){c.beginPath();c.moveTo(x+Math.cos(a)*(radius+3*scale),y+Math.sin(a)*(radius+3*scale));c.lineTo(x+Math.cos(a)*(radius+9*scale),y+Math.sin(a)*(radius+9*scale));c.stroke();}
+      }
+
     }
   }
   private fields(s:Snapshot) {

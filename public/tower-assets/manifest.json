@@ -619,6 +619,12 @@
       "domain": "cards",
       "path": "cards/critical-coin-md.webp",
       "sha256": "912d98ed7565abce540a2124ef9646fd5fc1f1812c0fdae50bf170d6757aa0b4"
+    },
+    "perk-damage": {
+      "name": "Damage Meter",
+      "domain": "workshop",
+      "path": "workshop/damage-meter-md.webp",
+      "sha256": "6a10765588e9534865ed9f372097369156951e8700b8a121025f8bf883ba3947"
     }
   }
 }

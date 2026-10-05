@@ -1,0 +1,62 @@
+[
+  {
+    "asset": "Damage Meter",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Health",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Regen",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Attack Speed",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Orb Qty",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Bounce Targets",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Coins/Kill",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Weapon Chrono Field",
+    "domain": "ultimate-weapons"
+  },
+  {
+    "asset": "Enemy Tank",
+    "domain": "enemies"
+  },
+  {
+    "asset": "Enemy Basic",
+    "domain": "enemies"
+  },
+  {
+    "asset": "Damage Meter",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Health",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Coins/Kill",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Attack Speed",
+    "domain": "workshop"
+  },
+  {
+    "asset": "Orb Speed",
+    "domain": "workshop"
+  }
+]

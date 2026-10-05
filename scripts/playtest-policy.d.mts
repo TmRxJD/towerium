@@ -1,5 +1,5 @@
 import type { Snapshot } from '../src/types';
-interface Candidate { key:string; x:number; y:number; }
+interface Candidate { id:number; key:string; x:number; y:number; }
 export function targets(state:Snapshot, config:unknown, aim?:string):Candidate[];
 export function baselineAction(state:Snapshot, config:unknown, candidates:Candidate[], aim?:string, circleSeconds?:number, context?:{previous?:Snapshot}):{target:string; pointer?:[number,number]; weapon:number; deathWave:boolean;urgent?:boolean;premiumInterval?:number;transitTargets?:[number,number,number][];transitFanAngles?:number[];transitChance?:number;fire?:boolean;waitingForImpact?:boolean};
 export function baselinePurchase(state:Snapshot, config:unknown, strategy:string, excluded?:number, assisted?:boolean):number;

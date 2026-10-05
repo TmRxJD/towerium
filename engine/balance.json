@@ -417,8 +417,8 @@
     {
       "name": "Multishot Chance",
       "group": "Attack",
-      "base": 0.2,
-      "step": 0.03,
+      "base": 0.1,
+      "step": 0.035,
       "cap": 20,
       "unit": "%",
       "description": "Projectiles and Light Speed can fire a multishot fan.",
@@ -450,8 +450,8 @@
     {
       "name": "Multishot Quantity",
       "group": "Attack",
-      "base": 5,
-      "step": 1,
+      "base": 2,
+      "step": 2,
       "cap": 3,
       "unit": "",
       "description": "Total projectiles in a multishot fan. Needs multishot chance.",
@@ -1359,7 +1359,7 @@
       "description": "Raises every finite ammo reserve. Does not refill ammo."
     },
     {
-      "name": "Auto Cannon Efficiency",
+      "name": "Autocannon Efficiency",
       "base": 0.1,
       "step": 0.01,
       "cap": 100,
@@ -1469,7 +1469,7 @@
       ],
       "description": "Automatic cannon and LSS combat stats scale from 10% to 110% of manual stats. Whole shot counts round down; the primary volley always fires at least one shot.",
       "display_scale": 100,
-      "group": "Auto Aim"
+      "group": "Autocannon"
     },
     {
       "name": "Targeting Speed",
@@ -1500,9 +1500,9 @@
         3550,
         3935
       ],
-      "description": "Auto aim traverses the battlefield faster. Switching targets waits 90 milliseconds; aiming must settle before firing.",
+      "description": "The Autocannon traverses the battlefield faster. Switching targets waits 90 milliseconds; aiming must settle before firing.",
       "display_scale": 1,
-      "group": "Auto Aim"
+      "group": "Autocannon"
     },
     {
       "name": "Auto Weapons",
@@ -1518,7 +1518,7 @@
       ],
       "description": "Unlock automatic LSS, then Smart Missiles, then Hook Bombs. Automatic weapons conserve premium ammo for priority threats.",
       "display_scale": 1,
-      "group": "Auto Aim"
+      "group": "Autocannon"
     },
     {
       "name": "Missile Fire Rate",
@@ -1551,7 +1551,7 @@
       ],
       "description": "Smart Missiles fire at 2 per second initially, gaining 0.1 shots per second each level.",
       "display_scale": 1,
-      "group": "Auto Aim"
+      "group": "Autocannon"
     },
     {
       "name": "Power Stack Cap",
@@ -1584,7 +1584,7 @@
       ],
       "description": "Increase maximum banked power time from 50 to 70 seconds. Demon invincibility remains capped at 50 seconds.",
       "display_scale": 1,
-      "group": "Auto Aim"
+      "group": "Autocannon"
     }
   ],
   "waves": {

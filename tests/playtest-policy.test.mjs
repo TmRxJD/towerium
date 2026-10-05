@@ -135,6 +135,8 @@ test('safe openings invest in CPK but low health chooses survival',()=>{
 test('later strategy avoids expensive tiny attack-speed gains and useless dependent upgrades',()=>{
   const later={...state,wave:60,coins:10000,levels:[...state.levels],values:[...state.values],costs:[...state.costs]};
   later.levels[0]=50;later.values[0]=2;later.costs[0]=10000;
+  // Compare purchase priorities for an established fan, independent of opening balance.
+  later.levels[3]=2;later.values[3]=config.upgrades[3].base+2*config.upgrades[3].step;
   const index=baselinePurchase(later,config,'offense');
   assert.notEqual(index,0);assert(![3,5,7,8,15].includes(index));
   const focused={...later,coins:100,costs:Array(25).fill(Infinity)};

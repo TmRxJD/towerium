@@ -1,8 +1,8 @@
 # Validation status
 
-Recorded 2026-10-05. Current checks cover Auto Aim, perks, automation and Critical Coin; earlier release evidence is labeled historical.
+Recorded 2026-10-05. Current checks cover Autocannon, perks, automation and Critical Coin; earlier release evidence is labeled historical.
 
-## Current Auto Aim, Perks, Automation And Critical Coin Checks
+## Current Autocannon, Perks, Automation And Critical Coin Checks
 
 - Rust: 179 passed, 0 failed, 1 ignored (`dense_endurance_profile`). Formatting and Clippy with `-D warnings` passed.
 - Controller and automation: 73 passed, including purchase priorities, perk priorities, hold acceleration, finite aim movement and premium-shot conservation.
@@ -69,7 +69,7 @@ A failing ammo fixture was followed once by native `0xc0000005 STATUS_ACCESS_VIO
 
 Kritic deterministic validation passed all 64 controller tests through a Bash script. Its initial quoted Bash invocation failed with `is not recognized as an internal or external command`; the script invocation corrected that runner issue. Model scoring was unscored: `Kev is off (kev.backend = "off"): only deterministic checks run`. No local model was started.
 
-The bounded UX crawl reached Play, Help and Aim Priorities in one step. Pause/restart exploration hit its action cap; enabling Auto Aim was not measured because the persisted setting already matched the done-check. The reviewer found no structural blocker, but its port-5202 capture still showed stale manual-guidance copy. Fresh-server browser checks verify that manual aim and automatic aim remain independent, wave-160 Auto Play spends its budget before starting, and its restart restores the isolated demonstration. The updated capture was accepted without a structural UI blocker.
+The bounded UX crawl reached Play, Help and Target Priority in one step. Pause/restart exploration hit its action cap; enabling Autocannon was not measured because the persisted setting already matched the done-check. The reviewer found no structural blocker, but its port-5202 capture still showed stale manual-guidance copy. Fresh-server browser checks verify that manual aim and automatic aim remain independent, wave-160 Auto Play spends its budget before starting, and its restart restores the isolated demonstration. The updated capture was accepted without a structural UI blocker.
 
 Continuous clearing adds nine controller regressions for occupied versus empty transfer routes, bounded direct movement, observed Multishot fans, premium-shot conservation, LSS range limits and avoiding false pending-damage credit at the destination. Fresh-server affected-flow browser checks passed after these changes. Full matched survival comparisons are still running; combat buffs have not been reduced on the assumption that this controller improvement explains the prior results.
 
@@ -84,3 +84,12 @@ The matched independent-perk-stream comparison completed without harness errors:
 Kritic's complete 55-file deterministic validation passed. It skipped text parsing of the Critical Coin WebP as `binary/lockfile`; content and browser asset checks cover the image. Initial review invocations used Linux paths against Windows Git (`fatal: Invalid path '/mnt/c': No such file or directory` and `empty artifact (nothing readable to score)`); normalizing file paths corrected the runner inputs. Model scoring remains unscored: `Kev is off (kev.backend = "off"): only deterministic checks run`. No local inference was started.
 
 Release-candidate browser setup initially failed with `Error: Cannot find module @rollup/rollup-win32-x64-msvc` and `[WebServer] 'vite' is not recognized as an internal or external command`. Using the configured Linux Vite runtime and Windows browser runner resolved those setup errors; all 33 current browser cases then passed. Native dense stress remains ignored, physical-phone play and human endurance unmeasured. Git whitespace validation passed after the documentation updates.
+
+## Autocannon And Perk Choice Follow-Up — 2026-10-05
+
+- Native Rust: 180 passed, 0 failed, 1 ignored (`dense_endurance_profile`). Node controller/policy suite: 75/75 passed.
+- Content validation passed with 15 perk definitions and 92 Tower assets. The WASM build, TypeScript check, and Vite production build passed. The Damage Meter perk art URL resolves to `workshop/damage-meter-md.webp`; its manifest SHA matches the tracked image.
+- The affected browser set passed 10/10 on fresh port 5212; after compact-landscape CSS and the full Target Priority footer label, 3/3 targeted checks passed on fresh port 5214. The regression checks perk-card text inside each button and above the fixed footer at 568×320. Both 320×568 and 568×320 screenshots show decoded perk art and owned-perk state; the active reticle captures show three enemies at 20 simulated seconds.
+- Captures: `.local/perks-offer-320x568.png`, `.local/perks-owned-320x568.png`, `.local/perks-offer-568x320.png`, `.local/perks-owned-568x320.png`, `.local/crowded-reticle-320x568.png`, and `.local/crowded-reticle-568x320.png`.
+- `npm run assets:sync` remains unavailable because the configured extraction lacks `unidentified/demon-wing-glow-lg.webp`. The failed sync's partial image copy was restored; the public asset directory has no unintended sync changes.
+- Dense endurance, physical-phone validation, and model scoring were not run.
