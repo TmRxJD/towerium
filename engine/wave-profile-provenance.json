@@ -1,0 +1,67 @@
+{
+  "sdkVersion": "0.11.0",
+  "tier": 14,
+  "targetWaves": 400,
+  "sourceEndWave": 10000,
+  "mapping": "1 + floor((wave - 1) * 9999 / 399)",
+  "spawnSeconds": 30,
+  "cardsLabsMasteries": false,
+  "sources": {
+    "src/mechanics/waves/info-panel-stats.ts": "01fcfc2d5ba52acfb04066a9b28a3d431f8a27883cd0c21822e6a4cbd8868076",
+    "src/mechanics/enemies/type-mults.ts": "e5f3cd9845a9a5a8caacd84052a3d4f01c9d804ef78ae82e5cc0ffa7e070d6ac",
+    "src/mechanics/enemies/elite-spawn-chance.ts": "b2a216ae3e998eb44b5c3cf6fb83067aacf8e2d530cb3ba04e5975195e62402b"
+  },
+  "compositionSha256": "5bb0fdd3cc561614d08d82fde13086e97e465df2c0c77b76bde42eafc3c0a079",
+  "compositionLastResolvedWave": 1000,
+  "adaptations": {
+    "densityKnots": [
+      [
+        1,
+        1
+      ],
+      [
+        10,
+        1
+      ],
+      [
+        50,
+        1.5
+      ],
+      [
+        100,
+        2
+      ],
+      [
+        200,
+        3
+      ],
+      [
+        300,
+        4
+      ],
+      [
+        400,
+        5
+      ]
+    ],
+    "post400DensityPerWave": 0.01,
+    "minimumOrdinary": 8,
+    "fleetRoster": [
+      "Commander",
+      "Saboteur",
+      "Overcharge"
+    ],
+    "superBossTypeRatios": "Boss"
+  },
+  "priceCalibrationFactor": 0.1048459236239592,
+  "referenceOverlapFractions": {
+    "0": 0.2,
+    "1": 0.35,
+    "3": 0.1,
+    "5": 0.1,
+    "7": 0.05,
+    "9": 0.1,
+    "17": 0.05,
+    "31": 0.05
+  }
+}

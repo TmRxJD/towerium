@@ -1,5 +1,6 @@
 import './game.css';
 import { AutoPlayer } from './autoplay';
+import { powerShop, stoneIcon } from './power-shop';
 import init, { Game } from './wasm/towerium';
 import balance from '../engine/balance.json';
 import { formatNumberForDisplay } from 'thetowersdk/formatting';
@@ -10,6 +11,9 @@ import { Audio } from './audio';
 import type { Snapshot, WaveReport } from './types';
 import { weaponIcons } from './weapon-icons';
 import { renderHelp, weaponNames } from './help';
+import { TouchControls } from './touch-controls';
+import { RunRetries, retryStorageKey } from './run-retries';
+import { createSaveCompatibility } from './save-compatibility';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
 const number=(n:number)=>formatNumberForDisplay(n,'Period (.)',{mode:'compact',smallNumberMaxFractionDigits:0,notationMaxFractionDigits:1});
@@ -23,13 +27,18 @@ let game:Game;
 let snapshot:Snapshot;
 let renderer:Renderer;
 let aim:[number,number]=[0,-220],firing=false,weapon=0;
+let touchControls:TouchControls;
+const touchDevice=matchMedia('(any-pointer: coarse)').matches;
 let last=0,lastHud=0,uiPhase=-1,helpOpen=false,resultSent=false,animation=0;
 let best=0;
 try {const stored=Number(localStorage.getItem('towerium.best-wave'));if(Number.isSafeInteger(stored)&&stored>0)best=stored;}catch{/* Storage is optional in embedded/private contexts. */}
 const cosmetics=new Cosmetics(best);
 const runKey='towerium.run.v1',configJson=JSON.stringify(balance);
 let savedRun:{seed:number;state:string;config:string}|null=null,lastSave=0,restartPrompt=false;
+let runRetries:RunRetries;
+let compatibleConfig:(config:unknown)=>boolean=config=>config===configJson;
 let postWaveView:'report'|'shop'='report';
+let shopCategory:'workshop'|'powers'='workshop',selectedPower=0;
 let autoPlayer:AutoPlayer|null=null;
 let humanGame:Game|null=null,humanSeed=seed;
 function resumeAudio(){void audio.resume().catch(error=>{console.error('Audio could not resume:',error);setText('notice','Audio Unavailable');});}
@@ -42,7 +51,9 @@ function saveRun() {
   }catch{setText('notice','Run Saving Unavailable');}
 }
 function showIntro(){
-  el('intro').innerHTML=`<img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2>${savedRun?'<button id="restore-run" class="primary">Resume Run</button><button id="new-run" class="quiet">New Run</button>':'<button id="start" class="primary">Play</button>'}<button id="auto-play" class="secondary">Auto Play</button>`;
+  const milestone=Math.floor(cosmetics.completed/50)*50;
+  const retry=!savedRun&&runRetries?.available?`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint!.wave} · ${3-runRetries.used} Left</button>`:'';
+  el('intro').innerHTML=`<img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2>${savedRun?'<button id="restore-run" class="primary">Resume Run</button>':'<button id="start" class="primary">Play</button>'}<div class="intro-options">${savedRun?'<button id="new-run" class="quiet">New Run</button>':''}${retry}${milestone?`<button id="milestone-run" class="secondary" title="Empty Shops With Coin And Power Stone Budgets">Fresh Wave ${milestone}<small>Empty Shops + Budget</small></button>`:''}<button id="auto-play" class="secondary">Auto Play</button></div>`;
 }
 function configureAutoPlay(){
   modalContent('<div class="modal-top"><h2 id="modal-title">Auto Play</h2></div><div class="auto-settings"><label>Build<select id="auto-build"><option value="balanced">Balanced</option><option value="offense">Offense</option><option value="defense">Defense</option><option value="economy">Economy</option></select></label><label>Aim<select id="auto-aim"><option value="nearest">Closest Threat</option><option value="priority">Priority Targets</option><option value="circle">Circle Sweep</option></select></label><label>Weapons<select id="auto-weapons"><option value="all">All Weapons</option><option value="projectile">Primary Only</option><option value="light">Favor Light Speed</option><option value="missile">Favor Smart Missiles</option><option value="hook">Favor Hook Bomb</option><option value="rotate">Rotate Weapons</option></select></label></div><div class="modal-actions"><button id="cancel-auto-play" class="quiet">Cancel</button><button id="watch-auto-play" class="primary">Watch</button></div>');
@@ -65,7 +76,11 @@ function runAutoPlayer(dt:number){
   if(action.kind==='combat'){
     aim=action.aim;weapon=action.weapon;firing=action.fire;input();
     if(action.deathWave)game.death_wave();
+  }else if(action.kind==='buy-power'){
+    shopCategory='powers';selectedPower=action.power;
+    if(game.buy_power(action.power,action.path)){read();renderShop();}
   }else if(action.kind==='buy'){
+    shopCategory='workshop';
     if(game.buy(action.index)){read();renderShop();modal.querySelector(`[data-upgrade="${action.index}"]`)?.classList.add('auto-purchase');}
   }else startWave();
 }
@@ -82,9 +97,26 @@ function restoreRun() {
   if(!savedRun)return;
   const restored=Game.restore(configJson,savedRun.state);
   game.free();game=restored;seed=savedRun.seed;read();weapon=snapshot.weapon;
+  if(runRetries.checkpoint&&runRetries.checkpoint.seed!==seed)runRetries.reset();
   aim=[0,-220];firing=false;uiPhase=-1;last=0;syncPhase();updateHud();
   if(snapshot.phase===1){pause();el('modal-title').textContent=`Run Restored · Wave ${snapshot.wave}`;}
   else if(snapshot.phase===2)void resumeAudio();
+}
+function retryRun() {
+  if(autoPlayer||!runRetries.available||!runRetries.checkpoint)return;
+  const restored=runRetries.retry();if(!restored)return;
+  stopFiring();game.free();game=restored;seed=runRetries.checkpoint.seed;
+  closeModal();helpOpen=false;aim=[0,-220];weapon=0;firing=false;uiPhase=-1;last=0;resultSent=false;
+  input();read();syncPhase();updateHud();saveRun();void resumeAudio();canvas.focus({preventScroll:true});
+}
+function milestoneRun() {
+  if(autoPlayer)return;
+  const wave=Math.floor(cosmetics.completed/50)*50;if(wave<50)return;
+  const nextSeed=crypto.getRandomValues(new Uint32Array(1))[0];
+  const fresh=Game.milestone_start(nextSeed,configJson,wave);
+  stopFiring();game.free();game=fresh;seed=nextSeed;runRetries.reset();
+  closeModal();helpOpen=false;aim=[0,-220];weapon=0;firing=false;uiPhase=-1;last=0;resultSent=false;
+  read();syncPhase();renderShop();updateHud();saveRun();void resumeAudio();
 }
 
 const skinIcon=(index:number)=>skinUrls[index]?`<img src="${skinUrls[index]}" alt="">`:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M58 32 45 55 19 55 6 32 19 9 45 9Z" fill="#122934" stroke="#b6fff2" stroke-width="3"/></svg>';
@@ -103,12 +135,13 @@ app.innerHTML=`
           <div class="coin-stat" title="Coins">${coinIcon}<strong id="coins" aria-label="Coins">0</strong></div>
         </div>
         <div class="arena-wrap">
-          <canvas id="arena" width="1100" height="1100" tabindex="0" aria-label="Tower battlefield. Aim with the pointer and hold to fire. On touch, drag to aim and fire. Arrow keys aim; Space fires. Weapons 1 through 4 or mouse wheel; Q or right click for Death Wave."></canvas>
+          <canvas id="arena" width="1100" height="1100" tabindex="0" aria-label="Tower battlefield. Mouse aims; hold to fire. On touch, use Trackpad Aim and Fire below the battlefield. Arrow keys aim; Space fires. Weapons 1 through 4 or mouse wheel; Q or right click for Death Wave."></canvas>
           <div id="powers" class="power-strip" role="group" aria-label="Active powers"></div>
           <section id="intro" class="intro" aria-label="Start Towerium"><img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2><button id="start" class="primary">Play</button></section>
           <div id="notice" class="run-status" role="status" aria-live="polite"></div>
         </div>
         <div class="weapon-bar" aria-label="Weapon selection">${weaponNames.map((name,i)=>`<button class="weapon${i===0?' selected':''}" data-weapon="${i}" aria-label="${name}" aria-pressed="${i===0}" title="${name} · ${i+1}">${weaponIcons[i]}<b id="ammo-${i}" aria-hidden="true">${i===0?'∞':balance.weapons[i].ammo}</b></button>`).join('')}<button id="death-wave" class="weapon death-weapon" aria-label="Death Wave" title="Death Wave · Q · No charges" disabled>${weaponIcons[4]}<b id="charge-count" aria-hidden="true">0/3</b></button></div>
+        <div id="touch-controls" class="touch-controls" hidden></div>
       </section>
     </main>
   </div>
@@ -116,6 +149,15 @@ app.innerHTML=`
 `;
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
 const canvas=el<HTMLCanvasElement>('arena'),modal=el<HTMLDialogElement>('modal');
+touchControls=new TouchControls(el('touch-controls'),canvas,{
+  ready:()=>!!snapshot&&!autoPlayer&&snapshot.phase===1&&!snapshot.paused&&!modal.open,
+  fireReady:()=>canFireWeapon(),
+  aim:()=>aim,
+  move:value=>{aim=value;input();},
+  fire:held=>{firing=held;if(game)input();if(held)resumeAudio();},
+  weapon:()=>weapon,
+  spent:()=>snapshot?.weapon_report[3].ammo_spent??0,
+});
 const setText=(id:string,text:string)=>{const node=el(id);if(node.textContent!==text)node.textContent=text;};
 function post(type:string,payload:Record<string,unknown>={}) {
   window.dispatchEvent(new CustomEvent(type,{detail:payload}));
@@ -126,9 +168,11 @@ function post(type:string,payload:Record<string,unknown>={}) {
 function read() {snapshot=JSON.parse(game.snapshot()) as Snapshot;return snapshot;}
 // Read-only diagnostics for integration tests. No test-only simulation controls.
 export function getRenderSnapshot():Snapshot {return JSON.parse(game.snapshot()) as Snapshot;}
+export function getControlState(){return {aim:[...aim],firing,weapon};}
 function input() {game.input(...aim,firing,weapon);}
-function stopFiring() {firing=false;if(game)input();}
-function selectWeapon(index:number) {if(snapshot.disabled_weapon===index)return;weapon=index;input();read();updateHud();}
+function canFireWeapon(){return !!snapshot&&snapshot.disabled_weapon!==weapon&&(weapon===0||snapshot.ammo[weapon]>0);}
+function stopFiring() {touchControls.reset();firing=false;if(game)input();}
+function selectWeapon(index:number) {if(snapshot.disabled_weapon===index)return;if(index!==weapon)touchControls.releaseFire();weapon=index;input();read();updateHud();}
 function modalContent(html:string) {if(autoPlayer)html=html.replace('</h2>','</h2><span class="auto-badge">Auto Play</span>');modal.classList.remove('shop-modal','report-modal');modal.classList.toggle('auto-mode',!!autoPlayer);modal.innerHTML=html;if(!modal.open)modal.showModal();}
 function closeModal() {if(modal.open)modal.close();}
 function pause(show=true) {
@@ -138,7 +182,12 @@ function pause(show=true) {
 }
 function resume() {helpOpen=false;closeModal();game.pause(false);stopFiring();resumeAudio();last=0;read();updateHud();if(snapshot.phase===2)returnRunScreen();else canvas.focus({preventScroll:true});}
 function startWave() {closeModal();helpOpen=false;if(game.start_wave()){resumeAudio();last=0;read();syncPhase();updateHud();saveRun();canvas.focus({preventScroll:true});}}
-function restart() {restartPrompt=false;if(!autoPlayer)savedRun=null;else autoPlayer=new AutoPlayer(autoPlayer.strategy,autoPlayer.aim,autoPlayer.weapons);closeModal();game.free();seed=crypto.getRandomValues(new Uint32Array(1))[0];game=new Game(seed,JSON.stringify(balance));aim=[0,-220];weapon=0;firing=false;resultSent=false;uiPhase=-1;read();startWave();}
+function restart() {
+  restartPrompt=false;
+  if(!autoPlayer){savedRun=null;runRetries.reset();}else autoPlayer=new AutoPlayer(autoPlayer.strategy,autoPlayer.aim,autoPlayer.weapons);
+  closeModal();game.free();seed=crypto.getRandomValues(new Uint32Array(1))[0];game=new Game(seed,configJson);
+  aim=[0,-220];weapon=0;firing=false;resultSent=false;uiPhase=-1;read();startWave();
+}
 function help() {
   const live=snapshot.phase===1;helpOpen=true;if(live)pause(false);
   modalContent(renderHelp({live,best,time:clock(snapshot.time),seed}));
@@ -164,22 +213,31 @@ function reportSection(title:string, report:WaveReport, id:string) {
     ['Hits Taken',number(report.hits_taken)],
     ['Powerups Collected',number(report.powerups_collected)],
     ['Coins Earned',coinIcon+number(report.coins_earned)],
+    ['Stones Earned',stoneIcon+number(report.stones_earned)],
     ['Kills',number(report.kills)],
   ];
+  if(title==='Overall') {
+    const overlaps=snapshot.coin_overlap_kills.reduce((sum,count,mask)=>sum+((mask&(mask-1))!==0?count:0),0);
+    stats.push(['Overlap Kills',number(overlaps)]);
+  }
   return `<section class="report-section" aria-labelledby="${id}"><div class="report-section-heading"><h3 id="${id}">${title}</h3><span aria-label="Time ${clock(report.duration_seconds)}">${clock(report.duration_seconds)}</span></div><dl class="report-stats">${stats.map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl></section>`;
 }
 function runFooter(ended=false) {
   const navigation=postWaveView==='report'?'<button id="open-shop" class="secondary">Shop</button>':'<button id="wave-report" class="secondary">Report</button>';
   const pauseOrRestart=ended?'':autoPlayer?'<button id="auto-pause" class="quiet">Pause</button>':'<button id="request-restart" class="quiet">Restart</button>';
-  const actions=ended
+  let actions=ended
     ? autoPlayer?'<button class="secondary" id="stop-auto-play">Stop Auto Play</button><button class="primary" id="restart">Watch Again</button>':'<button class="primary" id="restart">Play Again</button>'
     : navigation+`<button id="next-wave" class="primary" ${autoPlayer?'disabled title="Auto Play Starts The Next Wave"':''}>Next Wave →</button>`;
+  if(ended&&!autoPlayer&&runRetries.available&&runRetries.checkpoint?.seed===seed)actions=`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint.wave} · ${3-runRetries.used} Left</button>`+actions;
+  if(ended&&!autoPlayer&&cosmetics.completed>=50)actions=`<button id="milestone-run" class="secondary">Fresh Wave ${Math.floor(cosmetics.completed/50)*50}</button>`+actions;
+  if(!ended&&snapshot.pending_start_wave>0)actions=`<button id="next-wave" class="primary">Start Wave ${snapshot.pending_start_wave} →</button>`;
   return `<div class="shop-footer"><div class="shop-tools">${shopSoundButtons()}${pauseOrRestart}<button id="shop-help" class="quiet">Help</button><button id="shop-skins" ${autoPlayer?'disabled':''} class="quiet skin-button" title="${autoPlayer?'Skins Are Read Only During Auto Play':'Tower Skins'}" aria-label="Skins${cosmetics.fresh?', new skin unlocked':''}">${skinIcon(cosmetics.selected)}<span${cosmetics.fresh?' class="new-skin"':''}>Skins</span></button></div><p id="purchase-status" class="sr-only" role="status">${snapshot.notice.text.includes('upgraded')?esc(snapshot.notice.text):''}</p><div class="report-actions">${actions}</div></div>`;
 }
 function returnRunScreen() {
-  if(snapshot.phase===3)gameOver();else if(postWaveView==='shop')renderShop();else renderReport();
+  if(snapshot.phase===3)gameOver();else if(snapshot.pending_start_wave>0||postWaveView==='shop')renderShop();else renderReport();
 }
 function renderReport() {
+  if(snapshot.pending_start_wave>0){renderShop();return;}
   postWaveView='report';
   if(!autoPlayer)cosmetics.clear(snapshot.wave);
   modalContent(`<div class="shop-heading"><h2 id="modal-title">Wave ${snapshot.wave} Cleared</h2><div class="shop-wallet">${coinIcon}<strong>${number(snapshot.coins)}</strong></div></div><div class="report-body">${reportSection('This Wave',snapshot.wave_report,'wave-report-heading')}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter()}`);
@@ -188,7 +246,12 @@ function renderReport() {
 function renderShop() {
   postWaveView='shop';
   if(!autoPlayer)cosmetics.clear(snapshot.wave);
-  modalContent(`<div class="shop-heading"><h2 id="modal-title">Workshop</h2><div class="shop-wallet">${coinIcon}<strong>${number(snapshot.coins)}</strong></div></div><div class="shop-body"><div class="upgrade-grid">${workshop.map((item,position)=>{const i=item.index,u=balance.upgrades[i];
+  const categories=`<div class="shop-categories" role="group" aria-label="Shop Category"><button id="category-workshop" class="secondary" aria-pressed="${shopCategory==='workshop'}">Workshop</button><button id="category-powers" class="secondary" aria-pressed="${shopCategory==='powers'}">Powerups</button></div>`;
+  if(shopCategory==='powers'){
+    modalContent(`<div class="shop-heading"><h2 id="modal-title" class="sr-only">Powerups</h2>${categories}<div class="shop-wallet stone-wallet">${stoneIcon}<strong>${number(snapshot.stones)}</strong><span class="wallet-label">Stones</span></div></div><div class="shop-body">${powerShop(snapshot,selectedPower,!!autoPlayer)}</div>${runFooter()}`);
+    modal.classList.add('shop-modal');return;
+  }
+  modalContent(`<div class="shop-heading"><h2 id="modal-title" class="sr-only">${snapshot.pending_start_wave>0?`Build For Wave ${snapshot.pending_start_wave}`:'Workshop'}</h2>${categories}<div class="shop-wallet">${coinIcon}<strong>${number(snapshot.coins)}</strong></div></div><div class="shop-body"><div class="upgrade-grid">${workshop.map((item,position)=>{const i=item.index,u=balance.upgrades[i];
     const capped=snapshot.levels[i]>=u.cap,afford=snapshot.coins>=snapshot.costs[i];
     return `<button class="upgrade" data-upgrade="${i}" title="${autoPlayer?'Auto Play Chooses Upgrades':capped?'Maximum Level':!afford?'Not Enough Coins':item.label}" ${autoPlayer||capped||!afford?'disabled':''} aria-label="Buy ${item.label} for ${snapshot.costs[i]} coins"><span class="upgrade-title"><img src="${workshopUrls[position]}" width="20" height="20" alt=""><strong>${item.label}</strong></span><div class="upgrade-bottom"><span><span class="upgrade-value">${statText(snapshot.values[i],i)}</span>${capped?'':' <span class="upgrade-value upgrade-preview">→ '+statText(snapshot.values[i]+u.step,i)+'</span>'}</span><b>${capped?'MAX':coinIcon+number(snapshot.costs[i])}</b></div></button>`;
   }).join('')}</div></div>${runFooter()}`);
@@ -212,7 +275,11 @@ function gameOver() {
 function syncPhase() {
   if(snapshot.phase===uiPhase)return;uiPhase=snapshot.phase;
   el('intro').hidden=snapshot.phase!==0;
-  if(snapshot.phase===2){stopFiring();renderReport();}
+  if(snapshot.phase===2){
+    stopFiring();
+    if(!autoPlayer&&snapshot.pending_start_wave===0&&snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());
+    renderReport();
+  }
   if(snapshot.phase===3){stopFiring();gameOver();}
 }
 function clock(s:number) {return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;}
@@ -224,6 +291,10 @@ function updateSoundButtons() {
   }
 }
 function updateHud() {
+  const mobile=touchDevice&&!autoPlayer;
+  el('touch-controls').hidden=!mobile;
+  document.querySelector('.shell')!.classList.toggle('touch-mode',mobile);
+  touchControls.update(mobile&&snapshot.phase===1&&!snapshot.paused&&!modal.open,canFireWeapon());
   const s=snapshot;
   el('run-mode').hidden=!autoPlayer;
   setText('wave',String(s.wave||1).padStart(2,'0'));setText('coins',number(s.coins));
@@ -242,7 +313,7 @@ function updateHud() {
   setText('charge-count',`${s.charges}/3`);
   const death=el<HTMLButtonElement>('death-wave');death.disabled=!!autoPlayer||s.charges===0||s.phase!==1||s.paused;death.classList.toggle('ready',s.charges>0);
   death.setAttribute('aria-label',`Death Wave · ${s.charges} of 3 charges`);death.title=autoPlayer?'Auto Play Controls Death Wave':s.charges===0?'No Death Wave charges':'Release Death Wave · Q';
-  const active=s.powers.map((time,i)=>({time,i})).filter(p=>p.time>0);
+  const active=[...s.powers.map((time,i)=>({time,i})),{time:s.fallout_time,i:10},{time:s.demon_time,i:11},...s.module_times.map((time,i)=>({time,i:i+12}))].filter(p=>p.time>0);
   el('powers').innerHTML=active.map(({time,i})=>`<div role="img" title="${powerNames[i]}" class="active-power${time<balance.powers.warning?' expiring':''}" aria-label="${powerNames[i]}, ${Math.ceil(time)} seconds"><img src="${powerUrls[i]}" width="28" height="28" alt=""><b>${Math.ceil(time)}</b></div>`).join('');
   if(s.shields>0)el('powers').insertAdjacentHTML('beforeend',`<div role="img" class="active-power" title="Energy Shield" aria-label="Energy Shield, ${s.shields} of 3 charges"><img src="${powerUrls[9]}" width="28" height="28" alt=""><b>${'●'.repeat(s.shields)}${'○'.repeat(3-s.shields)}</b></div>`);
   const sabotaged=s.sabotage_time>0&&(s.disabled_weapon>=0||s.disabled_stat>=0);
@@ -254,6 +325,8 @@ document.addEventListener('click',event=>{
   const button=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(!button || button.disabled || !game)return;
   if(button.dataset.weapon!==undefined&&!autoPlayer){selectWeapon(Number(button.dataset.weapon));return;}
   if(button.dataset.skin!==undefined&&!autoPlayer){if(cosmetics.select(Number(button.dataset.skin))){renderer.skin=cosmetics.selected;returnRunScreen();el('shop-skins').focus({preventScroll:true});}return;}
+  if(button.dataset.powerSelect!==undefined){selectedPower=Number(button.dataset.powerSelect);renderShop();modal.querySelector<HTMLButtonElement>(`[data-power-select="${selectedPower}"]`)?.focus({preventScroll:true});return;}
+  if(button.dataset.powerBuy!==undefined&&!autoPlayer){const power=Number(button.dataset.powerBuy),path=Number(button.dataset.powerPath);if(game.buy_power(power,path)){read();saveRun();renderShop();const next=modal.querySelector<HTMLButtonElement>(`[data-power-buy="${power}"][data-power-path="${path}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else modal.querySelector<HTMLButtonElement>(`[data-power-select="${power}"]`)?.focus({preventScroll:true});updateHud();}return;}
   if(button.dataset.upgrade!==undefined&&!autoPlayer){const id=Number(button.dataset.upgrade);if(game.buy(id)){read();saveRun();const top=modal.querySelector('.shop-body')?.scrollTop??0;renderShop();const body=modal.querySelector('.shop-body');if(body)body.scrollTop=top;const next=modal.querySelector<HTMLButtonElement>(`[data-upgrade="${id}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else el('next-wave').focus({preventScroll:true});updateHud();}return;}
   switch(button.id){
     case 'auto-play':configureAutoPlay();break;
@@ -261,11 +334,16 @@ document.addEventListener('click',event=>{
     case 'cancel-auto-play':closeModal();break;
     case 'stop-auto-play':stopAutoPlay();break;
     case 'auto-pause':snapshot.paused?resume():pause();break;
-    case 'start':case 'next-wave':if(!autoPlayer)startWave();break;
+    case 'start':if(!autoPlayer){runRetries.reset();startWave();}break;
+    case 'next-wave':if(!autoPlayer)startWave();break;
+    case 'retry-run':retryRun();break;
+    case 'milestone-run':milestoneRun();break;
     case 'pause':snapshot.paused?resume():pause();break;
     case 'resume':resume();break;
     case 'help':case 'shop-help':help();break;
     case 'shop-skins':renderSkins();break;
+    case 'category-workshop':shopCategory='workshop';renderShop();el('category-workshop').focus();break;
+    case 'category-powers':shopCategory='powers';renderShop();el('category-powers').focus();break;
     case 'open-shop':renderShop();el('wave-report').focus();break;
     case 'wave-report':renderReport();el('open-shop').focus();break;
     case 'back-shop':returnRunScreen();el('shop-skins').focus({preventScroll:true});break;
@@ -280,7 +358,7 @@ document.addEventListener('click',event=>{
     case 'restore-run':restoreRun();break;
   }
 });
-canvas.addEventListener('pointermove',e=>{if(!renderer||autoPlayer)return;aim=renderer.point(e.clientX,e.clientY);input();});
+canvas.addEventListener('pointermove',e=>{if(!renderer||autoPlayer||e.pointerType==='touch')return;aim=renderer.point(e.clientX,e.clientY);input();});
 function releaseDeathWave(){if(!autoPlayer&&snapshot.phase===1&&!snapshot.paused&&game.death_wave()){void resumeAudio();audio.tone(90,.5,'triangle',.065,35);read();updateHud();}}
 canvas.addEventListener('contextmenu',e=>{if(snapshot.phase===1&&!snapshot.paused){e.preventDefault();releaseDeathWave();}});
 let wheelAmount=0,wheelAt=0;
@@ -292,9 +370,9 @@ canvas.addEventListener('wheel',e=>{
   const direction=Math.sign(wheelAmount);wheelAmount=0;
   for(let step=1;step<=4;step++){const next=(weapon+direction*step+8)%4;if(snapshot.disabled_weapon!==next){selectWeapon(next);break;}}
 },{passive:false});
-canvas.addEventListener('pointerdown',e=>{if(autoPlayer || e.button!==0 || snapshot.phase!==1 || snapshot.paused)return;e.preventDefault();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);aim=renderer.point(e.clientX,e.clientY);firing=true;input();resumeAudio();});
-for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,stopFiring);
-window.addEventListener('pointerup',stopFiring);
+canvas.addEventListener('pointerdown',e=>{if(autoPlayer || e.pointerType==='touch' || e.button!==0 || snapshot.phase!==1 || snapshot.paused)return;e.preventDefault();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);aim=renderer.point(e.clientX,e.clientY);firing=true;input();resumeAudio();});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,e=>{if((e as PointerEvent).pointerType!=='touch')stopFiring();});
+window.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'&&!(e.target instanceof Element&&e.target.closest('#touch-controls')))stopFiring();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('keydown',e=>{
   if(!game || e.ctrlKey || e.metaKey || e.altKey)return;
@@ -308,18 +386,29 @@ document.addEventListener('keydown',e=>{
   if(directions[e.key]){e.preventDefault();aim=directions[e.key];input();}
   if(e.code==='Space' && e.target===canvas){e.preventDefault();firing=true;input();}
 });
-document.addEventListener('keyup',e=>{if(e.code==='Space')stopFiring();});
+document.addEventListener('keyup',e=>{if(e.code==='Space'&&e.target!==el('touch-fire'))stopFiring();});
 modal.addEventListener('cancel',e=>{e.preventDefault();if(restartPrompt)cancelRestart();});
-window.addEventListener('blur',()=>pause());
-document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();saveRun();}last=0;});
-const observer=new IntersectionObserver(entries=>{if(entries[0]&&!entries[0].isIntersecting && game && snapshot.phase===1)pause();},{threshold:0.1});observer.observe(canvas);
+window.addEventListener('blur',()=>{if(!autoPlayer)pause();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&!autoPlayer){pause();saveRun();}backgroundLast=performance.now();last=0;});
+const observer=new IntersectionObserver(entries=>{if(entries[0]&&!entries[0].isIntersecting && game && snapshot.phase===1&&!autoPlayer)pause();},{threshold:0.1});observer.observe(canvas);
 window.addEventListener('message',e=>{if(e.source===window.parent && e.origin===location.origin && e.data?.type==='towerium:pause')pause();});
 window.addEventListener('pagehide',()=>{cancelAnimationFrame(animation);audio.pause();stopFiring();saveRun();});
 window.addEventListener('pageshow',e=>{if(e.persisted){last=0;animation=requestAnimationFrame(frame);}});
+let backgroundLast=performance.now();
+function stepGame(dt:number){runAutoPlayer(dt);game.advance(dt);read();syncPhase();}
+// Hidden tabs suspend animation frames. Catch up in bounded native steps instead.
+window.setInterval(()=>{
+  const now=performance.now(),elapsed=(now-backgroundLast)/1000;backgroundLast=now;
+  if(!game||!autoPlayer||!document.hidden||snapshot.paused||helpOpen||restartPrompt)return;
+  for(let remaining=Math.min(elapsed,60);remaining>0;){const dt=Math.min(remaining,.05);stepGame(dt);remaining-=dt;}
+  audio.update(snapshot);updateHud();last=0;
+},1000);
 function frame(now:number) {
+  if(autoPlayer&&document.hidden){last=0;animation=requestAnimationFrame(frame);return;}
   const dt=last?Math.min((now-last)/1000,0.1):0;last=now;
-  runAutoPlayer(dt);game.advance(dt);read();syncPhase();renderer.draw(snapshot,aim,dt);audio.update(snapshot);
+  stepGame(dt);renderer.draw(snapshot,aim,dt);audio.update(snapshot);
   if(firing&&!snapshot.paused&&snapshot.phase===1&&snapshot.fx.some(f=>f[0]===0))audio.shot(snapshot.time,weapon);
+  touchControls.finishShot();
   if(now-lastSave>1000){saveRun();lastSave=now;}
   if(now-lastHud>100){updateHud();lastHud=now;}
   animation=requestAnimationFrame(frame);
@@ -327,13 +416,14 @@ function frame(now:number) {
 async function boot() {
   el<HTMLButtonElement>('start').disabled=true;el('start').textContent='Initializing…';
   const [art]=await Promise.all([loadArt(),init()]);
-  game=new Game(seed,JSON.stringify(balance));renderer=new Renderer(canvas,art);renderer.skin=cosmetics.selected;read();updateHud();
+  compatibleConfig=await createSaveCompatibility(configJson,[runKey,retryStorageKey]);
+  game=new Game(seed,configJson);runRetries=new RunRetries(configJson,compatibleConfig);renderer=new Renderer(canvas,art);renderer.skin=cosmetics.selected;renderer.touchAim=touchDevice;read();updateHud();
   el<HTMLButtonElement>('start').disabled=false;el('start').textContent='Play';showIntro();
   try {
     const raw=localStorage.getItem(runKey);
     if(raw){
       const candidate=JSON.parse(raw);
-      if(!candidate || typeof candidate!=='object' || Object.keys(candidate).sort().join(',')!=='config,seed,state' || candidate.config!==configJson || !Number.isInteger(candidate.seed) || candidate.seed<0 || candidate.seed>0xffffffff || typeof candidate.state!=='string' || candidate.state.length>5_000_000)throw new Error('Incompatible Save');
+      if(!candidate || typeof candidate!=='object' || Object.keys(candidate).sort().join(',')!=='config,seed,state' || !compatibleConfig(candidate.config) || !Number.isInteger(candidate.seed) || candidate.seed<0 || candidate.seed>0xffffffff || typeof candidate.state!=='string' || candidate.state.length>5_000_000)throw new Error('Incompatible Save');
       const check=Game.restore(configJson,candidate.state);check.free();savedRun=candidate;
       showIntro();
     }

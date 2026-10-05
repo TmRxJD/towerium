@@ -37,9 +37,25 @@ const assertAssetExists = async (assetPath, label) => {
 };
 
 assert.equal(weapons.length, 4, 'weapon labels must match four engine weapon slots');
-assert.equal(powers.length, 10, 'power labels must match ten engine power slots');
+assert.equal(powers.length, 16, 'power labels must match sixteen engine pickup types');
 assertUnique(weapons, 'weapon labels');
 assertUnique(powers, 'power labels');
+assert.equal(balance.power_workshop.upgrades.length,16);
+assert.deepEqual(balance.power_workshop.upgrades.map(u=>u.name),powers,'power shop labels must match pickup identities');
+for(const u of balance.power_workshop.upgrades){
+  assertKeys(u,['name','weight','weight_step','weight_costs','effect_label','effect_base','effect_step','effect_costs','unit'],'power upgrade');
+  assertNonEmpty(u.effect_label,'power effect label');
+  for(const costs of [u.weight_costs,u.effect_costs]){
+    assert.ok(costs.every((n,i)=>Number.isInteger(n)&&n>0&&(i===0||n>costs[i-1])),'power prices must escalate');
+  }
+}
+assert.equal(balance.waves.hp_hits_every,10);
+assert.equal(balance.waves.milestones.length,400);
+assert.equal(balance.waves.milestones[0].sdk_wave,1);
+assert.equal(balance.waves.milestones[399].sdk_wave,10000);
+const provenance=await readJson('../engine/wave-profile-provenance.json');
+const lock=await readJson('../package-lock.json');
+assert.equal(provenance.sdkVersion,lock.packages['node_modules/thetowersdk'].version,'generated profile must use pinned SDK');
 for (const label of [...weapons, ...powers]) assertNonEmpty(label, 'gameplay label');
 assert.equal(balance.enemies.length, 13, 'enemy catalog must contain 13 entries');
 assertUnique(balance.enemies.map(enemy => enemy.name), 'enemy names');
@@ -87,4 +103,4 @@ for (const track of music) {
   await access(new URL(`../public/tower-assets/music/${track}`, import.meta.url));
 }
 
-console.log(`Help catalogs valid: 13 enemies, 25 workshop entries, ${cosmetics.skins.length} skins, ${cosmetics.backgrounds.length} backgrounds, and ${music.length} music tracks.`);
+console.log(`Help catalogs valid: 13 enemies, 25 workshop entries, 16 power upgrades, 400 SDK wave rows, ${cosmetics.skins.length} skins, ${cosmetics.backgrounds.length} backgrounds, and ${music.length} music tracks.`);

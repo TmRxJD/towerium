@@ -30,12 +30,17 @@ Vite prints the local address. To build a static production bundle, run `npm run
 ## Controls and screens
 
 - Aim with the pointer or arrow keys; hold the primary fire control or Space to fire.
+- On touch devices, drag the Aim Pad to aim and use the separate Fire button to shoot; lifting either finger does not cancel the other action. Tap Fire once for single-shot weapons, including Hook Bomb.
+- Touch sensitivity and right/left-handed control placement are available in settings and persist on this device.
 - Select weapons with the weapon buttons, number keys, or the mouse wheel. Right-click or press Q to release Death Wave when a charge is available.
 - Use Pause, Help, Music, and Effects from the game controls. The Workshop and wave report share the between-wave flow; Next Wave starts the next attack.
 - Saved human runs can be resumed from the opening screen. Restart asks for confirmation.
-- Auto Play runs a separate spectator game with selectable build, aim, and weapon preferences. It does not use or overwrite the personal human run.
+- Each run has up to three retries from its latest cleared ten-wave checkpoint. Clearing wave 50 unlocks a fresh Wave 50 start with empty shops and reference-based coin and Power Stone budgets.
+- Auto Play runs a separate spectator game with selectable build, aim, and weapon preferences, keeps advancing when the tab is hidden, and does not use or overwrite the personal human run. Manual runs pause when the window loses focus.
 
-The Workshop contains the upgrade paths, skins, and run report. Special weapons have finite ammunition. Ammo drops are collected automatically; power-up drops must be shot to collect them. Music and effects have independent settings.
+The Workshop has separate coin-funded upgrades and a Powerups category bought with run-local Power Stones. Special weapons have finite ammunition. Ammo drops are collected automatically; power-up drops must be shot to collect them. Music and effects have independent settings. Death Penalty marks an enemy, including bosses; Space Displacer moves mines inside the orb path and sends them in the opposite direction; Galaxy Compressor extends active and future power timers; Om Chip focuses the nearest elite or boss target.
+
+The timed power set includes Chain Lightning, Chrono Field, Swamp, Black Hole, Spotlight, Death Ray, and Golden Tower. Power Stone purchases upgrade their effects. Enemy health gains one cannon-hit worth of capacity every ten waves. Swamp ticks each enemy once every four seconds even when pools overlap; Death Ray runs a three-second beam and two-second cooldown with a randomized angle at each cycle start. Nuke and Demon drops use their extracted cards, and Demon Mode displays its extracted wing art.
 
 ## Checks
 

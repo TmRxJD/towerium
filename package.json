@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "assets:sync": "node scripts/sync-assets.mjs",
+    "waves:sync": "node scripts/sync-wave-profile.mjs",
     "wasm:build": "node scripts/build-wasm.mjs",
     "dev": "vite --host 127.0.0.1 --port 5184",
     "typecheck": "tsc --noEmit",

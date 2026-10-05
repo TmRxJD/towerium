@@ -33,7 +33,7 @@ Chance increments below are percentage points. A multiplier increment adds to th
 | Shockwave Frequency | 20 s | −0.15 s | 20 | 10 s | −0.5 s | 20 |
 | Ammo Drop Chance | — | — | — | 5% | 0.2 pp | 30 |
 | Ammo Quantity | — | — | — | 1× bundle | 0.2× bundle | 25 |
-| Power Up Chance | — | — | — | 5% | 0.1 pp | 30 |
+| Power Up Chance | — | — | — | 4% | 0.1 pp | 30 |
 | Powerup Duration | — | — | — | 0 s bonus | 1 s bonus | 25 |
 
 Ammo Quantity, Ammo Drop Chance, Power Up Chance and Powerup Duration have no direct standard-workshop counterpart. Towerium starts with 15 coins, 40 LSS rounds, 20 missiles and 5 Hook Bombs. Projectiles are unlimited; the primary interval is 0.18 seconds before Attack Speed and Rapid Fire.
@@ -42,13 +42,13 @@ Ammo Quantity, Ammo Drop Chance, Power Up Chance and Powerup Duration have no di
 
 Tower's first Attack Speed cash prices are 5, 7, 10; its last purchase costs 9,167. Multishot Chance begins 10, 16, 23 and ends at 17,319. These are gradual progression across 99 purchases, not abrupt late completion walls.
 
-Tower Multishot Targets costs 125, 350, 800, 2,000, 8,000, 20,000 and 40,000. Towerium's three purchases cost 95, 5,588 and 1,220,930. Towerium's Orb Quantity accounts for 29.5% of total workshop cost; Multishot, Bounce and Orb Quantity together account for approximately 47%. Consequently total-workshop affordability can understate how cheaply a strong combat build develops.
+Tower Multishot Targets costs 125, 350, 800, 2,000, 8,000, 20,000 and 40,000. Towerium's three purchases cost 95, 671 and 128,095. Orb Quantity costs 143, 218, 11,789 and 426,174. Orb Quantity accounts for 29.2% of total workshop cost; Multishot, Bounce and Orb Quantity together account for approximately 47%. Total-workshop affordability can therefore understate how cheaply a strong combat build develops.
 
-The next tuning pass should spread chance progression into smaller purchases, price quantity milestones around several waves of saving, and distribute the late budget across useful specialization. Keep early survival accessible and calibrate the resulting curves together with income around the wave-300 target. Do not copy a single generic escalation formula or weaken a purchased effect secretly.
+The current SDK progression repricing preserves the first third of each price curve and targets full workshop affordability near wave 300 under the reference income model. It changes acquisition costs, not promised upgrade effects. See [balance rules](balance.md) for accounting assumptions and the separate Power Stone budget.
 
 ## Enemy Rewards
 
-Current Towerium base rewards, before Coins/Kill and Golden Tower:
+Current Towerium base rewards, before Coins/Kill and overlapping coin bonuses:
 
 | Enemy | Coins |
 |---|---:|
@@ -61,8 +61,8 @@ Scatter children use the Fast definition, including its reward. The SDK's `ENEMY
 
 Uniform five-coin rewards make cheap, one-hit enemies unusually productive. Reward differentiation should be tested alongside prices, accounting for enemy mix, Scatter families and stacked Golden Tower uptime. Cutting rewards alone could make the opening harder without fixing cheap early combat multipliers.
 
-## Gameplay Evidence
+## Historical Gameplay Evidence
 
-The player's wave-63 bullet-only report agrees with the earlier scripted primary-only control, which reached wave 170, similar to the mixed-weapon control on the same pre-carry build. This is a warning about weapon utility, not proof of human balance or a causal weapon ranking. Current mixed runs also discard large amounts of LSS and missile ammunition while relying heavily on powers. See [playtest evidence](../PLAYTESTING.md).
+The player's wave-63 bullet-only report agreed with an earlier scripted primary-only control reaching wave 170, similar to its matched mixed-weapon control. Those runs predate SDK progression, health bands, modules and Power Stones. They raised a weapon-utility concern but do not validate the current build. See [playtest evidence](../PLAYTESTING.md).
 
-This comparison records the next experiment; it does not change the tested feedback build or an existing player's run. Fixed enemy HP, 30-second spawning and the wave-300 exceptional target remain the design contract.
+The current contract keeps 30-second spawning and the wave-300 exceptional target. Enemy health gains one unmodified cannon hit every tenth wave, superseding the earlier fixed-health rule. Speed, mass and special arrivals map SDK waves 1–10,000 into Towerium waves 1–400.

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
+import { gameAssetPath } from 'thetowersdk/assets';
 
 const root = resolve(import.meta.dirname, '..');
 const publicRoot = resolve(root, 'public/tower-assets');
@@ -21,6 +22,9 @@ async function verifyAsset(relativePath, expectedHash, expectedBytes) {
 }
 
 for (const asset of Object.values(imageManifest.assets)) {
+  const size = asset.size ?? (asset.path.endsWith('-lg.webp') ? 'lg' : 'md');
+  const sdkPath = gameAssetPath(asset.name, { domain: asset.domain, size });
+  if (sdkPath !== asset.path) throw new Error(`SDK asset path mismatch: ${asset.name}: ${sdkPath} != ${asset.path}`);
   await verifyAsset(asset.path, asset.sha256);
 }
 

@@ -23,6 +23,8 @@ npm run playtest -- --policy=kev --laya=/path/to/laya --model-file=/path/to/mode
 
 The harness does not start Kev automatically. Check `npm run playtest -- --help` for the current options before launching a longer run.
 
+Baseline decisions run every 50 ms, matching Auto Play. It tracks observed movement and reserves predicted first-hit damage from shots already in flight. Intentional waits for lethal incoming shots are logged separately from stalls. Forecasts exclude speculative procs, secondary hits and Black Hole contacts; guided turns and future crowd control remain uncertain. The opening purchase plan favors Coins/Kill when survival is comfortable, then compares useful upgrade effects against their costs.
+
 The harness records the build/configuration and WebAssembly hashes, run outcome, upgrade purchases, weapon shots/hits/kills/damage, ammo pickups, and collected power-ups. Use a new output directory for each run. Exact replay uses the saved run log and archived WebAssembly/bindings; see `npm run playtest -- --help` and `scripts/replay-playtest.mjs` for current options.
 
 ## Interpreting results
@@ -33,11 +35,32 @@ Ammo pickups are not the same as ammunition spent: cap overflow and pickup caden
 
 ## Current balance framing
 
-The balance target is an endurance run: approximately wave 300 is exceptional and wave 400+ is extreme. Economy/reference calculations are a model, not evidence that a human player can reach those waves. The measured reference economy crossing near wave 270 is model-specific and must not be presented as a player result.
+The balance target is an endurance run: approximately wave 300 is exceptional and wave 400+ is extreme. The current profile maps SDK waves 1–10,000 into Towerium 1–400, adds one cannon hit of health every tenth wave, and supports separate run-local coin and Power Stone shops. Reference accounting targets workshop completion near wave 300; it is not evidence that a human can reach that wave. Auto Play spends both currencies according to its selected build.
 
-## Latest controlled weapon runs
+The historical runs below predate SDK progression, health bands, Power Stones, modules and overlap income; they do not validate the current candidate.
 
-These single-seed runs use seed 100 and the balanced build. Weapon variants start at wave 25; the default all-weapons run uses all weapons from the start. The `70b94eb5` rows predate fractional ammo carry and the detailed spent/granted/discarded telemetry, so compare them only as separate historical observations.
+## Current Controlled Runs
+
+Seed 100, balanced purchases, current SDK progression and health bands. WASM `f46072d4`, policy `0a2bb844`; no model decisions. These are accelerated native-WASM simulations, not human play or browser performance measurements.
+
+| Control | Result | Pickups And Purchases | Weapon Shots P/LSS/SM/HB |
+|---|---|---|---|
+| Priority targets, all weapons | Cleared 30; stopped at requested limit; 1,019 active seconds | 70 ammo pickups, 80 powers, 325 coin purchases, 8 Stone purchases | 6,782 / 1,950 / 211 / 14 |
+| Blind circle, primary only | Died at 10; 9 cleared; 460 active seconds | 4 ammo pickups, 5 powers, 46 coin purchases | 2,539 / 0 / 0 / 0 |
+| Priority targets, primary only | Died at 10; 9 cleared; 317 active seconds | 8 ammo pickups, 6 powers, 49 coin purchases | 1,090 / 0 / 0 / 0 |
+| Priority targets, all weapons, endurance | Cleared 300; stopped at requested limit; 10,890 active seconds | 1,646 ammo pickups, 7,896 powers, 579 coin purchases, 47 Stone purchases | 190,051 / 104,817 / 1,676 / 333 |
+
+The priority run dealt 2,777 / 1,815 / 1,207 / 843 damage with the four weapons. It spent 1,174 LSS rounds, 211 missiles and 14 Hook Bombs; proc-created projectiles also count as shots. Cleanup median was 3.0 seconds, 95th percentile 11.7 seconds, with no wave over 15. The blind circle control changes both aim and weapon use, so its failure does not establish primary-only balance.
+
+The accurate primary-only control kept priority targeting and balanced purchases. It recorded 995 primary hits and 596.5 damage; neither missiles nor Hook Bombs were fired. Its death at the first Super Boss supports a practical use for special weapons on this seed, rather than attributing the blind control's failure solely to movement. A broader seed/build sample is still needed.
+
+The endurance run earned 1,488,667 coins: 99.0% of total max-workshop cost, with 71.6% actually spent. It earned 655 Stones, close to the reference model's 653. Cleanup median was 5.0 seconds and 95th percentile 12.5; 11 of 300 waves exceeded 15 seconds. No engine/model errors occurred.
+
+Late-run balance remains provisional. The policy favors LSS and passive powers: direct weapons killed 20,167 of 161,515 enemies, and missile/Hook reserves overflowed substantially. This supports endurance stability and the income accounting, but does not establish that all weapons are equally useful or that humans can reach wave 300. Further comparisons should vary builds, accuracy, power investment and weapon preferences across seeds before changing ammo supply.
+
+## Historical Weapon Runs
+
+These historical single-seed runs predate the current 50-ms targeting policy, Nuke/Demon Mode and reduced Swamp/power generation. They use seed 100 and the balanced build. Weapon variants start at wave 25; the default all-weapons run uses all weapons from the start. The `70b94eb5` rows also predate fractional ammo carry and detailed spent/granted/discarded telemetry. They do not validate the current balance.
 
 | Run | WASM | Outcome | Kills; ammo pickups / powers | Weapon report |
 |---|---|---|---|---|

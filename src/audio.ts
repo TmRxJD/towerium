@@ -104,14 +104,21 @@ export class Audio {
       if(s.hp<previous.hp&&s.time-this.lastDamage>.35){this.lastDamage=s.time;this.tone(170,.12,'sine',.016,65);}
       if(s.charges>previous.charges)this.tone(420,.2,'sine',.018,650);
       if(s.shields>previous.shields)this.tone(260,.2,'sine',.035,420);
-      for(let i=0;i<s.powers.length;i++)if(s.powers[i]>previous.powers[i]+.5)this.tone(300+i*35,.2,'sine',.016,480+i*35);
+      const moduleGain=s.module_times.some((time,i)=>time>previous.module_times[i]+.5);
+      if(moduleGain)this.tone(170,.25,'triangle',.025,260);
+      else if(s.demon_invincible>previous.demon_invincible+.5)this.tone(110,.3,'triangle',.04,55);
+      else {
+        const i=s.powers.findIndex((time,index)=>time>previous.powers[index]+.5);
+        if(i>=0)this.tone(300+i*35,.2,'sine',.016,480+i*35);
+      }
       if(s.ammo.some((a,i)=>i>0&&a>previous.ammo[i])&&s.time-this.lastPickup>.3){this.lastPickup=s.time;this.tone(460,.09,'sine',.009,620);}
     }
     const current=new Set(s.fx.map(f=>f.slice(0,5).join(',')));
     if(!s.paused&&(s.phase===1||s.phase===2)&&s.time-this.lastEffect>.18){
-      const candidates=s.fx.filter(f=>!this.effects.has(f.slice(0,5).join(','))&&[2,4,5,7,8,9].includes(f[0]));const fresh=candidates.find(f=>f[0]===7||f[0]===8)??candidates[0];
+      const candidates=s.fx.filter(f=>!this.effects.has(f.slice(0,5).join(','))&&[2,4,5,7,8,9,10].includes(f[0]));const fresh=candidates.find(f=>f[0]===10||f[0]===7||f[0]===8)??candidates[0];
       if(fresh){this.lastEffect=s.time;const kind=fresh[0];
-        if(kind===7)this.explosion();
+        if(kind===10){this.noise(.9,380,.1);this.tone(60,.8,'sine',.065,28);}
+        else if(kind===7)this.explosion();
         else if(kind===8)this.explosion(false);
         else if(kind===9)this.tone(320,.22,'sine',.045,120);
         else if(kind===5){this.noise(.065,900,.014);this.tone(420,.07,'triangle',.008,210);}

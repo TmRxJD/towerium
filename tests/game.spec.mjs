@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 
 async function readBalance(page) {
   return page.evaluate(async()=>await(await fetch('/engine/balance.json')).json());
@@ -41,10 +42,45 @@ async function readSnapshot(page) {
   });
 }
 
+async function makeWaveTenRetryRecord(page,used=0,seed=42) {
+  const cleared=await makeClearedWaveSave(page,seed);
+  const checkpoint=await page.evaluate(async saved=>{
+    const {default:init,Game}=await import('/src/wasm/towerium.js');await init();
+    const state=JSON.parse(saved.state);state.world.wave=10;state.world.wave_ticks=1800;
+    const stateText=JSON.stringify(state),retry=Game.retry_checkpoint(saved.config,stateText);
+    try{if(JSON.parse(retry.snapshot()).wave!==10)throw new Error('Native retry fixture did not restore wave ten');}
+    finally{retry.free();}
+    return {seed:saved.seed,wave:10,state:stateText};
+  },cleared);
+  return {version:1,config:cleared.config,used,checkpoint};
+}
+
+async function readControlState(page) {
+  return page.evaluate(async()=>{
+    const entry=[...document.querySelectorAll('script[type="module"][src*="/src/main.ts"]')][0];
+    if(!entry)throw new Error('Towerium entry module was not found');
+    return (await import(entry.src)).getControlState();
+  });
+}
+
+async function captureIntroLayouts(page,prefix) {
+  for(const viewport of [{width:320,height:568},{width:844,height:390}]){
+    await page.setViewportSize(viewport);
+    const bounds=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,buttons:[...document.querySelectorAll('#intro button')].map(button=>button.getBoundingClientRect().toJSON())}));
+    expect(bounds.width,`${prefix} ${viewport.width} horizontal overflow`).toBeLessThanOrEqual(viewport.width);
+    expect(bounds.height,`${prefix} ${viewport.height} vertical overflow`).toBeLessThanOrEqual(viewport.height);
+    expect(bounds.buttons.every(rect=>rect.left>=0&&rect.right<=viewport.width&&rect.top>=0&&rect.bottom<=viewport.height),`${prefix} ${viewport.width} button bounds ${JSON.stringify(bounds.buttons)}`).toBe(true);
+    await page.screenshot({path:`.local/intro-${prefix}-${viewport.width}x${viewport.height}.png`,fullPage:true});
+  }
+}
+
 async function readWaveReport(page) {
   const sections=page.locator('.report-section');
   await expect(sections).toHaveCount(2);
-  const labels=['Accuracy','Shots Fired','Hits Taken','Powerups Collected','Coins Earned','Kills'];
+  const labels=[
+    ['Accuracy','Shots Fired','Hits Taken','Powerups Collected','Coins Earned','Stones Earned','Kills'],
+    ['Accuracy','Shots Fired','Hits Taken','Powerups Collected','Coins Earned','Stones Earned','Kills','Overlap Kills'],
+  ];
   const report=await sections.evaluateAll(nodes=>nodes.map(section=>({
     title:section.querySelector('h3')?.textContent?.trim(),
     time:section.querySelector('.report-section-heading span')?.getAttribute('aria-label'),
@@ -54,8 +90,8 @@ async function readWaveReport(page) {
     })),
   })));
   expect(report.map(section=>section.title)).toEqual(['This Wave','Overall']);
-  for(const section of report){
-    expect(section.stats.map(stat=>stat.label)).toEqual(labels);
+  for(const [index,section] of report.entries()){
+    expect(section.stats.map(stat=>stat.label)).toEqual(labels[index]);
     expect(section.stats.every(stat=>stat.value.length>0)).toBe(true);
     expect(section.time).toMatch(/^Time \d{2}:\d{2}$/);
   }
@@ -71,7 +107,12 @@ async function expectReportMatchesSnapshot(page,snapshot) {
     expect(values['Hits Taken']).toBe(String(source.hits_taken));
     expect(values['Powerups Collected']).toBe(String(source.powerups_collected));
     expect(values['Coins Earned']).toBe(String(Math.round(source.coins_earned)));
+    expect(values['Stones Earned']).toBe(String(Math.round(source.stones_earned)));
     expect(values.Kills).toBe(String(source.kills));
+    if(sectionIndex===1){
+      const overlaps=snapshot.coin_overlap_kills.reduce((sum,count,mask)=>sum+((mask&(mask-1))!==0?count:0),0);
+      expect(values['Overlap Kills']).toBe(String(overlaps));
+    }
   }
   return report;
 }
@@ -89,7 +130,10 @@ async function expectOverallMatchesSnapshot(page,snapshot) {
   expect(values['Hits Taken']).toBe(String(source.hits_taken));
   expect(values['Powerups Collected']).toBe(String(source.powerups_collected));
   expect(values['Coins Earned']).toBe(String(Math.round(source.coins_earned)));
+  expect(values['Stones Earned']).toBe(String(Math.round(source.stones_earned)));
   expect(values.Kills).toBe(String(source.kills));
+  const overlaps=snapshot.coin_overlap_kills.reduce((sum,count,mask)=>sum+((mask&(mask-1))!==0?count:0),0);
+  expect(values['Overlap Kills']).toBe(String(overlaps));
 }
 
 async function footerButtonIds(page) {
@@ -180,22 +224,96 @@ test('start, weapon selection, pointer fire, manual and focus-loss pause',async(
   expect(errors).toEqual([]);
 });
 
-test('mobile layout fits and touch fires without page scrolling',async({browser})=>{
+test('mobile controls preserve aim, separate hold fire, and fit portrait and landscape',async({browser})=>{
   const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-  const page=await context.newPage();await page.goto('/?seed=42');
+  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?seed=42');
   const balance=await readBalance(page);
   await expect(page.getByRole('button',{name:'Play',exact:true})).toBeEnabled();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   await expectWeaponControls(page);
+  await expect(page.locator('#touch-controls')).toBeVisible();
+  await expect(page.locator('#aim-pad')).toBeVisible();
+  await expect(page.locator('#touch-fire')).toBeVisible();
   await page.screenshot({path:'test-results/towerium-mobile.png',fullPage:true});
-  await page.getByRole('button',{name:'Play',exact:true}).tap();await page.locator('[data-weapon="2"]').tap();
-  const box=await page.locator('#arena').boundingBox();
-  // Real touch gesture through CDP (pointer capture requires an active pointer).
+  await page.getByRole('button',{name:'Play',exact:true}).tap();
+  const pad=await page.locator('#aim-pad').boundingBox(),fire=await page.locator('#touch-fire').boundingBox();
   const cdp=await context.newCDPSession(page);
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height*0.7}]});
-  await page.waitForTimeout(500);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  expect(Number(await page.locator('#ammo-2').textContent())).toBeLessThan(balance.weapons[2].ammo);
+  const aimPoint={id:1,x:pad.x+pad.width/2,y:pad.y+pad.height/2};
+  const initial=await readControlState(page),arena=await page.locator('#arena').boundingBox();
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[aimPoint]});
+  expect((await readControlState(page)).aim).toEqual(initial.aim);
+  const initialAmmo=Number(await page.locator('#ammo-1').textContent());
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...aimPoint,x:aimPoint.x+24,y:aimPoint.y-16}]});
+  const moved=await readControlState(page);
+  expect(moved.aim).not.toEqual(initial.aim);expect(moved.firing).toBe(false);
+  expect(moved.aim[0]-initial.aim[0]).toBeCloseTo(24*1100/arena.width,1);
+  expect(moved.aim[1]-initial.aim[1]).toBeCloseTo(-16*1100/arena.width,1);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  expect((await readControlState(page)).aim).toEqual(moved.aim);
+  expect(Number(await page.locator('#ammo-1').textContent())).toBe(initialAmmo);
+
+  // Independent pointer IDs: lifting the aim finger must leave Fire held.
+  await page.locator('[data-weapon="1"]').tap();
+  const ammoBeforeHold=Number(await page.locator('#ammo-1').textContent());
+  const points=[{...aimPoint,id:11},{id:12,x:fire.x+fire.width/2,y:fire.y+fire.height/2}];
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[points[0]]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});
+  await expect(page.locator('#touch-fire')).toHaveAttribute('aria-pressed','true');
+  await page.waitForTimeout(400);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[points[0]]});
+  await expect(page.locator('#touch-fire')).toHaveAttribute('aria-pressed','true');
+  await expect.poll(async()=>Number(await page.locator('#ammo-1').textContent())).toBeLessThan(ammoBeforeHold);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[points[1]]});
+  await expect(page.locator('#touch-fire')).toHaveAttribute('aria-pressed','false');
+
+  await page.locator('[data-weapon="3"]').tap();
+  const spentBefore=(await readSnapshot(page)).weapon_report[3].ammo_spent;
+  await page.locator('#touch-fire').tap();
+  await expect.poll(async()=>(await readSnapshot(page)).weapon_report[3].ammo_spent).toBeGreaterThan(spentBefore);
+  const spentAfter=(await readSnapshot(page)).weapon_report[3].ammo_spent;
+  await page.waitForTimeout(350);
+  expect((await readSnapshot(page)).weapon_report[3].ammo_spent).toBe(spentAfter);
+
+  await page.locator('[data-weapon="0"]').tap();
+  const firePoint={id:21,x:fire.x+fire.width/2,y:fire.y+fire.height/2};
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[firePoint]});
+  await expect(page.locator('#touch-fire')).toHaveAttribute('aria-pressed','true');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('heading',{name:'Paused',exact:true})).toBeVisible();
+  await expect(page.locator('#touch-fire')).toHaveAttribute('aria-pressed','false');
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+
+  await page.locator('#touch-sensitivity').evaluate(input=>{input.value='1.75';input.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.locator('#touch-hand').selectOption('left');
+  await expect(page.locator('#touch-controls')).toHaveAttribute('data-hand','left');
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('towerium.touch.v1')))).toEqual({sensitivity:1.75,hand:'left'});
+  for(const viewport of [{width:320,height:568},{width:844,height:390}]){
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await expect(page.locator('#touch-fire')).toBeInViewport();
+    await expect(page.locator('#aim-pad')).toBeInViewport();
+  }
+  expect(errors).toEqual([]);
   await context.close();
+});
+
+test('touch settings restore, malformed settings fall back, and desktop hides touch controls',async({browser,page})=>{
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const mobile=await context.newPage(),errors=[];mobile.on('pageerror',error=>errors.push(error.message));
+  await mobile.addInitScript(()=>{if(!localStorage.getItem('towerium.touch.v1'))localStorage.setItem('towerium.touch.v1',JSON.stringify({sensitivity:99,hand:'sideways'}));});
+  await mobile.goto('/');
+  await expect(mobile.locator('#touch-sensitivity')).toHaveValue('1');
+  await expect(mobile.locator('#touch-hand')).toHaveValue('right');
+  await mobile.locator('#touch-sensitivity').evaluate(input=>{input.value='1.5';input.dispatchEvent(new Event('input',{bubbles:true}));});
+  await mobile.locator('#touch-hand').selectOption('left');await mobile.reload();
+  await expect(mobile.locator('#touch-sensitivity')).toHaveValue('1.5');
+  await expect(mobile.locator('#touch-hand')).toHaveValue('left');
+  await mobile.locator('#auto-play').click();await mobile.locator('#watch-auto-play').click();
+  await expect(mobile.locator('#touch-controls')).toBeHidden();
+  expect(errors).toEqual([]);
+  await context.close();
+  await page.goto('/');
+  await expect(page.locator('#touch-controls')).toBeHidden();
 });
 
 test('play through shop purchases, next wave, defeat, and restart',async({page})=>{
@@ -240,7 +358,7 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
     expect(documentBounds.scrollHeight<=documentBounds.innerHeight,JSON.stringify({width,height,...documentBounds})).toBe(true);
     expect(await page.locator('.report-section').count()).toBe(2);
     expect(await page.locator('.report-body').evaluate(body=>body.scrollHeight<=body.clientHeight+1)).toBe(true);
-    expect(await page.locator('.report-stats>div').count()).toBe(12);
+    expect(await page.locator('.report-stats>div').count()).toBe(15);
     expect(await page.locator('.report-stats>div').evaluateAll(cards=>cards.every(card=>{const r=card.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}))).toBe(true);
     await page.screenshot({path:`test-results/towerium-report-${width}x${height}.png`,fullPage:true});
   }
@@ -261,7 +379,8 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
     expect(documentBounds.scrollHeight<=documentBounds.innerHeight,JSON.stringify({width,height,...documentBounds})).toBe(true);
     expect(await page.locator('.upgrade').count()).toBe(balance.upgrades.length);
     expect(await page.locator('.upgrade').evaluateAll(buttons=>buttons.every(button=>{const r=button.getBoundingClientRect();return r.top>=0 && r.bottom<=innerHeight && r.left>=0 && r.right<=innerWidth;}))).toBe(true);
-    expect(await page.locator('#modal').evaluate(dialog=>dialog.scrollHeight<=dialog.clientHeight+1),`report modal overflow at ${width}x${height}`).toBe(true);
+    const reportGeometry=await page.locator('#modal').evaluate(dialog=>({scrollHeight:dialog.scrollHeight,clientHeight:dialog.clientHeight,rect:dialog.getBoundingClientRect().toJSON()}));
+    expect(reportGeometry.scrollHeight<=reportGeometry.clientHeight+1,`report modal overflow at ${width}x${height}: ${JSON.stringify(reportGeometry)}`).toBe(true);
     expect(await page.locator('.shop-body').evaluate(body=>body.scrollHeight<=body.clientHeight+1)).toBe(true);
     await page.screenshot({path:`test-results/towerium-shop-${width}x${height}.png`,fullPage:true});
   }
@@ -457,7 +576,9 @@ test('Death Wave renders its first and subsequent animation frames without stopp
     const config=await(await fetch('/engine/balance.json')).json();
     const dropChance=config.upgrades.find(upgrade=>upgrade.name==='Power Drop Chance');
     if(!dropChance)throw new Error('Power drop chance upgrade is missing');
-    dropChance.base=1;dropChance.step=0;config.powers.death_wave_weight=1;
+    dropChance.base=1;dropChance.step=0;
+    config.power_workshop.upgrades.forEach(upgrade=>upgrade.weight=0.34);
+    config.power_workshop.upgrades.find(upgrade=>upgrade.name==='Death Wave').weight=100;
     const canvas=document.createElement('canvas');canvas.width=800;canvas.height=800;
     canvas.style.cssText='position:fixed;left:-10000px;width:800px;height:800px';document.body.append(canvas);
     const renderer=new Renderer(canvas,await loadArt()),game=new Game(42,JSON.stringify(config));
@@ -569,7 +690,7 @@ test('shop skin selection is accessible and fits all supported viewport sizes',a
     });
     const shopBounds=await page.evaluate(()=>({scrollHeight:document.documentElement.scrollHeight,innerHeight,modal:document.querySelector('#modal').getBoundingClientRect().toJSON(),tools:['#shop-help','#shop-skins','#next-wave'].map(selector=>document.querySelector(selector).getBoundingClientRect().toJSON())}));
     expect(shopBounds.scrollHeight<=shopBounds.innerHeight,`${width}×${height} shop ${JSON.stringify(shopBounds)}`).toBe(true);
-    expect(shopBounds.tools.every(rect=>rect.top>=shopBounds.modal.top&&rect.bottom<=shopBounds.modal.bottom&&rect.left>=shopBounds.modal.left&&rect.right<=shopBounds.modal.right),`${width}×${height} shop control bounds`).toBe(true);
+    expect(shopBounds.tools.every(rect=>rect.top>=shopBounds.modal.top&&rect.bottom<=shopBounds.modal.bottom&&rect.left>=shopBounds.modal.left&&rect.right<=shopBounds.modal.right),`${width}×${height} shop control bounds ${JSON.stringify(shopBounds)}`).toBe(true);
     await page.screenshot({path:`.local/v7-shop-${width}x${height}.png`,fullPage:true});
     await page.getByRole('button',{name:/Skins/}).click();
     const skinBounds=await page.evaluate(()=>({scrollHeight:document.documentElement.scrollHeight,innerHeight,modal:document.querySelector('#modal').getBoundingClientRect().toJSON(),cards:[...document.querySelectorAll('.skin-card')].map(card=>card.getBoundingClientRect().toJSON())}));
@@ -661,8 +782,121 @@ test('contacting enemies stay outside the visible tower wall',async({page})=>{
   expect((await readSnapshot(page)).enemies).toEqual(before.enemies);
   await page.locator('#request-restart').click();await page.locator('#confirm-restart').click();
   expect((await readSnapshot(page)).wave).toBe(1);expect((await readSnapshot(page)).kills).toBe(0);
-  await expect(page.locator('#intro')).toBeHidden();
- });
+ await expect(page.locator('#intro')).toBeHidden();
+});
+
+test('released balance and legacy save format can resume',async({page})=>{
+  await page.goto('/');await page.locator('#start').click();
+  const saved=await makeClearedWaveSave(page);
+  const releasedConfig=JSON.stringify(JSON.parse(execFileSync('git',['show','90cc74f:engine/balance.json'],{encoding:'utf8'})));
+  const legacy=await page.evaluate(async({saved,releasedConfig})=>{
+    const {default:init,Game}=await import('/src/wasm/towerium.js');await init();
+    const game=Game.restore(saved.config,saved.state);
+    if(!game.buy(0)||!game.start_wave())throw new Error('Could not prepare legacy-format active run');
+    for(let i=0;i<90;i++)game.advance(1/60);
+    const current=JSON.parse(game.snapshot()),state=JSON.parse(game.save());game.free();
+    const expected={wave:current.wave,coins:current.coins,levels:current.levels};
+    delete state.world.ray_cycle;
+    for(const enemy of state.world.enemies)delete enemy.swamp_hit_cd;
+    return {saved:{seed:saved.seed,config:releasedConfig,state:JSON.stringify(state)},expected};
+  },{saved,releasedConfig});
+  await stageRunOnNextNavigation(page,legacy.saved,'towerium.test-legacy-save');
+  await page.reload();await expect(page.locator('#restore-run')).toBeVisible();
+  await page.locator('#restore-run').click();
+  const restored=await readSnapshot(page);
+  expect(restored.wave).toBe(legacy.expected.wave);
+  expect(restored.coins).toBe(legacy.expected.coins);
+  expect(restored.levels).toEqual(legacy.expected.levels);
+  expect(restored.paused).toBe(true);
+});
+
+test('unknown run and retry configs are rejected while malformed storage is cleared',async({page})=>{
+  await page.goto('/');
+  const saved=await makeClearedWaveSave(page),retry=await makeWaveTenRetryRecord(page,1);
+  const unknownConfig=JSON.stringify({...JSON.parse(saved.config),waves:{...JSON.parse(saved.config).waves,spawn_seconds:JSON.parse(saved.config).waves.spawn_seconds+1}});
+  saved.config=unknownConfig;retry.config=unknownConfig;
+  await page.addInitScript(({saved,retry})=>{
+    if(sessionStorage.getItem('towerium.test-unknown-config'))return;
+    localStorage.setItem('towerium.run.v1',JSON.stringify(saved));
+    localStorage.setItem('towerium.retries.v1',JSON.stringify(retry));
+    sessionStorage.setItem('towerium.test-unknown-config','1');
+  },{saved,retry});
+  await page.reload();
+  await expect(page.locator('#restore-run')).toHaveCount(0);
+  expect(await page.evaluate(()=>[localStorage.getItem('towerium.run.v1'),localStorage.getItem('towerium.retries.v1')])).toEqual([null,null]);
+});
+
+test('all four module HUD timers persist and restore with their module art',async({page})=>{
+  await page.goto('/');
+  const saved=await page.evaluate(async()=>{
+    const {default:init,Game}=await import('/src/wasm/towerium.js');await init();
+    const config=JSON.stringify(await(await fetch('/engine/balance.json')).json()),game=new Game(42,config);
+    if(!game.start_wave())throw new Error('Could not start module timer fixture');
+    const state=JSON.parse(game.save());game.free();state.world.module_times=[42,41,40,39];
+    return {seed:42,config,state:JSON.stringify(state)};
+  });
+  await stageRunOnNextNavigation(page,saved,'towerium.test-module-timers');
+  await page.reload();await expect(page.locator('#restore-run')).toBeVisible();await page.locator('#restore-run').click();
+  const expected=['Death Penalty, 42 seconds','Space Displacer, 41 seconds','Galaxy Compressor, 40 seconds','Om Chip, 39 seconds'];
+  const snapshot=await readSnapshot(page);
+  expect(snapshot.module_times).toEqual([42,41,40,39]);
+  for(const label of expected)await expect(page.locator('#powers [aria-label="'+label+'"]')).toBeVisible();
+  await page.reload();await expect(page.locator('#restore-run')).toBeVisible();await page.locator('#restore-run').click();
+  expect((await readSnapshot(page)).module_times).toEqual([42,41,40,39]);
+});
+
+test('tenth-wave retry count persists, caps at three, and survives reload',async({page})=>{
+  await page.goto('/');
+  const record=await makeWaveTenRetryRecord(page,2),marker='towerium.test-retry-metadata';
+  await page.addInitScript(({record,marker})=>{
+    const stage=sessionStorage.getItem(marker);
+    if(stage===null){
+      localStorage.removeItem('towerium.run.v1');
+      localStorage.setItem('towerium.retries.v1',JSON.stringify(record));
+      sessionStorage.setItem(marker,'staged');
+    }else if(stage==='clear-run'){
+      localStorage.removeItem('towerium.run.v1');sessionStorage.removeItem(marker);
+    }
+  },{record,marker});
+  await page.reload();
+  await expect(page.locator('#retry-run')).toHaveText('Retry Wave 10 · 1 Left');
+  await captureIntroLayouts(page,'retry');
+  await page.locator('#retry-run').click();
+  await expect(page.locator('#wave')).toHaveText('10');
+  const afterRetry=await page.evaluate(()=>JSON.parse(localStorage.getItem('towerium.retries.v1')));
+  expect(afterRetry.used).toBe(3);
+  expect(afterRetry.checkpoint).toEqual(record.checkpoint);
+  expect(Object.keys(afterRetry).sort()).toEqual(['checkpoint','config','used','version']);
+  await page.evaluate(marker=>sessionStorage.setItem(marker,'clear-run'),marker);
+  await page.reload();
+  await expect(page.locator('#retry-run')).toHaveCount(0);
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('towerium.retries.v1')).used)).toBe(3);
+});
+
+test('wave fifty start unlocks from progression, stays empty, and resumes its purchased run',async({page})=>{
+  await page.goto('/');
+  await expect(page.locator('#milestone-run')).toHaveCount(0);
+  await page.evaluate(()=>localStorage.setItem('towerium.cosmetics.v1',JSON.stringify({completed:50,selected:'cyber'})));
+  await page.reload();
+  await expect(page.locator('#milestone-run')).toBeVisible();
+  await captureIntroLayouts(page,'milestone');
+  await page.locator('#milestone-run').click();
+  const fresh=await readSnapshot(page);
+  expect(fresh.pending_start_wave).toBe(50);expect(fresh.phase).toBe(2);expect(fresh.coins).toBeGreaterThan(0);
+  expect(fresh.levels).toEqual(Array(25).fill(0));
+  await page.locator('[data-upgrade="0"]').click();
+  const purchased=await readSnapshot(page);
+  expect(purchased.levels[0]).toBe(1);expect(purchased.coins).toBeLessThan(fresh.coins);
+  await page.locator('#next-wave').click();
+  await expect(page.locator('#wave')).toHaveText('50');
+  const started=await readSnapshot(page);
+  expect(started.pending_start_wave).toBe(0);expect(started.levels).toEqual(purchased.levels);
+  await page.reload();await expect(page.locator('#restore-run')).toBeVisible();
+  await page.locator('#restore-run').click();
+  const restored=await readSnapshot(page);
+  expect(restored.wave).toBe(started.wave);expect(restored.levels).toEqual(started.levels);
+  expect(restored.paused).toBe(true);
+});
 
 test('shop save restores upgrades and Title Case labels without scrolling',async({page})=>{
   const workshopImageResponses=[];
@@ -707,12 +941,55 @@ test('shop save restores upgrades and Title Case labels without scrolling',async
   await page.locator('#open-shop').click();
   for(const viewport of [{width:320,height:568},{width:844,height:390}]){
     await page.setViewportSize(viewport);
-    expect(await page.locator('#modal').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
+    const shopGeometry=await page.locator('#modal').evaluate(el=>({scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,rect:el.getBoundingClientRect().toJSON()}));
+    expect(shopGeometry.scrollHeight<=shopGeometry.clientHeight+1,JSON.stringify({viewport,...shopGeometry})).toBe(true);
     const footer=await page.locator('.shop-footer').boundingBox();expect(footer.x+footer.width).toBeLessThanOrEqual(viewport.width);
   }
   await page.locator('#request-restart').click();await page.locator('#cancel-restart').click();await expect(page.locator('.upgrade')).toHaveCount(25);
   await page.locator('#next-wave').click();
   await expect(page.locator('#powers [aria-label="Energy Shield, 2 of 3 charges"]')).toBeVisible();
+});
+
+test('Powerups shop spends run-local Stones, restores purchases, and fits phone layouts',async({page})=>{
+  await page.goto('/');
+  const saved=await makeClearedWaveSave(page),state=JSON.parse(saved.state);
+  state.world.stones=10000;state.world.stones_earned=10000;
+  state.world.power_levels=Array.from({length:16},()=>[0,0]);saved.state=JSON.stringify(state);
+  await stageRunOnNextNavigation(page,saved,'towerium.test-power-shop');
+  await page.reload();await expect(page.locator('#restore-run')).toBeVisible();await page.locator('#restore-run').click();
+  await page.locator('#open-shop').click();
+  await page.locator('#category-powers').click();
+  await expect(page.locator('#category-powers')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#category-workshop')).toHaveAttribute('aria-pressed','false');
+  await expect(page.locator('.power-choice')).toHaveCount(16);
+  await expect(page.locator('#modal h2')).toHaveText('Powerups');
+  await expect(page.locator('.shop-wallet .wallet-label')).toHaveText('Stones');
+  await expect(page.locator('.shop-wallet .stone-icon')).toBeVisible();
+  const before=await readSnapshot(page),cost=before.power_costs[0][0];
+  expect(before.stones).toBe(10000);expect(before.coins).toBeGreaterThan(0);
+  await page.locator('[data-power-buy="0"][data-power-path="0"]').click();
+  const bought=await readSnapshot(page);
+  expect(bought.power_levels[0][0]).toBe(1);expect(bought.stones).toBe(before.stones-cost);expect(bought.coins).toBe(before.coins);
+  for(const viewport of [{width:320,height:568},{width:844,height:390}]){
+    await page.setViewportSize(viewport);
+    expect(await page.locator('#modal').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    expect(await page.locator('.power-selector').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+    const footer=await page.locator('.shop-footer').boundingBox();expect(footer.x+footer.width).toBeLessThanOrEqual(viewport.width);
+  }
+  await page.reload();await expect(page.locator('#restore-run')).toBeVisible();await page.locator('#restore-run').click();
+  const restored=await readSnapshot(page);
+  expect(restored.stones).toBe(bought.stones);expect(restored.coins).toBe(bought.coins);expect(restored.power_levels).toEqual(bought.power_levels);
+  await page.locator('#open-shop').click();await page.locator('#category-powers').click();
+  await expect(page.locator('[data-power-buy="0"][data-power-path="0"]')).toBeEnabled();
+  for(const viewport of [{width:320,height:568},{width:844,height:390}]){
+    await page.setViewportSize(viewport);
+    expect(await page.locator('#modal').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    expect(await page.locator('.power-selector').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+    const footer=await page.locator('.shop-footer').boundingBox();expect(footer.x+footer.width).toBeLessThanOrEqual(viewport.width);
+    await page.screenshot({path:`.local/powerups-purchased-${viewport.width}x${viewport.height}.png`,fullPage:true});
+  }
 });
 
 test('Krisu music plays, pauses, and mute survives reload',async({page})=>{
@@ -766,4 +1043,63 @@ test('Auto Play buys upgrades and advances without changing personal progress',a
   await page.locator('#auto-play').click();await page.locator('#auto-aim').selectOption('circle');await page.locator('#auto-weapons').selectOption('projectile');await page.locator('#watch-auto-play').click();
   await page.waitForTimeout(1200);await page.reload();await expect(page.locator('#restore-run')).toBeVisible();
   expect(await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])))).toEqual(personal);
+});
+
+test('Auto Play advances out of focus while a human run pauses on blur',async({page})=>{
+  await page.clock.install();await page.goto('/?seed=42');
+  await page.locator('#auto-play').click();await page.locator('#watch-auto-play').click();
+  await expect(page.locator('#run-mode')).toBeVisible();
+  await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+  expect((await readSnapshot(page)).paused).toBe(false);
+  const before=await readSnapshot(page);
+  await page.evaluate(()=>{
+    Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.runFor(3200);
+  const background=await readSnapshot(page);
+  expect(background.paused).toBe(false);expect(background.time).toBeGreaterThan(before.time);
+
+  const manual=await page.context().newPage();
+  await manual.clock.install();await manual.addInitScript(()=>localStorage.removeItem('towerium.run.v1'));
+  await manual.goto('/?seed=42');await manual.locator('#start').click();
+  await manual.evaluate(()=>window.dispatchEvent(new Event('blur')));
+  expect((await readSnapshot(manual)).paused).toBe(true);
+  await manual.close();
+});
+
+test('Nuke, Demon, and all module assets decode and render drops without errors',async({page})=>{
+  const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
+  await page.goto('/');
+  const result=await page.evaluate(async()=>{
+    const [{loadArt},{Renderer},{default:init,Game}]=await Promise.all([
+      import('/src/assets.ts'),import('/src/renderer.ts'),import('/src/wasm/towerium.js'),
+    ]);
+    await init();const art=await loadArt();
+    const canvas=document.createElement('canvas');canvas.style.width='440px';canvas.style.height='440px';document.body.append(canvas);
+    const renderer=new Renderer(canvas,art),config=JSON.stringify(await(await fetch('/engine/balance.json')).json());
+    const game=new Game(42,config);game.start_wave();const snapshot=JSON.parse(game.snapshot());
+    snapshot.demon_time=10;snapshot.demon_invincible=5;
+    snapshot.drops.push([1001,10,-90,20,10],[1002,11,90,20,10],[1003,12,-60,60,10],[1004,13,-20,80,10],[1005,14,20,80,10],[1006,15,60,60,10]);
+    renderer.draw(snapshot,[0,0],0);
+    const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+    const result={
+      nuke:{complete:art.powers[10].complete,width:art.powers[10].naturalWidth},
+      demonCard:{complete:art.powers[11].complete,width:art.powers[11].naturalWidth},
+      modules:art.powers.slice(12,16).map(image=>({complete:image.complete,width:image.naturalWidth,src:new URL(image.src).pathname})),
+      demonWing:{complete:art.demonWing.complete,width:art.demonWing.naturalWidth,height:art.demonWing.naturalHeight},
+      pixelColors:new Set(Array.from({length:Math.floor(pixels.length/4)},(_,i)=>`${pixels[i*4]},${pixels[i*4+1]},${pixels[i*4+2]}`)).size,
+    };
+    game.free();canvas.remove();return result;
+  });
+  expect(result.nuke.complete).toBe(true);expect(result.nuke.width).toBeGreaterThan(0);
+  expect(result.demonCard.complete).toBe(true);expect(result.demonCard.width).toBeGreaterThan(0);
+  expect(result.modules.map(image=>image.complete)).toEqual([true,true,true,true]);
+  expect(result.modules.map(image=>image.width).every(width=>width>0)).toBe(true);
+  expect(result.modules.map(image=>image.src)).toEqual([
+    '/tower-assets/modules/death-penalty-md.webp','/tower-assets/modules/space-displacer-md.webp',
+    '/tower-assets/modules/galaxy-compressor-md.webp','/tower-assets/modules/om-chip-md.webp',
+  ]);
+  expect(result.demonWing.complete).toBe(true);expect(result.demonWing.width).toBeGreaterThan(0);expect(result.demonWing.height).toBeGreaterThan(0);
+  expect(result.pixelColors).toBeGreaterThan(20);expect(pageErrors).toEqual([]);
 });

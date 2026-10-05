@@ -139,6 +139,12 @@
       "path": "ultimate-weapons/weapon-land-mines-md.webp",
       "sha256": "df600488f6efcb02fcdfef9c8673176c80d64017eb0ab8b2df1c82d7f306ed09"
     },
+    "hook-bomb": {
+      "name": "Land Mine",
+      "domain": "icons",
+      "path": "icons/land-mine-md.webp",
+      "sha256": "bd3b64ab16da6987b48886887a1ff9804c15a9916f80aeb14beae23c14864e71"
+    },
     "recovery": {
       "name": "Recovery Package",
       "domain": "workshop",
@@ -432,6 +438,78 @@
       "domain": "backgrounds",
       "path": "backgrounds/abduction-background-lg.webp",
       "sha256": "f9e2f35241f8c7ecedcc005ad1895956ef7c2a1fda6669cb59051970c55d6988"
+    },
+    "demon": {
+      "name": "demon-mode",
+      "domain": "cards",
+      "path": "cards/demon-mode-md.webp",
+      "size": "md",
+      "sourceSprite": "DemonMode",
+      "provenance": "The Tower v28.2.1 base APK; tower-extractor/scripts/extract-game-images.py",
+      "sha256": "3a7f0692794df9befe1253e6acd58713fdd72ac7a630ae6792b8de5cdb791e5e"
+    },
+    "demon-wing": {
+      "name": "demon-wing-glow",
+      "domain": "unidentified",
+      "path": "unidentified/demon-wing-glow-lg.webp",
+      "size": "lg",
+      "sourceSprite": "DemonWing_glow",
+      "provenance": "The Tower v28.2.1 base APK; tower-extractor/scripts/extract-game-images.py; scoped run disabled the DemonWing_glow VFX exclusion",
+      "sha256": "5c9dcfa3784c2cb5159f5de2253e42d41fe20f0698f83eb94ff25977e24213df"
+    },
+    "nuke": {
+      "name": "protector-nuke",
+      "domain": "cards",
+      "path": "cards/protector-nuke-md.webp",
+      "size": "md",
+      "sourceSprite": "protector-nuke",
+      "provenance": "The Tower v28.2.1 base APK; existing packaged asset from packages/tower-assets/assets/game/cards/protector-nuke-md.webp",
+      "sha256": "a9fa0225c9a9ac3e2f520a78a025c79f947a67579a5a56249e8281c7bf703e4c"
+    },
+    "module-dp": {
+      "name": "death-penalty",
+      "domain": "modules",
+      "path": "modules/death-penalty-md.webp",
+      "size": "md",
+      "sourceSprite": "death-penalty",
+      "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
+      "sha256": "d99b2d27a4017cae74696037507e91f6d8ac5a9c2f3933caac4e039c2c86afc9"
+    },
+    "module-sd": {
+      "name": "space-displacer",
+      "domain": "modules",
+      "path": "modules/space-displacer-md.webp",
+      "size": "md",
+      "sourceSprite": "space-displacer",
+      "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
+      "sha256": "7ca1774c2d091072be42ba1b6adf1718c71bf853bd9a71bf6071305cf950e8d7"
+    },
+    "module-gc": {
+      "name": "galaxy-compressor",
+      "domain": "modules",
+      "path": "modules/galaxy-compressor-md.webp",
+      "size": "md",
+      "sourceSprite": "galaxy-compressor",
+      "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
+      "sha256": "0449c6ef7cb8409132164522b5f6778b146b5ed09dcb78770257acb653a136f3"
+    },
+    "module-om": {
+      "name": "om-chip",
+      "domain": "modules",
+      "path": "modules/om-chip-md.webp",
+      "size": "md",
+      "sourceSprite": "om-chip",
+      "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
+      "sha256": "b5dbfe6a618139037061ab98bbca14a3773e195b08e4d60ce3111e8f10e51007"
+    },
+    "power-stone": {
+      "name": "coin_ultimate",
+      "domain": "icons",
+      "path": "icons/coin-ultimate-md.webp",
+      "size": "md",
+      "sourceSprite": "coin_ultimate",
+      "provenance": "The Tower v29.0.0 arm64 extraction; tower-extractor asset-extract full-extract/icons/coin-ultimate-md.webp",
+      "sha256": "eef672d90406aa1a831c2e549034fa979cadd09f040f17d09addec34a687dc79"
     }
   }
 }

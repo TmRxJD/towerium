@@ -2,7 +2,7 @@ import {readFile, mkdir, writeFile, appendFile, readdir} from 'node:fs/promises'
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import init,{Game} from '../src/wasm/towerium.js';
-import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction, baselineWeapon,baselinePurchase} from './playtest-policy.mjs';
+import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction, baselineWeapon,baselinePurchase,baselinePowerPurchase} from './playtest-policy.mjs';
 import {openKev} from './kev-local.mjs';
 
 const root=resolve(import.meta.dirname,'..');
@@ -13,19 +13,19 @@ if(args.help||args.h){
 Usage: node scripts/playtest.mjs [options]
 
 Common options:
-  --policy=baseline|kev       Defaults to kev. Baseline never uses a model.
+  --policy=baseline|kev       Defaults to baseline. Baseline never uses a model.
   --seed=100                  First deterministic seed.
-  --runs=1                    Number of consecutive seeds.
-  --waves=300                 Maximum wave count.
-  --seconds=7200              Simulated-time limit.
-  --decisions=20000           Decision limit.
-  --interval=0.5              Simulated seconds between combat decisions.
+  --runs=8                    Number of consecutive seeds.
+  --waves=40                  Maximum wave count.
+  --seconds=3600              Simulated-time limit.
+  --decisions=N               Default covers time limit plus 25 shop decisions/wave.
+  --interval=0.05             Combat decision interval; matches UI Auto Play.
   --out=playtest-results/run  New, empty output directory.
 
 Baseline options:
   --strategy=balanced|offense|defense|economy|none
   --aim=nearest|priority|idle|circle
-  --weapons=all|projectile
+  --weapons=all|projectile|light|missile|hook|rotate
   --circle-seconds=2 --circle-from=1 --weapons-from=1
 
 Kev options:
@@ -49,9 +49,10 @@ if(!Number.isFinite(circleSeconds)||circleSeconds<=0||!['all','projectile','ligh
 const endpoint=args.endpoint||'http://127.0.0.1:8099/v1/systemone';
 const url=new URL(endpoint);
 if(url.protocol!=='http:'||!['127.0.0.1','localhost','[::1]'].includes(url.hostname))throw new Error('This harness only permits local Kev endpoints.');
-const interval=Number(args.interval||'.25'),maxWaves=Number(args.waves||'40'),maxSeconds=Number(args.seconds||'3600'),maxDecisions=Number(args.decisions||'20000');
+const interval=Number(args.interval||'.05'),maxWaves=Number(args.waves||'40'),maxSeconds=Number(args.seconds||'3600');
+const maxDecisions=Number(args.decisions??Math.ceil(maxSeconds/interval)+maxWaves*25);
 const seedStart=Number(args.seed||'100'),count=Number(args.runs||'8'),excluded=Number(args.exclude||'-1');
-if(![interval,maxWaves,maxSeconds,maxDecisions,count].every(n=>Number.isFinite(n)&&n>0)||count>1000||interval>5)throw new Error('Invalid playtest bounds');
+if(![interval,maxWaves,maxSeconds,maxDecisions,count].every(n=>Number.isFinite(n)&&n>0)||count>1000||interval>5||Math.round(interval*60)<1)throw new Error('Invalid playtest bounds');
 const latencyMode=args.timing==='latency';
 const configText=await readFile(resolve(root,args.config||'engine/balance.json'),'utf8'),config=JSON.parse(configText);
 const wasm=await readFile(resolve(root,'src/wasm/towerium_bg.wasm'));
@@ -94,8 +95,8 @@ function summary() {
 for(let run=0;run<count;run++) {
   const seed=seedStart+run,game=new Game(seed,configText),log=resolve(out,`seed-${seed}.jsonl`),start=performance.now();
   let s=JSON.parse(game.snapshot()),decisions=0,modelCalls=0,combatFrames=0,error=null;
-  const latencies=[],combatLatencies=[],shopLatencies=[],runtimeRestarts=[],purchases=[],waves=[],weapons=[0,0,0,0];
-  let lastHp=s.hp,damage=0,stalls=0;
+  const latencies=[],combatLatencies=[],shopLatencies=[],runtimeRestarts=[],purchases=[],powerPurchases=[],waves=[],weapons=[0,0,0,0];
+  let lastHp=s.hp,damage=0,stalls=0,impactWaits=0,previousCombat;
   const snapshot=()=>JSON.parse(game.snapshot());
   const advance=seconds=>{
     const frames=Math.max(0,Math.round(seconds*60));
@@ -142,7 +143,11 @@ for(let run=0;run<count;run++) {
         } else choice=baselinePurchase(s,config,strategy,excluded);
         decisions++;
         const before={hp:s.hp,coins:s.coins,levels:s.levels};
-        if(choice<0)game.start_wave();
+        if(choice<0){
+          const power=baselinePowerPurchase(s,config,strategy);
+          if(power){if(!game.buy_power(power.power,power.path))throw new Error('Rejected Power Stone purchase');const purchase={wave:s.wave,...power,cost:s.power_costs[power.power][power.path],stones:s.stones};powerPurchases.push(purchase);await appendFile(log,JSON.stringify({event:'power_shop',...purchase})+'\n');}
+          else {game.start_wave();previousCombat=undefined;}
+        }
         else {if(!game.buy(choice))throw new Error(`Rejected legal purchase ${choice}`);purchases.push({wave:s.wave,index:choice,cost:s.costs[choice],hp:s.hp});}
         s=snapshot();lastHp=s.hp;
         await appendFile(log,JSON.stringify({event:'shop',wave:before.levels? s.wave:null,choice,before,request,response,latency})+'\n');
@@ -158,18 +163,21 @@ for(let run=0;run<count;run++) {
         // The first inference is recorded but is not charged as reaction delay.
         if(latencyMode&&modelCalls>1)delayFrames=advance(latency/1000);
         if(s.phase!==1){await appendFile(log,JSON.stringify({event:'late_decision',request,response,latency,delayFrames})+'\n');continue;}
-      } else action=policy==='kev'?{target:'hold',weapon:0,deathWave:false}:baselineAction(s,config,candidates,aim==='circle'&&s.wave<circleFrom?'priority':aim,circleSeconds);
+      } else action=policy==='kev'?{target:'hold',weapon:0,deathWave:false}:baselineAction(s,config,candidates,aim==='circle'&&s.wave<circleFrom?'priority':aim,circleSeconds,{previous:previousCombat});
       if(policy==='baseline')action.weapon=baselineWeapon(s,action.weapon,s.wave<weaponFrom?'all':weaponMode);
       // Only mechanical mapping: a chosen target becomes its observed pointer coordinates.
       const target=candidates.find(t=>t.key===action.target);
       const pointer=policy==='baseline'&&action.pointer?action.pointer:target?[target.x,target.y]:null;
-      game.input(pointer?.[0]??0,pointer?.[1]??200,!!pointer,action.weapon);
+      const fire=policy==='baseline'?(action.fire??!!pointer):!!pointer;
+      game.input(pointer?.[0]??0,pointer?.[1]??200,fire,action.weapon);
       const usedDeathWave=action.deathWave&&game.death_wave();
       weapons[action.weapon]++;
-      if(action.target==='hold'&&candidates.length)stalls++;
+      if(action.waitingForImpact)impactWaits++;
+      else if(action.target==='hold'&&candidates.length)stalls++;
       const observation={wave:s.wave,time:s.time,hp:s.hp,coins:s.coins,enemies:s.enemies.length,kills:s.kills,ammo:s.ammo,charges:s.charges};
+      previousCombat=s;
       const frames=advance(interval);decisions++;
-      await appendFile(log,JSON.stringify({event:'combat',observation,action,pointer,usedDeathWave,frames,delayFrames,startupDelayExcluded:latencyMode&&modelCalls===1&&!!request,request,response,latency})+'\n');
+      await appendFile(log,JSON.stringify({event:'combat',observation,action,pointer,fire,usedDeathWave,frames,delayFrames,startupDelayExcluded:latencyMode&&modelCalls===1&&!!request,request,response,latency})+'\n');
       if(decisions%250===0)console.log(JSON.stringify({progress:true,seed,wave:s.wave,time:Math.round(s.time),hp:Math.round(s.hp),calls:modelCalls}));
     }
   }catch(e){error=e.stack||String(e);console.error(error);}
@@ -177,7 +185,8 @@ for(let run=0;run<count;run++) {
   const result={seed,outcome:error?'error':s.phase===3?'death':s.wave>=maxWaves&&s.phase===2?'wave-limit':s.time>=maxSeconds?'time-limit':'decision-limit',error,
     wave:s.wave,cleared:s.phase===2?s.wave:s.wave-1,simulatedSeconds:s.time,combatFrames,kills:s.kills,hp:s.hp,earned:s.earned,coins:s.coins,levels:s.levels,
     weaponReport:s.weapon_report,ammoPickups:s.ammo_pickups,powerupsCollected:s.overall_report.powerups_collected,overallReport:s.overall_report,
-    damageLowerBound:damage,decisions,modelCalls,weaponDecisions:weapons,holdWithTargets:stalls,purchases,waves,
+    stones:s.stones,stonesEarned:s.stones_earned,powerLevels:s.power_levels,powerPurchases,coinOverlapKills:s.coin_overlap_kills,coinBonusCoins:s.coin_bonus_coins,
+    damageLowerBound:damage,decisions,modelCalls,weaponDecisions:weapons,holdWithTargets:stalls,waitingForImpact:impactWaits,purchases,waves,
     workshop:{totalCost:workshopCost,affordableShare:s.earned/workshopCost,spentShare:purchases.reduce((sum,p)=>sum+p.cost,0)/workshopCost},
     goldenKillShare:s.kills?s.golden_kills/s.kills:0,
     waveTiming:{median:percent(waves.map(w=>w.waveSeconds),.5),cleanupMedian:percent(waves.map(w=>w.cleanupSeconds),.5),cleanupP95:percent(waves.map(w=>w.cleanupSeconds),.95),cleanupOver15:waves.filter(w=>w.cleanupSeconds>15).length},

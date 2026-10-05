@@ -13,7 +13,7 @@ pub struct IncomeReport {
 }
 
 // Transparent accounting model, not a survival simulation. It clears each wave,
-// collects the configured fraction of Golden Tower kills, and reinvests a
+// uses explicitly configured joint coin-overlap fractions, and reinvests a
 // limited share of earned money in Coins/Kill. It never grants free coin levels.
 pub fn reference_income(c: &Config, waves: u32) -> IncomeReport {
     let r = &c.elite_reference;
@@ -21,6 +21,24 @@ pub fn reference_income(c: &Config, waves: u32) -> IncomeReport {
     let mut income = 0.0;
     let mut spend = 0.0;
     let mut level = 0;
+    let overlap_multiplier: f32 = r
+        .overlap_fractions
+        .iter()
+        .enumerate()
+        .map(|(mask, p)| {
+            p * c
+                .coin_multipliers
+                .iter()
+                .enumerate()
+                .fold(1.0, |mult, (i, bonus)| {
+                    if mask & (1 << i) != 0 {
+                        mult * bonus
+                    } else {
+                        mult
+                    }
+                })
+        })
+        .sum();
     for wave in 1..=waves {
         let pressure = c.waves.pressure(wave);
         let count = pressure.count.ceil();
@@ -33,7 +51,7 @@ pub fn reference_income(c: &Config, waves: u32) -> IncomeReport {
         let mut weight = 0.0;
         let mut coins = 0.0;
         for (i, e) in c.enemies.iter().enumerate() {
-            if e.unlock <= wave {
+            if i < 4 && e.unlock <= wave {
                 weight += pressure.weights[i];
                 // Assumes Scatter families are cleared with weapons, including all children.
                 let family_coins = e.coins
@@ -45,12 +63,18 @@ pub fn reference_income(c: &Config, waves: u32) -> IncomeReport {
                 coins += pressure.weights[i] * family_coins;
             }
         }
-        let base = (count - bosses - superboss) * coins / weight
+        let elite_coins = (c.enemies[6].coins
+            + c.enemies[7].coins
+            + c.enemies[8].coins
+            + c.specials.scatter_children as f32 * c.enemies[1].coins)
+            / 3.0;
+        let fleet_coins: f32 = c.enemies[9..12].iter().map(|e| e.coins).sum();
+        let base = count * coins / weight
+            + pressure.elite_per_wave * elite_coins
+            + pressure.fleet_per_wave * fleet_coins
             + bosses * c.enemies[5].coins
             + superboss * c.enemies[crate::sim::SUPERBOSS].coins;
-        income += base
-            * (economy.base + economy.step * level as f32)
-            * (1.0 + r.golden_kill_fraction * (c.powers.golden_multiplier - 1.0));
+        income += base * (economy.base + economy.step * level as f32) * overlap_multiplier;
         while level < economy.costs.len()
             && spend + economy.costs[level] <= income * r.economy_budget_fraction
         {
@@ -68,4 +92,37 @@ pub fn reference_income(c: &Config, waves: u32) -> IncomeReport {
         total_workshop_cost: total,
         affordable_share: income / total,
     }
+}
+
+/// Expected special-enemy rewards; no ordinary kills or Scatter children mint Stones.
+pub fn reference_stones(c: &Config, waves: u32) -> u32 {
+    let rewards = &c.power_workshop.stones_per_enemy;
+    let mut stones = 0.0;
+    let mut elite_credit = 0.0;
+    for wave in 1..=waves {
+        let p = c.waves.pressure(wave);
+        let eligible: Vec<_> = (6..9).filter(|i| c.enemies[*i].unlock <= wave).collect();
+        if !eligible.is_empty() {
+            elite_credit += p.elite_per_wave;
+            let count = elite_credit.floor();
+            elite_credit -= count;
+            stones += count * eligible.iter().map(|i| rewards[*i] as f32).sum::<f32>()
+                / eligible.len() as f32;
+        }
+        stones += p.fleet_per_wave
+            * (9..12)
+                .filter(|i| c.enemies[*i].unlock <= wave)
+                .map(|i| rewards[i] as f32)
+                .sum::<f32>();
+        if c.enemies[4].unlock <= wave {
+            stones += p.protector_chance * rewards[4] as f32;
+        }
+        if wave.is_multiple_of(c.waves.boss_every) {
+            stones += p.bosses.round() * rewards[5] as f32;
+        }
+        if wave.is_multiple_of(10) {
+            stones += rewards[12] as f32;
+        }
+    }
+    stones.floor() as u32
 }

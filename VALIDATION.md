@@ -1,32 +1,32 @@
 # Validation status
 
-This record summarizes the latest checks after the ammo-carry and Auto Play changes. It is not a claim that every quality or play-balance target has passed.
+Recorded 2026-10-04 against the Power Stones and Powerups build.
 
-## Recorded checks
+## Automated checks
 
-- Rust engine: 100 tests passed; `dense_endurance_profile` is intentionally ignored by default as a manual release-profile endurance workload.
-- Playtest policy tests: 14 passed.
-- TypeScript typecheck: passed.
-- Rust formatting: passed after `cargo fmt`.
+- Rust engine: 129 passed, 0 failed, 1 ignored (`dense_endurance_profile`, the manual release-profile stress workload). The manual workload also completed 120 ticks with 750, 3,000, and 13,000 enemies; these are native timings, not browser FPS or playable wave results.
+- Rust formatting: `cargo fmt --check` passed.
 - Clippy: passed with `-D warnings`.
-- Content validation: passed for 13 enemies, 25 workshop entries, 11 skins, 3 backgrounds, 8 music tracks, and 65 Tower assets.
-- Browser suite: 15 passed on the final WebAssembly build.
-- Production build: passed.
-- Local playtest WebAssembly SHA-256: `aca3e576a22cd1ee25ee7a4a99c531d48456760ef81c89468574e91990196a80`.
-- Deterministic artifact validation revision 2 passed on the engine and frontend files covered at that time with `use_model=false`; the later Auto Play viewport CSS and Pages workflow adjustment were not included in that validation run.
-- Pages Actions run 37155488531 succeeded for head `b7e9883`; the published URL returned HTTP 200.
-- Fresh headless checks on the live site verified human Play/Pause/Resume and Auto Play Watch/Pause/Resume/Stop. The saved human run was unchanged across Auto Play; all five weapon buttons fit at 1440×1080 (bottom edge 1063 px), with no page errors or failed asset responses.
+- Playtest policy tests: 26 passed, including the boss-targeting and Hook Bomb policy regression.
+- Content validation: passed for 13 enemies, 25 Workshop entries, 16 Power upgrades, 400 SDK wave rows, 11 skins, 3 backgrounds, 8 music tracks, and 74 Tower assets.
+- TypeScript typecheck and production build: passed, including generated WASM bindings and Vite bundle.
+- Playwright browser suite: 24 passed, 0 failed.
+- Current-WASM endurance: the balanced priority policy cleared 300 waves on seed 100 without errors; accurate primary-only and blind circle controls both died at wave 10. Full outcomes and balance caveats are in [PLAYTESTING.md](PLAYTESTING.md).
 
-## Review findings and limits
+The browser suite covers separate touch aim/fire pointers, touch settings persistence and fallback, desktop control hiding, coins versus Power Stone spending, purchase restore after reload, all four module timers and art, tenth-wave retries, fresh Wave 50 progression, Auto Play persistence/focus behavior, asset decode/render checks, and compact viewport bounds.
 
-- The code-quality review reported advisory complexity findings; not all quality thresholds passed. It did not find duplicate blocks.
-- The latest UX critic run completed 15 actions across 7 screens. Play (1), Help (1), and Pause (2) were verified; the 55-second review deadline arrived before Restart and Auto Play pause/stop were reached, so those workflows remain unverified by that run. Its 7 px weapon-bar viewport warning was addressed by reserving additional height for the Auto Play badge; a fresh 1440×1080 production-preview check measured all five weapon buttons within the viewport (bottom edge 1063 px). This remains a partial workflow review, not a full UX pass.
-- A separate 320×568 production-page capture verified Auto Play's wave report and Workshop, each before and after pausing. Footer navigation and Next Wave fit within the modal bounds with no horizontal overflow; the four captures are in `.local/ux-auto-report-320.png`, `.local/ux-auto-report-paused-320.png`, `.local/ux-auto-shop-320.png`, and `.local/ux-auto-shop-paused-320.png`.
-- The first Pages Actions run failed because its standalone frontend typecheck ran before generated WebAssembly bindings existed: `Cannot find module './wasm/towerium' or its corresponding type declarations.` The standalone step was removed; `npm run build` generates bindings before typechecking, and the subsequent deployment and live checks passed.
-- Kritic model scoring was unavailable because the configured backend was off. Deterministic checks ran; no model score should be inferred.
-- Balance calculations are model estimates. They do not prove human reachability at the approximately wave-300 exceptional target or wave-400+ extreme target.
-- The [Tower economy comparison](docs/tower-economy-comparison.md) documents the SDK reference, the current price/economy gap, and the unresolved human-balance question; modeled affordability is not evidence that the target is attainable in play.
-- Auto Play policy runs and weapon telemetry are controlled evidence, not proof of human skill or causal weapon utility. Current runs do not establish the intended relative utility of Smart Missiles versus Light Speed.
+## Captures
+
+- Powerups shop after purchase and reload: `.local/powerups-purchased-320x568.png`, `.local/powerups-purchased-844x390.png`.
+- Retry intro: `.local/intro-retry-320x568.png`, `.local/intro-retry-844x390.png`.
+- Fresh Wave 50 intro: `.local/intro-milestone-320x568.png`, `.local/intro-milestone-844x390.png`.
+- Workshop, skins, and wave report viewport captures are in `.local/v7-shop-*`, `.local/v7-skins-*`, and `test-results/towerium-report-*`.
+
+## Review limits
+
+- Browser mobile checks use desktop Chrome viewport emulation; physical phones were not tested.
+- SDK profile, policy harness, and matched-seed CLI runs are deterministic automated evidence. They do not establish human reachability, skill-level balance, or comparative weapon utility.
+- The visual review approved the supplied intro and Powerups captures. Kritic's UX crawl covered eight actions and four screens before its deadline. A separate eight-action UI crawl reported seven heuristic no-effect flags for audio, Play, Auto Play, and weapon controls; browser assertions verify those flows. Kev scoring was unavailable because its configured backend was off.
 
 ## Recheck commands
 

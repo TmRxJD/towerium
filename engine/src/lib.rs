@@ -1,6 +1,9 @@
 mod balance;
 mod config;
 mod math;
+mod power_shop;
+#[cfg(test)]
+mod power_shop_tests;
 mod sim;
 #[cfg(test)]
 mod tests;
@@ -40,6 +43,18 @@ impl Game {
     pub fn advance(&mut self, elapsed: f32) {
         self.world.advance(elapsed);
     }
+    pub fn retry_checkpoint(config_json: &str, data: &str) -> Result<Game, JsValue> {
+        let c = Config::parse(config_json).map_err(|e| JsValue::from_str(&e))?;
+        Ok(Self {
+            world: World::retry_checkpoint(c, data).map_err(|e| JsValue::from_str(&e))?,
+        })
+    }
+    pub fn milestone_start(seed: u32, config_json: &str, wave: u32) -> Result<Game, JsValue> {
+        let c = Config::parse(config_json).map_err(|e| JsValue::from_str(&e))?;
+        Ok(Self {
+            world: World::milestone_start(c, seed, wave).map_err(|e| JsValue::from_str(&e))?,
+        })
+    }
     pub fn input(&mut self, x: f32, y: f32, firing: bool, weapon: u8) {
         self.world.input(x, y, firing, weapon);
     }
@@ -48,6 +63,9 @@ impl Game {
     }
     pub fn buy(&mut self, index: usize) -> bool {
         self.world.buy(index)
+    }
+    pub fn buy_power(&mut self, power: usize, path: usize) -> bool {
+        self.world.buy_power(power, path)
     }
     pub fn pause(&mut self, paused: bool) {
         self.world.pause(paused);
