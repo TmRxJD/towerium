@@ -1,8 +1,21 @@
+use crate::power_expansion::{default_bots, BotState, AOE, EXTRA_ORBS, GOLD_BOT};
+use crate::power_shop::POWER_COUNT;
 use crate::{
     config::{Config, EnemyDef, WaveMilestone, UPGRADE_COUNT},
     math::{angle_delta, segment_distance, Grid, Rng, V},
 };
 use serde::{Deserialize, Serialize};
+fn deserialize_power_levels<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<[[u32; 2]; POWER_COUNT], D::Error> {
+    let v = Vec::<[u32; 2]>::deserialize(d)?;
+    if v.len() != 16 && v.len() != POWER_COUNT {
+        return Err(serde::de::Error::custom("Invalid power level count"));
+    }
+    let mut out = [[0; 2]; POWER_COUNT];
+    out[..v.len()].copy_from_slice(&v);
+    Ok(out)
+}
 use std::f32::consts::{PI, TAU};
 
 pub const DT: f32 = 1.0 / 60.0;
@@ -42,7 +55,7 @@ pub const DEMON: usize = 11;
 pub const DP: usize = 0;
 pub const SD: usize = 1;
 pub const PH: usize = 2;
-pub const OM: usize = 3;
+pub const NEXUS: usize = 15;
 pub const VAMPIRE: usize = 6;
 pub const RAY: usize = 7;
 pub const SCATTER: usize = 8;
@@ -75,6 +88,16 @@ pub struct Enemy {
     pub swamp_cd: f32,
     #[serde(default)]
     pub swamp_hit_cd: f32,
+    #[serde(default)]
+    pub extra_orb_cd: f32,
+    #[serde(default)]
+    pub burn_left: f32,
+    #[serde(default)]
+    pub burn_tick: f32,
+    #[serde(default)]
+    pub burn_stage: u32,
+    #[serde(default)]
+    pub thunder_slow_time: f32,
     pub charge: f32,
     pub spin: f32,
     pub child: bool,
@@ -255,8 +278,16 @@ pub struct World {
     pub stones: u32,
     #[serde(default)]
     pub stones_earned: u32,
+    #[serde(default, deserialize_with = "deserialize_power_levels")]
+    pub power_levels: [[u32; 2]; POWER_COUNT],
     #[serde(default)]
-    pub power_levels: [[u32; 2]; 16],
+    pub extra_power_times: [f32; 6],
+    #[serde(default = "default_bots")]
+    pub bots: [BotState; 4],
+    #[serde(default)]
+    pub extra_orb_angle: f32,
+    #[serde(default)]
+    pub gold_stone_credit: f32,
     pub earned: f32,
     pub kills: u32,
     pub golden_kills: u32,
@@ -382,6 +413,7 @@ impl World {
             || !w.valid_save_entities(&c)
             || !w.valid_save_effects()
             || !w.valid_save_counters()
+            || !w.valid_expansion_state()
             || !w.valid_power_budget(&c)
         {
             return Err("Invalid saved run state".into());
@@ -435,7 +467,9 @@ impl World {
                     || (e.child && e.kind != SCATTER)
             })
             || w.shots.iter().any(|s| s.life <= 0.0)
-            || w.drops.iter().any(|d| d.life <= 0.0 || d.kind > 15)
+            || w.drops
+                .iter()
+                .any(|d| d.life <= 0.0 || d.kind >= POWER_COUNT)
             || w.areas.iter().any(|a| a.life <= 0.0)
             || w.hostile.iter().any(|b| b.damage < 0.0 || b.v.len() <= 0.0)
             || w.deathwaves.iter().any(|r| *r < 0.0);
@@ -448,6 +482,19 @@ impl World {
         }
         w.wave_pressure = c.waves.pressure(w.wave);
         w.c = c;
+        // Slot three belonged to the removed Om Chip; Nexus grants power time directly.
+        w.module_times[3] = 0.0;
+        for timer in w
+            .powers
+            .iter_mut()
+            .chain(w.module_times.iter_mut())
+            .chain(w.extra_power_times.iter_mut())
+        {
+            *timer = timer.min(w.c.powers.timer_cap);
+        }
+        w.fallout_time = w.fallout_time.min(w.c.powers.timer_cap);
+        w.demon_time = w.demon_time.min(w.c.powers.timer_cap);
+        w.demon_invincible = w.demon_invincible.min(w.c.powers.timer_cap);
         w.paused = true;
         w.firing = false;
         w.accumulator = 0.0;
@@ -546,7 +593,7 @@ impl World {
     }
     fn valid_save_effects(&self) -> bool {
         !(self.shields > 3
-            || self.drops.iter().any(|d| d.kind > 15)
+            || self.drops.iter().any(|d| d.kind >= POWER_COUNT)
             || self.areas.iter().any(|a| a.kind > 1)
             || !(-1..=3).contains(&self.disabled_weapon)
             || !(-1..UPGRADE_COUNT as i32).contains(&self.disabled_stat)
@@ -601,7 +648,11 @@ impl World {
             coins,
             stones: 0,
             stones_earned: 0,
-            power_levels: [[0; 2]; 16],
+            power_levels: [[0; 2]; POWER_COUNT],
+            extra_power_times: [0.0; 6],
+            bots: default_bots(),
+            extra_orb_angle: 0.0,
+            gold_stone_credit: 0.0,
             earned: 0.0,
             kills: 0,
             golden_kills: 0,
@@ -839,12 +890,13 @@ impl World {
         self.firing = fire && !self.paused && self.phase == 1;
     }
     pub fn activate(&mut self, k: usize) {
-        if k <= 15 && self.phase == 1 {
+        if k < POWER_COUNT && self.phase == 1 {
             self.wave_stats.powerups_collected += 1;
             self.overall_stats.powerups_collected += 1;
         }
         if k < 7 {
-            self.powers[k] += self.c.powers.durations[k] + self.stat(20);
+            self.powers[k] = (self.powers[k] + self.c.powers.durations[k] + self.stat(20))
+                .min(self.c.powers.timer_cap);
         } else if k == RECOVERY {
             self.hp = (self.hp + self.stat(11) * self.power_effect(7))
                 .min(self.stat(11) * (1.0 + self.stat(24)));
@@ -853,7 +905,9 @@ impl World {
         } else if k == ENERGY_SHIELD {
             self.shields = (self.shields + 1).min(3);
         } else if k == NUKE {
-            self.fallout_time += self.c.powers.fallout_duration + self.stat(20);
+            self.fallout_time =
+                (self.fallout_time + self.c.powers.fallout_duration + self.stat(20))
+                    .min(self.c.powers.timer_cap);
             for i in 0..self.enemies.len() {
                 if self.enemies[i].kind == 0 && self.enemies[i].hp > 0.0 {
                     self.hit(i, self.enemies[i].hp, NUKE_DAMAGE);
@@ -861,13 +915,34 @@ impl World {
             }
             self.fx.push(Fx(10, 0.0, 0.0, 550.0, 0.0, 0.7));
         } else if k == DEMON {
-            self.demon_time += self.c.powers.demon_duration + self.stat(20);
-            self.demon_invincible += self.c.powers.demon_invincible_duration;
-        } else if (12..=15).contains(&k) {
+            self.demon_time = (self.demon_time + self.c.powers.demon_duration + self.stat(20))
+                .min(self.c.powers.timer_cap);
+            self.demon_invincible = (self.demon_invincible
+                + self.c.powers.demon_invincible_duration)
+                .min(self.c.powers.timer_cap);
+        } else if k == NEXUS {
+            for power in [BLACKHOLE, SPOTLIGHT, GOLDEN] {
+                self.powers[power] = (self.powers[power]
+                    + (self.c.powers.durations[power] + self.stat(20)) * self.power_effect(NEXUS))
+                .min(self.c.powers.timer_cap);
+            }
+        } else if (12..15).contains(&k) {
             let module = k - 12;
-            self.module_times[module] += self.c.modules.durations[module] + self.stat(20);
+            self.module_times[module] =
+                (self.module_times[module] + self.c.modules.durations[module] + self.stat(20))
+                    .min(self.c.powers.timer_cap);
         }
-        if k < 16 {
+        if (EXTRA_ORBS..POWER_COUNT).contains(&k) {
+            let duration = if k == AOE {
+                self.power_effect(AOE)
+            } else {
+                self.c.expansion.durations[k - EXTRA_ORBS]
+            };
+            self.extra_power_times[k - EXTRA_ORBS] =
+                (self.extra_power_times[k - EXTRA_ORBS] + duration + self.stat(20))
+                    .min(self.c.powers.timer_cap);
+        }
+        if k < POWER_COUNT {
             self.say(if k == DEATHWAVE {
                 format!("Death Wave banked · {}/3 · press Q", self.charges)
             } else {
@@ -908,6 +983,11 @@ impl World {
             orb_cd: 0.0,
             swamp_cd: 0.0,
             swamp_hit_cd: 0.0,
+            extra_orb_cd: 0.0,
+            burn_left: 0.0,
+            burn_tick: 0.0,
+            burn_stage: 0,
+            thunder_slow_time: 0.0,
             charge: 0.0,
             spin: 0.0,
             child: false,
@@ -1003,21 +1083,15 @@ impl World {
         // All hits in this tick use the same beam angles that the snapshot exports.
         self.spotlight_angle =
             (self.spotlight_angle + self.c.powers.spotlight_speed * DT).rem_euclid(TAU);
-        if self.module_times[OM] > 0.0 {
-            if let Some(enemy) = self
-                .enemies
-                .iter()
-                .filter(|e| e.hp > 0.0 && e.kind >= 5)
-                .min_by(|a, b| a.p.len().total_cmp(&b.p.len()).then(a.id.cmp(&b.id)))
-            {
-                self.spotlight_angle = enemy.p.angle();
-            }
-        }
         self.notice.time = (self.notice.time - DT).max(0.0);
         for t in &mut self.powers {
             *t = (*t - DT).max(0.0);
         }
-        for t in &mut self.module_times {
+        for t in self
+            .module_times
+            .iter_mut()
+            .chain(self.extra_power_times.iter_mut())
+        {
             *t = (*t - DT).max(0.0);
         }
         self.fallout_time = (self.fallout_time - DT).max(0.0);
@@ -1060,6 +1134,8 @@ impl World {
             self.spawn_next();
             self.spawn_timer = self.c.waves.spawn_at(self.spawned, self.total);
         }
+        self.rebuild_protectors();
+        self.step_bots();
         self.move_enemies();
         self.rebuild_grid();
         if self.shock_timer <= 0.0 {
@@ -1107,7 +1183,7 @@ impl World {
             .rem_euclid(TAU)
     }
     pub fn chrono_radius(&self) -> f32 {
-        self.stat(1) + self.c.powers.chrono_margin
+        self.area_radius(self.stat(1) + self.c.powers.chrono_margin)
     }
     pub fn view_extent(&self) -> f32 {
         650.0_f32
@@ -1134,7 +1210,7 @@ impl World {
         let mass = self.c.waves.mass_multiplier(self.wave);
         let range = self.stat(1);
         let chrono_radius = self.chrono_radius();
-        let blackhole_radius = self.power_effect(3);
+        let blackhole_radius = self.area_radius(self.power_effect(3));
         let chrono_slow = self.power_effect(1);
         let commanders: Vec<_> = self
             .enemies
@@ -1201,9 +1277,22 @@ impl World {
                 self.c.tower_radius + def.radius + if self.wall_hp > 0.0 { 5.0 } else { 0.0 }
             };
             if e.p.len() > stop {
-                e.p = e.p.sub(e.p.unit().mul(
-                    (def.speed * speed * move_bonus * slow * e.mobility * DT).min(e.p.len() - stop),
-                ));
+                e.p = e.p.sub(
+                    e.p.unit().mul(
+                        (def.speed
+                            * speed
+                            * move_bonus
+                            * slow
+                            * (if e.thunder_slow_time > 0.0 {
+                                1.0 - self.c.expansion.thunder_slow
+                            } else {
+                                1.0
+                            })
+                            * e.mobility
+                            * DT)
+                            .min(e.p.len() - stop),
+                    ),
+                );
             }
             if !Self::boundary_attacker(e.kind) && e.p.len() < stop {
                 let outward = if e.p.len() > 0.001 {
@@ -1439,7 +1528,7 @@ impl World {
         }
     }
     fn shockwave(&mut self) {
-        let size = self.stat(17);
+        let size = self.area_radius(self.stat(17));
         let mass = self.c.waves.mass_multiplier(self.wave);
         for e in &mut self.enemies {
             if e.hp > 0.0 && e.p.len() <= size {
@@ -1507,7 +1596,7 @@ impl World {
         }
         let spec = self.c.weapons[kind as usize];
         let standard_upgrades = kind == PROJECTILE || kind == LIGHT;
-        if standard_upgrades && self.proc(RAPID_PROC, self.stat(4)) {
+        if standard_upgrades && self.rapid <= 0.0 && self.proc(RAPID_PROC, self.stat(4)) {
             self.rapid = self.stat(5);
         }
         self.fire_timer = if kind == MISSILE {
@@ -1659,7 +1748,7 @@ impl World {
             s.p = s.p.add(V::polar(s.angle, speed * DT));
             let travel = old.dist(s.p);
             let radius = if s.kind == BOMB || s.kind == CHILD {
-                self.c.bomb_radius
+                self.area_radius(self.c.bomb_radius)
             } else {
                 4.0 + self.c.direct_hit_padding
             };
@@ -1814,7 +1903,7 @@ impl World {
             }
         }
     }
-    fn protected(&self, i: usize) -> bool {
+    pub(crate) fn protected(&self, i: usize) -> bool {
         self.protector_indices.iter().any(|&j| {
             let e = &self.enemies[j];
             e.hp > 0.0 && e.p.dist(self.enemies[i].p) < self.c.defense.protector_radius
@@ -1842,12 +1931,6 @@ impl World {
         let p = self.enemies[i].p;
         let spotlight = self.in_spotlight(p);
         (if spotlight { self.power_effect(4) } else { 1.0 })
-            * if self.module_times[OM] > 0.0 && spotlight && [5, 12].contains(&self.enemies[i].kind)
-            {
-                self.power_effect(15)
-            } else {
-                1.0
-            }
             * if self.enemies[i].kind != 4 && protected {
                 1.0 - self.c.defense.protector_reduction
             } else {
@@ -1903,6 +1986,16 @@ impl World {
         if self.demon_time > 0.0 {
             damage *= self.power_effect(11);
         }
+        damage *= self.amp_multiplier(p);
+        if matches!(source, BOMB | CHILD | AREA_DAMAGE | DEATH_WAVE_DAMAGE) {
+            damage *= self.aoe_scale();
+        }
+        if matches!(source, BOMB | CHILD)
+            && p.len() > self.stat(1) + 0.1
+            && !matches!(self.enemies[i].kind, 5 | SUPERBOSS)
+        {
+            damage = damage.min(self.enemy_max_hp(&self.enemies[i]) * 0.5);
+        }
         if damage <= 0.0 {
             return false;
         }
@@ -1943,8 +2036,9 @@ impl World {
         let bonuses = [
             self.powers[GOLDEN] > 0.0,
             self.powers[BLACKHOLE] > 0.0
-                && (0..self.c.powers.blackhole_count)
-                    .any(|n| p.dist(self.blackhole_center(n)) < self.power_effect(3)),
+                && (0..self.c.powers.blackhole_count).any(|n| {
+                    p.dist(self.blackhole_center(n)) < self.area_radius(self.power_effect(3))
+                }),
             self.in_spotlight(p),
             source == ORB_DAMAGE,
             self.enemies[i].deathwave_tag,
@@ -1957,6 +2051,8 @@ impl World {
                 let extra = amount
                     * ((if n == 0 {
                         self.power_effect(6)
+                    } else if n == 3 && self.expanded_time(EXTRA_ORBS) > 0.0 {
+                        self.power_effect(EXTRA_ORBS)
                     } else {
                         self.c.coin_multipliers[n]
                     }) - 1.0);
@@ -1965,15 +2061,25 @@ impl World {
                 self.coin_bonus_coins[n] += extra;
             }
         }
+        if self.in_bot(0, p) {
+            amount *= self.c.expansion.gold_coin_multiplier;
+        }
         self.coin_overlap_kills[mask] += 1;
         self.coins += amount;
         self.earned += amount;
         self.wave_coins += amount;
-        let stones = if self.enemies[i].child {
+        let mut stones = if self.enemies[i].child {
             0
         } else {
             self.c.power_workshop.stones_per_enemy[self.enemies[i].kind]
         };
+        if !self.enemies[i].child && self.in_bot(0, p) {
+            self.gold_stone_credit += self.c.expansion.gold_stone_chance;
+            if self.gold_stone_credit >= 1.0 - 0.00001 {
+                self.gold_stone_credit = (self.gold_stone_credit - 1.0).max(0.0);
+                stones += 1;
+            }
+        }
         self.stones = self.stones.saturating_add(stones);
         self.stones_earned = self.stones_earned.saturating_add(stones);
         self.wave_stats.stones_earned = self.wave_stats.stones_earned.saturating_add(stones);
@@ -2116,6 +2222,7 @@ impl World {
                 }
             }
         }
+        self.extra_orb_hits();
         let mut areas = std::mem::take(&mut self.areas);
         let mut poisoned = std::mem::take(&mut self.poisoned);
         poisoned.clear();
@@ -2138,9 +2245,9 @@ impl World {
                 mine_slot += 1;
             }
             let r = if a.kind == 0 {
-                self.c.powers.swamp_radius
+                self.area_radius(self.c.powers.swamp_radius)
             } else {
-                self.stat(25)
+                self.area_radius(self.stat(25))
             };
             self.grid.query(a.p, r + 48.0, &mut near);
             if a.kind == 0 {
@@ -2169,7 +2276,7 @@ impl World {
             } else if near.iter().any(|&i| {
                 self.enemies[i].hp > 0.0
                     && self.enemies[i].p.dist(a.p)
-                        < self.c.defense.mine_trigger_radius
+                        < self.area_radius(self.c.defense.mine_trigger_radius)
                             + self.enemies[i].definition(&self.c).radius
             }) {
                 a.life = 0.0;
@@ -2231,6 +2338,8 @@ impl World {
                     self.enemies[i].hp = if self.enemies[i].kind == SUPERBOSS && !selected {
                         self.enemies[i].hp
                             - self.power_effect(8)
+                                * self.aoe_scale()
+                                * self.amp_multiplier(self.enemies[i].p)
                                 * if self.demon_time > 0.0 {
                                     self.power_effect(11)
                                 } else {
@@ -2295,8 +2404,7 @@ pub struct Snapshot<'a> {
     pub stones: u32,
     #[serde(default)]
     pub stones_earned: u32,
-    #[serde(default)]
-    pub power_levels: [[u32; 2]; 16],
+    pub power_levels: [[u32; 2]; POWER_COUNT],
     pub earned: f32,
     pub kills: u32,
     pub weapon: u8,
@@ -2330,6 +2438,7 @@ pub struct Snapshot<'a> {
     pub enemies: Vec<(u32, usize, f32, f32, f32, f32, f32)>,
     pub enemy_effects: Vec<(u32, f32, bool, bool)>,
     pub enemy_radii: Vec<(u32, f32)>,
+    pub enemy_burns: Vec<(u32, f32, u32)>,
     pub ray_spins: Vec<(u32, f32)>,
     pub shots: Vec<(u32, u8, f32, f32, f32)>,
     pub drops: Vec<(u32, usize, f32, f32, f32)>,
@@ -2340,6 +2449,12 @@ pub struct Snapshot<'a> {
     pub fx: &'a Vec<Fx>,
     pub notice: &'a Notice,
     pub levels: [u32; UPGRADE_COUNT],
+    pub supply_costs: [f32; crate::supplies::SUPPLY_COUNT],
+    pub supply_available: [bool; crate::supplies::SUPPLY_COUNT],
+    pub extra_power_times: [f32; 6],
+    pub extra_orbs: Vec<(f32, f32)>,
+    pub bots: Vec<(usize, f32, f32, f32, f32)>,
+    pub aoe_scale: f32,
     pub power_costs: Vec<[u32; 2]>,
     pub power_effects: Vec<f32>,
     pub power_weights: Vec<f32>,
@@ -2389,11 +2504,29 @@ impl World {
             stones: self.stones,
             stones_earned: self.stones_earned,
             power_levels: self.power_levels,
-            power_costs: (0..16)
+            supply_costs: std::array::from_fn(|i| self.supply_cost(i)),
+            supply_available: std::array::from_fn(|i| self.supply_available(i)),
+            extra_power_times: self.extra_power_times,
+            extra_orbs: self.extra_orb_positions(),
+            bots: (0..4)
+                .filter(|b| self.expanded_time(GOLD_BOT + b) > 0.0 && self.bots[*b].initialized)
+                .map(|b| {
+                    (
+                        GOLD_BOT + b,
+                        self.bots[b].position.x,
+                        self.bots[b].position.y,
+                        self.power_effect(GOLD_BOT + b)
+                            * if b >= 2 { self.aoe_scale() } else { 1.0 },
+                        self.bots[b].pulse_in,
+                    )
+                })
+                .collect(),
+            aoe_scale: self.aoe_scale(),
+            power_costs: (0..POWER_COUNT)
                 .map(|i| [self.power_cost(i, 0), self.power_cost(i, 1)])
                 .collect(),
-            power_effects: (0..16).map(|i| self.power_effect(i)).collect(),
-            power_weights: (0..16).map(|i| self.power_weight(i)).collect(),
+            power_effects: (0..POWER_COUNT).map(|i| self.power_effect(i)).collect(),
+            power_weights: (0..POWER_COUNT).map(|i| self.power_weight(i)).collect(),
             earned: self.earned,
             kills: self.kills,
             weapon: self.weapon,
@@ -2478,6 +2611,12 @@ impl World {
                 .iter()
                 .filter(|e| e.kind == RAY)
                 .map(|e| (e.id, e.spin))
+                .collect(),
+            enemy_burns: self
+                .enemies
+                .iter()
+                .filter(|e| e.burn_left > 0.0)
+                .map(|e| (e.id, e.burn_left, e.burn_stage))
                 .collect(),
             enemy_radii: self
                 .enemies

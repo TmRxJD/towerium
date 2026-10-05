@@ -1,7 +1,8 @@
 import {assistAim} from './aim-assist.mjs';
+export const humanDefaults=Object.freeze({mouse:Object.freeze({reactionMs:180,aimSpeed:2400,switchMs:160}),touch:Object.freeze({reactionMs:240,aimSpeed:1800,switchMs:200})});
 /** Observations are discrete; movement between them uses only the remembered aim point. */
 export class HumanController {
-  constructor({reactionMs=250,aimSpeed=900,switchMs=200,initialAim=[0,-220],reference=false,assistPixels=0,arenaWidth=320}={}) {
+  constructor({reactionMs=humanDefaults.mouse.reactionMs,aimSpeed=humanDefaults.mouse.aimSpeed,switchMs=humanDefaults.mouse.switchMs,initialAim=[0,-220],reference=false,assistPixels=0,arenaWidth=320}={}) {
     if(typeof reference!=='boolean'||!Number.isFinite(reactionMs)||reactionMs<0||reactionMs>2000||!Number.isFinite(aimSpeed)||aimSpeed<50||aimSpeed>10000||!Number.isFinite(switchMs)||switchMs<0||switchMs>2000)throw new Error('Invalid Auto Play timing settings');
     this.reaction=reference?0:reactionMs/1000;this.speed=aimSpeed;this.switchDelay=switchMs/1000;
     this.reference=reference;
@@ -17,7 +18,7 @@ export class HumanController {
     if(this.clock+1e-8>=this.nextObserve){
       const hp=new Map((state.enemies??[]).map(e=>['enemy_'+e[0],e[4]]));
       const shots=state.overall_report?.shots_fired??0,delta=Math.max(0,shots-this.observedShots);
-      if(delta&&this.action.weapon!==1&&this.action.target?.startsWith('enemy_')){
+      if(delta&&!this.action.sweep&&this.action.weapon!==1&&this.action.target?.startsWith('enemy_')){
         const prior=this.pending.get(this.action.target);
         this.pending.set(this.action.target,{damage:(prior?.damage??0)+delta*(this.action.hitDamage??0),expires:this.clock+Math.min(3,this.action.flightSeconds??0)+this.reaction});
       }
@@ -26,7 +27,7 @@ export class HumanController {
         if(!hp.has(key)||pending.expires<=this.clock||pending.damage<=0)this.pending.delete(key);
       }
       this.observedShots=shots;this.observedHP=hp;
-      this.action=decide(state,{human:!this.reference,previous:this.previous,pendingDamage:new Map([...this.pending].map(([key,value])=>[key,value.damage]))});
+      this.action=decide(state,{human:!this.reference,aim:[...this.aim],lastTarget:this.action.target,previous:this.previous,pendingDamage:new Map([...this.pending].map(([key,value])=>[key,value.damage]))});
       this.previous=state;this.nextObserve=this.clock+Math.max(1/60,this.reaction);
       if(this.action.pointer)this.goal=[...this.action.pointer];
       const wanted=this.action.weapon??0;

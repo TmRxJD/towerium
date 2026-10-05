@@ -79,5 +79,5 @@ const hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
 writeFileSync('engine/wave-profile-provenance.json',JSON.stringify({sdkVersion:JSON.parse(readFileSync('package-lock.json','utf8')).packages['node_modules/thetowersdk'].version,tier,targetWaves,sourceEndWave:10000,
   mapping:'1 + floor((wave - 1) * 9999 / 399)',spawnSeconds:30,cardsLabsMasteries:false,
   sources:Object.fromEntries(sourceFiles.map(file=>[file,hash(resolve(sdkSource,file))])),compositionSha256:hash(compositionPath),compositionLastResolvedWave:mixes.at(-1).wave,
-  adaptations:{densityKnots:[[1,1],[10,1],[50,1.5],[100,2],[200,3],[300,4],[400,5]],post400DensityPerWave:.01,minimumOrdinary:8,fleetRoster:['Commander','Saboteur','Overcharge'],superBossTypeRatios:'Boss'},priceCalibrationFactor:priceFactor,referenceOverlapFractions:masks},null,2)+'\n');
+  adaptations:{densityKnots:[[1,1],[10,1],[50,1.5],[100,2],[200,3],[300,4],[400,5]],post400DensityPerWave:.01,minimumOrdinary:8,fleetRoster:['Commander','Saboteur','Overcharge'],superBossTypeRatios:'Boss',lateWorkshopPriceMultiplier:1.75,lateWorkshopPriceStartFraction:.8,workshopCompletionTarget:[400,450]},priceCalibrationFactor:priceFactor,referenceOverlapFractions:masks},null,2)+'\n');
 console.log(`Generated ${profile.length} SDK wave rows; reference wave300 affordability ${(reference()*100).toFixed(2)}%.`);

@@ -1,4 +1,4 @@
-use crate::{config::Config, math::V, sim::*};
+use crate::{config::Config, math::V, power_shop::POWER_COUNT, sim::*};
 
 #[test]
 fn stones_and_coins_are_separate_and_purchases_only_work_in_shop() {
@@ -12,7 +12,7 @@ fn stones_and_coins_are_separate_and_purchases_only_work_in_shop() {
     assert_eq!(w.stones, 10);
     assert_eq!(w.coins, coins);
     assert_eq!(w.power_levels[0], [1, 0]);
-    assert!(!w.buy_power(16, 0));
+    assert!(!w.buy_power(POWER_COUNT, 0));
     assert!(!w.buy_power(0, 2));
     w.stones = 0;
     assert!(!w.buy_power(0, 1));
@@ -86,7 +86,7 @@ fn power_builds_persist_and_invalid_levels_are_rejected() {
     }
     let old = World::restore(Config::standard(), &legacy.to_string()).unwrap();
     assert_eq!(old.stones, 0);
-    assert_eq!(old.power_levels, [[0; 2]; 16]);
+    assert_eq!(old.power_levels, [[0; 2]; POWER_COUNT]);
 }
 
 #[test]
@@ -104,14 +104,14 @@ fn reference_stone_budget_requires_specialization_at_wave_300() {
     assert!(earned as f32 / (total as f32) < 0.4);
     let fresh = World::milestone_start(c, 42, 50).unwrap();
     assert!(fresh.stones > 0);
-    assert_eq!(fresh.power_levels, [[0; 2]; 16]);
+    assert_eq!(fresh.power_levels, [[0; 2]; POWER_COUNT]);
 }
 
 #[test]
 fn effect_upgrades_have_real_incremental_benefits_and_no_duration_path() {
     let mut w = World::new(Config::standard(), 42);
     w.start_wave();
-    for power in 0..16 {
+    for power in 0..POWER_COUNT {
         let before = w.power_effect(power);
         w.power_levels[power][1] = 1;
         assert!(

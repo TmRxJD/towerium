@@ -493,15 +493,6 @@
       "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
       "sha256": "323e19b6f61bcd9fe5aa00011bc8e8412f5b4d13af3956c3daaec4dd694177a4"
     },
-    "module-om": {
-      "name": "om-chip",
-      "domain": "modules",
-      "path": "modules/om-chip-md.webp",
-      "size": "md",
-      "sourceSprite": "om-chip",
-      "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
-      "sha256": "b5dbfe6a618139037061ab98bbca14a3773e195b08e4d60ce3111e8f10e51007"
-    },
     "power-stone": {
       "name": "coin_ultimate",
       "domain": "icons",
@@ -550,6 +541,48 @@
       "authoredIcon": "attack-07.webp",
       "provenance": "assets/workshop-icons/provenance.json",
       "sha256": "0e7bef75fa743b388413198e3a3cf1b65df7669cb0d532d6dfab93e7ab80c04d"
+    },
+    "module-nexus": {
+      "name": "multiverse-nexus",
+      "domain": "modules",
+      "path": "modules/multiverse-nexus-md.webp",
+      "sha256": "88c3633d0f35b24a0ef74d276606be17a32747c9baf11c962b22106c0a7bc26f"
+    },
+    "extra-orbs": {
+      "name": "extra-orb",
+      "domain": "cards",
+      "path": "cards/extra-orb-md.webp",
+      "sha256": "c3ec109ece9fac2f61d8e67ad6ad23e0db12a0e06d54835295a41d62be6fee3f"
+    },
+    "aoe": {
+      "name": "aoe",
+      "domain": "cards",
+      "path": "cards/aoe-md.webp",
+      "sha256": "025e37c77cb79079a1e6a759e19d8b026fb33072190c970b8a8b25502c6fc712"
+    },
+    "gold-bot": {
+      "name": "golden-bot",
+      "domain": "icons",
+      "path": "icons/golden-bot-md.webp",
+      "sha256": "fa4ead9f4eba01b3d6291d13630ba3e958f805ae948edc2ed9205289b72b0eb4"
+    },
+    "amp-bot": {
+      "name": "amplify-bot",
+      "domain": "icons",
+      "path": "icons/amplify-bot-md.webp",
+      "sha256": "4a8bd1c0389302981c8ed74fd46832c37b834b862fed6cc6e3d4c223874e1652"
+    },
+    "flame-bot": {
+      "name": "flame-bot",
+      "domain": "icons",
+      "path": "icons/flame-bot-md.webp",
+      "sha256": "e020cf84b71acdd7e3d578f1901008c0fc8a7534cb80dd65b631b3e7a58b75eb"
+    },
+    "thunder-bot": {
+      "name": "thunder-bot",
+      "domain": "icons",
+      "path": "icons/thunder-bot-md.webp",
+      "sha256": "34ee72420f69864aae0aadd7a786cc1b8e4408faf1a4f781846e817940f77e63"
     }
   }
 }

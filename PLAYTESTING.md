@@ -2,7 +2,7 @@
 
 ## Browser play
 
-Run `npm ci` and `npm run dev`, then use Play or choose Auto Play from the opening screen. Auto Play is a spectator run: choose a build (Balanced, Offense, Defense, or Economy), an aim policy (Closest Threat, Priority Targets, or Circle Sweep), and a weapon preference. It operates on a separate game state and preserves the player's human run and local progression.
+Run `npm ci` and `npm run dev`, then use Play or choose Auto Play from the opening screen. Auto Play is a spectator run: choose a build (Balanced, Offense, Defense, or Economy), an aim policy (Crowd Sweeps, Closest Threat, Priority Targets, or Circle Sweep), and a weapon preference. Watch automatically purchases coin and Power Stone upgrades for that build before starting the selected wave. Restart repeats this preparation. It operates on a separate game state and preserves the player's human run and local progression.
 
 The run report exposes wave and overall counters. The Workshop is available between waves. Browser automation can be run with `npm run test:browser`; the configured site address can be overridden with `TOWERIUM_URL` when testing a specific local server.
 
@@ -23,7 +23,7 @@ npm run playtest -- --policy=kev --laya=/path/to/laya --model-file=/path/to/mode
 
 The harness does not start Kev automatically. Check `npm run playtest -- --help` for the current options before launching a longer run.
 
-Baseline and browser Auto Play share a 60 Hz input controller. Decisions use discrete observations, finite cursor movement, and a weapon-switch delay. Defaults are 250 ms reaction, 900 battlefield units/s, and 200 ms switching; touch defaults are 400/550/300. These are tuning assumptions, not measurements of player ability. Mobile adds a bounded 14-screen-pixel aim snap. Use `--assist-pixels=14 --arena-width=320` to model it at that viewport width.
+Baseline and browser Auto Play share a 60 Hz input controller. Decisions use discrete observations, finite cursor movement, and a weapon-switch delay. Defaults are 180 ms reaction, 2,400 battlefield units/s, and 160 ms switching; touch defaults are 240/1800/200. These are tuning assumptions, not measurements of player ability. Mobile adds a bounded 14-screen-pixel aim snap. Use `--assist-pixels=14 --arena-width=320` to model it at that viewport width.
 
 Use `--reaction-ms`, `--aim-speed`, `--switch-ms`, and `--start-wave` to vary the controls and funded starting workshop. Every run begins in preparation, including wave one. Only explicit `--reference=true` enables instant aim and exact projectile forecasting; zero reaction delay alone does not. Human profiles estimate damage committed by their own shots and observe deaths at the next reaction boundary. The opening plan buys two Coins/Kill levels when safe, then develops Multishot before broader specialization. Premium ammunition is reserved for bosses or useful groups, and Death Wave requires a worthwhile boss or crowd.
 
@@ -37,7 +37,7 @@ Ammo pickups are not the same as ammunition spent: cap overflow and pickup caden
 
 ## Current balance framing
 
-The balance target is an endurance run: approximately wave 300 is exceptional and wave 400+ is extreme. The current profile maps SDK waves 1–10,000 into Towerium 1–400, adds one cannon hit of health every tenth wave, and supports separate run-local coin and Power Stone shops. Reference accounting targets workshop completion near wave 300; it is not evidence that a human can reach that wave. Auto Play spends both currencies according to its selected build.
+The balance target is an endurance run: approximately wave 300 is exceptional and wave 400+ is extreme. The current profile maps SDK waves 1–10,000 into Towerium 1–400, adds one cannon hit of health every tenth wave, and supports separate run-local coin and Power Stone shops. Reference accounting targets workshop completion beyond wave 400; it is not evidence that a human can reach that wave. Auto Play spends both currencies according to its selected build.
 
 The historical runs below predate SDK progression, health bands, Power Stones, modules and overlap income; they do not validate the current candidate.
 
@@ -45,15 +45,15 @@ The historical runs below predate SDK progression, health bands, Power Stones, m
 
 The former per-kill supply generated approximately 22–33 pickups per wave at wave 160. Additive durations and Galaxy Compressor then generated more uptime than combat consumed, producing thousands of banked seconds. Galaxy Compressor has been replaced by Pulsar Harvester; it no longer extends any timers.
 
-Current supply uses `purchased chance × min(1, 100 / planned kills)`, including an allowance for Scatter children. Early waves retain their original chance. At later waves, global chance investment raises expected supply from approximately four to six pickups per cleared wave. The shop displays the adjusted per-kill chance and its actual next-level improvement. Collection still grants the entire advertised duration; existing banks are preserved.
+Current supply uses `purchased chance × min(1, 100 / planned kills)`, including an allowance for Scatter children. Early waves retain their original chance. At later waves, global chance investment raises expected supply from approximately six to eight pickups per cleared wave. The shop displays the adjusted per-kill chance and its actual next-level improvement. Durations add up to a 50-second cap; legacy banks are clamped when restored.
 
 Audit evenly developed powers separately from concentrated drop-share builds. Record actual uptime, peak remaining time, missed pickups, passive/direct kill shares, ammo use, upgrades, and cleanup times. A selected power becoming permanent can be intentional; every power accumulating an ever-growing bank in a general build is a balance failure. Perfect-collection generation models are conservative supply tests, not proof of human combat viability.
 
-Run `npm run audit:power-supply` for the reproducible generation audit. It captures the configuration, four seeds, fixed waves 160/300, five builds, and 180,000 simulated seconds per case in `playtest-results/power-supply`. It fails if a maximum general build has positive timer-bank drift. Use `-- --snapshot` to repeat the captured configuration.
+Run `npm run audit:power-supply` for the reproducible generation audit. It captures the configuration, four seeds, fixed waves 160/300, five builds, and 180,000 simulated seconds per case in `playtest-results/power-supply`. It fails if conservative duration-supply bounds reach one second per second in a maximum equal-investment build. Use `-- --snapshot` to repeat the captured configuration.
 
 ## Bounded Human-Control Checks
 
-With the current Pulsar Harvester and density-adjusted power supply, seed 100 cleared 39 waves with mouse controls and 38 with touch controls within a 1,600-second test window. Mouse accuracy was 77.9%; touch accuracy was 68.0%. These are simulated control profiles, not measured human performance.
+Before the Crowd Sweeps and 6/8 supply revision, seed 100 cleared 39 waves with mouse controls and 38 with touch controls within a 1,600-second test window. Mouse accuracy was 77.9%; touch accuracy was 68.0%. These are simulated control profiles, not measured human performance.
 
 Funded wave-160 starts exposed a policy defect: contact pressure prevented the controller from collecting useful defensive powers. After prioritizing needed pickups, seed 100 died at wave 164, while seed 101 cleared wave 180 at the requested stop limit. Both input logs replayed exactly. The surviving sample's largest power banks were approximately 93 seconds of Spotlight, 88 seconds of Pulsar Harvester, and 84 seconds of Space Displacer. These short funded runs test late-wave interactions; they do not establish survival from wave one or balanced utility across all weapons. More matched seeds and physical-phone feedback remain necessary.
 
@@ -72,7 +72,7 @@ The priority run dealt 2,777 / 1,815 / 1,207 / 843 damage with the four weapons.
 
 The accurate primary-only control kept priority targeting and balanced purchases. It recorded 995 primary hits and 596.5 damage; neither missiles nor Hook Bombs were fired. Its death at the first Super Boss supports a practical use for special weapons on this seed, rather than attributing the blind control's failure solely to movement. A broader seed/build sample is still needed.
 
-The endurance run earned 1,488,667 coins: 99.0% of total max-workshop cost, with 71.6% actually spent. It earned 655 Stones, close to the reference model's 653. Cleanup median was 5.0 seconds and 95th percentile 12.5; 11 of 300 waves exceeded 15 seconds. No engine/model errors occurred.
+The historical pre-repricing endurance run earned 1,488,667 coins: 99.0% of total max-workshop cost, with 71.6% actually spent. It earned 655 Stones, close to the reference model's 653. Cleanup median was 5.0 seconds and 95th percentile 12.5; 11 of 300 waves exceeded 15 seconds. No engine/model errors occurred.
 
 Late-run balance remains provisional. The policy favors LSS and passive powers: direct weapons killed 20,167 of 161,515 enemies, and missile/Hook reserves overflowed substantially. This supports endurance stability and the income accounting, but does not establish that all weapons are equally useful or that humans can reach wave 300. Further comparisons should vary builds, accuracy, power investment and weapon preferences across seeds before changing ammo supply.
 
@@ -89,3 +89,31 @@ These historical single-seed runs predate the current 50-ms targeting policy, Nu
 | Priority until wave 25, then 4-second circle sweep | `70b94eb5` | Died at wave 29; 28 cleared; 1,072 s | 1,618; 58 / 69 | Shots P/LSS/SM/HB: 6,340 / 202 / 82 / 3. Ammo spent/granted/discarded telemetry was not present in this build. |
 
 These runs document observed outcomes for one seed, not a ranking of weapon utility. In particular, shot counts and ammo grants do not show whether shots were useful or how much damage was lost to over-capacity; the newer runs record both ammo grants and discards. The profiles did not reach wave 300, and the sample does not establish human reachability or the intended relative value of Smart Missiles and Light Speed.
+
+Crowd Sweeps is the default aiming policy: it prefers angularly nearby groups and fires primary/LSS through short Multishot sweeps, accepting missed shots. Long empty transfers and premium weapons still require settled aim. Multiverse Nexus grants all three economy powers together. The power-supply audit includes its three duration grants and guards maximum equal investment with conservative supply bounds; focused permanent powers remain possible.
+
+## Historical Supplies And Timer-Cap Revision (Before Six Extra Powers)
+
+The pre-expansion configuration (9c473ebe) cleared 40/40 requested waves on seed 100 with finite mouse Crowd Sweeps controls: 1,441 simulated seconds, 67.66% accuracy, 3,867 kills, 96 ammo pickups and 170 powers. Cleanup median was 5.23 seconds, p95 13.45, with no wave exceeding 15 seconds. Exact event replay passed. This is one automated profile, not evidence of human endurance or equal weapon utility.
+
+Observed banks never exceeded 50 seconds. Fallout, Space Displacer and Pulsar Harvester reached the cap; other observed timed powers peaked at 38 seconds or less. The generation-only audit at fixed waves 160/300 spans 40 cases: max-equal Chrono uptime was 53–54%, modules 62–64%, and focused modules 82–84%. It excludes purchased Supplies and assumes perfect pickup collection.
+
+| Weapon | Shots | Hits | Kills | Ammo Spent |
+|---|---:|---:|---:|---:|
+| Primary | 13,947 | 6,602 | 940 | 0 |
+| Light Speed | 5,422 | 3,422 | 959 | 2,517 |
+| Smart Missiles | 212 | 191 | 181 | 212 |
+| Hook Bomb | 27 | 75 | 58 | 27 |
+
+Multishot extras inflate projectile counts without extra ammo cost or accuracy penalties. Missile and Hook usage remained limited; this run does not establish the intended late-game missile shot share.
+
+A separate funded start at wave 160 died at wave 163 after clearing 162 (160.53 active seconds, 75.96% accuracy, 2,152 kills, 19 ammo pickups, 25 powers). Exact replay passed; SL and Death Penalty reached 50 seconds, with no observed bank above the cap. It bought no Supplies because its workshop was not maxed. A funded start is not equivalent to a naturally developed run with stocked ammo and active powers. The current touch profile was not rerun.
+
+The six-power expansion changes drop weights and introduces roaming support/control. The preceding runs use the pre-expansion catalog; they must not be reported as current endurance evidence.
+
+
+## Six-Power Expansion
+
+Configuration `f6e66bf6` and WASM `80f7cbc1` cleared a funded wave 160–170 start on seed 100: 10 waves, 463.83 simulated seconds, 763.82 remaining HP, 6,403 kills, 73.74% accuracy, 47 ammo pickups and 80 powers. Exact replay passed (`e2a89c10540fb18c5fc29bac5bf38747c0d05e85439a64c651a2e57fb5d49002`). The policy bought 44 Power upgrades and no Supplies. Cleanup median was 11.17 seconds, p95 16.97, with two waves above 15 seconds; late-wave cleanup needs more playtesting. This bounded automated run does not establish human endurance or weapon balance.
+
+All 22 timer slots were captured in a telemetry-only replay with the same final-state hash. Extra Orbs peaked at 45 seconds; Gold, Amp, Flame and Thunder also peaked at 45. Area Of Effect was not collected in this seed span. Chrono, Spotlight, Death Penalty and Space Displacer reached the 50-second cap; no recorded bank exceeded it. A separate perfect-collection generation audit measures the new powers at 31.7–32.9% average uptime under maximum equal investment, excluding Supplies.

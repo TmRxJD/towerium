@@ -1,7 +1,7 @@
 use crate::{config::Config, sim::World};
 use serde::Deserialize;
 
-pub const POWER_COUNT: usize = 16;
+pub const POWER_COUNT: usize = 22;
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -44,6 +44,12 @@ impl PowerWorkshop {
             (1.0, 2.0),
             (0.0, 0.1),
             (1.0, 1.5),
+            (1.15, 1.5),
+            (1.0, 50.0),
+            (c.powers.swamp_radius + 1.0, c.powers.blackhole_radius - 1.0),
+            (c.powers.swamp_radius + 1.0, c.powers.blackhole_radius - 1.0),
+            (c.powers.swamp_radius + 1.0, c.powers.blackhole_radius - 1.0),
+            (c.powers.swamp_radius + 1.0, c.powers.blackhole_radius - 1.0),
         ];
         let bases = effect_bases(c);
         for (i, u) in self.upgrades.iter().enumerate() {
@@ -83,7 +89,7 @@ impl PowerWorkshop {
     }
 }
 
-fn effect_bases(c: &Config) -> [f32; 16] {
+fn effect_bases(c: &Config) -> [f32; POWER_COUNT] {
     [
         c.powers.chain_chance,
         c.powers.chrono_slow,
@@ -101,6 +107,12 @@ fn effect_bases(c: &Config) -> [f32; 16] {
         1.0,
         c.modules.pulsar_chance,
         1.0,
+        c.expansion.extra_orb_coin_multiplier,
+        c.expansion.durations[1],
+        c.expansion.bot_radius,
+        c.expansion.bot_radius,
+        c.expansion.bot_radius,
+        c.expansion.bot_radius,
     ]
 }
 
@@ -142,17 +154,17 @@ impl World {
         true
     }
     pub fn choose_power_drop(&mut self) -> usize {
-        let eligible = |i| i != 11 || self.demon_drop_cooldown <= 0.0;
-        let total: f32 = (0..POWER_COUNT)
-            .filter(|i| eligible(*i))
-            .map(|i| self.power_weight(i))
-            .sum();
-        let mut pick = self.rng.next() * total;
-        for i in 0..POWER_COUNT {
-            if !eligible(i) {
-                continue;
+        let weights: [f32; POWER_COUNT] = std::array::from_fn(|i| {
+            if i == 11 && self.demon_drop_cooldown > 0.0 {
+                0.0
+            } else {
+                self.power_weight(i)
             }
-            pick -= self.power_weight(i);
+        });
+        let total: f32 = weights.iter().sum();
+        let mut pick = self.rng.next() * total;
+        for (i, weight) in weights.iter().enumerate() {
+            pick -= weight;
             if pick < 0.0 {
                 return i;
             }

@@ -1,10 +1,14 @@
 mod balance;
 mod config;
+#[cfg(test)]
+mod expansion_tests;
 mod math;
+mod power_expansion;
 mod power_shop;
 #[cfg(test)]
 mod power_shop_tests;
 mod sim;
+mod supplies;
 #[cfg(test)]
 mod tests;
 use crate::{config::Config, sim::World};
@@ -69,6 +73,9 @@ impl Game {
     }
     pub fn buy(&mut self, index: usize) -> bool {
         self.world.buy(index)
+    }
+    pub fn buy_supply(&mut self, item: usize) -> bool {
+        self.world.buy_supply(item)
     }
     pub fn buy_power(&mut self, power: usize, path: usize) -> bool {
         self.world.buy_power(power, path)

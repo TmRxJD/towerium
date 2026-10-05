@@ -2,9 +2,9 @@ import {readFile, mkdir, writeFile, appendFile, readdir} from 'node:fs/promises'
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import init,{Game} from '../src/wasm/towerium.js';
-import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction, baselineWeapon,baselinePurchase,baselinePowerPurchase} from './playtest-policy.mjs';
+import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction, baselineWeapon,baselinePurchase,baselinePowerPurchase,baselineSupplyPurchase} from './playtest-policy.mjs';
 import {openKev} from './kev-local.mjs';
-import {HumanController} from './human-controls.mjs';
+import {HumanController,humanDefaults} from './human-controls.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{const [key,...rest]=arg.replace(/^--/,'').split('=');return [key,rest.join('=')||'true'];}));
@@ -25,7 +25,7 @@ Common options:
 
 Baseline options:
   --strategy=balanced|offense|defense|economy|none
-  --aim=nearest|priority|idle|circle
+  --aim=crowd|nearest|priority|idle|circle
   --weapons=all|projectile|light|missile|hook|rotate
   --circle-seconds=2 --circle-from=1 --weapons-from=1
 
@@ -37,15 +37,15 @@ Kev options:
   process.exit(0);
 }
 const policy=args.policy||'baseline',strategy=args.strategy||'balanced';
-const humanOptions={reactionMs:Number(args['reaction-ms']??250),aimSpeed:Number(args['aim-speed']??900),switchMs:Number(args['switch-ms']??200),reference:args.reference==='true',assistPixels:Number(args['assist-pixels']??0),arenaWidth:Number(args['arena-width']??320)};
+const humanOptions={reactionMs:Number(args['reaction-ms']??humanDefaults.mouse.reactionMs),aimSpeed:Number(args['aim-speed']??humanDefaults.mouse.aimSpeed),switchMs:Number(args['switch-ms']??humanDefaults.mouse.switchMs),reference:args.reference==='true',assistPixels:Number(args['assist-pixels']??0),arenaWidth:Number(args['arena-width']??320)};
 new HumanController(humanOptions); // Validate before writing artifacts.
 const startWave=Number(args['start-wave']??1);
 if(!Number.isInteger(startWave)||startWave<1||startWave>10000)throw new Error('Invalid start-wave');
 if(!['balanced','offense','defense','economy','none'].includes(strategy))throw new Error('Invalid workshop strategy');
 if(args.laya&&!args['model-file'])throw new Error('--laya requires an explicit --model-file');
 if(!['kev','baseline'].includes(policy))throw new Error('policy must be kev or baseline');
-const aim=args.aim||'nearest';
-if(!['nearest','priority','idle','circle'].includes(aim)||policy==='kev'&&args.aim)throw new Error('aim is a baseline-only option: nearest, priority, idle or circle');
+const aim=args.aim||'crowd';
+if(!['crowd','nearest','priority','idle','circle'].includes(aim)||policy==='kev'&&args.aim)throw new Error('aim is a baseline-only option: crowd, nearest, priority, idle or circle');
 const circleSeconds=Number(args['circle-seconds']||2),weaponMode=args.weapons||'all';
 const circleFrom=Number(args['circle-from']||1),weaponFrom=Number(args['weapons-from']||1);
 if(!Number.isInteger(weaponFrom)||weaponFrom<1||policy==='kev'&&args['weapons-from'])throw new Error('weapons-from must be a positive integer for baseline tests');
@@ -102,9 +102,9 @@ for(let run=0;run<count;run++) {
   const seed=seedStart+run,game=Game.autoplay_start(seed,configText,startWave),log=resolve(out,`seed-${seed}.jsonl`),start=performance.now(),controller=new HumanController(humanOptions);
   let s=JSON.parse(game.snapshot()),decisions=0,modelCalls=0,combatFrames=0,error=null;
   const latencies=[],combatLatencies=[],shopLatencies=[],runtimeRestarts=[],purchases=[],powerPurchases=[],waves=[],weapons=[0,0,0,0];
-  const powerNames=['Chain Lightning','Chrono Field','Swamp','Black Hole','Spotlight','Death Ray','Golden Tower',null,null,null,'Fallout','Demon Mode','Death Penalty','Space Displacer','Pulsar Harvester','Om Chip'];
+  const powerNames=['Chain Lightning','Chrono Field','Swamp','Black Hole','Spotlight','Death Ray','Golden Tower',null,null,null,'Fallout','Demon Mode','Death Penalty','Space Displacer','Pulsar Harvester','Multiverse Nexus','Extra Orbs','Area Of Effect','Gold Bot','Amp Bot','Flame Bot','Thunder Bot'];
   const powerUptime=powerNames.map((name,index)=>name?{index,name,active_seconds:0,peak_bank_seconds:0}:null),wavePowerUptime=new Map();
-  const timerValues=state=>[...(state.powers??[]),null,null,null,state.fallout_time,state.demon_time,...(state.module_times??[])];
+  const timerValues=state=>[...(state.powers??[]),null,null,null,state.fallout_time,state.demon_time,...(state.module_times??[]),...(state.extra_power_times??[])];
   let telemetryState=s,lastHp=s.hp,damage=0,stalls=0,impactWaits=0,previousCombat;
   const snapshot=()=>JSON.parse(game.snapshot());
   const advance=seconds=>{
@@ -169,20 +169,23 @@ for(let run=0;run<count;run++) {
         if(choice<0){
           const power=baselinePowerPurchase(s,config,strategy);
           if(power){if(!game.buy_power(power.power,power.path))throw new Error('Rejected Power Stone purchase');const purchase={wave:s.wave,...power,cost:s.power_costs[power.power][power.path],stones:s.stones};powerPurchases.push(purchase);await appendFile(log,JSON.stringify({event:'power_shop',...purchase})+'\n');}
-          else {game.start_wave();previousCombat=undefined;startedNext=true;}
+          else {const item=policy==='baseline'?baselineSupplyPurchase(s,config):undefined;
+            if(item!==undefined){if(!game.buy_supply(item))throw new Error('Rejected Supplies purchase');await appendFile(log,JSON.stringify({event:'supply_shop',wave:s.wave,item,cost:s.supply_costs[item]})+'\n');}
+            else {game.start_wave();previousCombat=undefined;startedNext=true;}
+          }
         }
         else {if(!game.buy(choice))throw new Error(`Rejected legal purchase ${choice}`);purchases.push({wave:s.wave,index:choice,cost:s.costs[choice],hp:s.hp});}
         s=snapshot();lastHp=s.hp;
         await appendFile(log,JSON.stringify({event:'shop',wave:before.levels? s.wave:null,choice,startedNext,before,request,response,latency})+'\n');
         continue;
       }
-      const candidates=targets(s,config);
+      const candidates=targets(s,config,aim);
       if(policy==='baseline'){
         const inputs=[],observation={wave:s.wave,time:s.time,hp:s.hp,coins:s.coins,enemies:s.enemies.length,kills:s.kills,ammo:s.ammo,charges:s.charges};
         const frames=Math.max(1,Math.round(interval*60));
         for(let frame=0;frame<frames&&s.phase===1;frame++){
           const action=controller.step(s,1/60,(observed,context)=>{
-            return baselineAction(observed,config,targets(observed,config),aim==='circle'&&observed.wave<circleFrom?'priority':aim,circleSeconds,{...context,weaponMode:observed.wave<weaponFrom?'all':weaponMode});
+            return baselineAction(observed,config,targets(observed,config,aim),aim==='circle'&&observed.wave<circleFrom?'priority':aim,circleSeconds,{...context,weaponMode:observed.wave<weaponFrom?'all':weaponMode});
           });
           game.input(...action.aim,action.fire,action.weapon);
           const usedDeathWave=action.deathWave&&game.death_wave();
@@ -208,7 +211,7 @@ for(let run=0;run<count;run++) {
       const target=candidates.find(t=>t.key===action.target);
       const pointer=policy==='baseline'&&action.pointer?action.pointer:target?[target.x,target.y]:null;
       const fire=policy==='baseline'?(action.fire??!!pointer):!!pointer;
-      game.input(pointer?.[0]??0,pointer?.[1]??200,fire,action.weapon);
+      game.input(pointer?.[0]??0,pointer?.[1]??humanDefaults.mouse.switchMs,fire,action.weapon);
       const usedDeathWave=action.deathWave&&game.death_wave();
       weapons[action.weapon]++;
       if(action.waitingForImpact)impactWaits++;

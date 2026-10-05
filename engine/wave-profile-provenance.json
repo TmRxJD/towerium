@@ -51,7 +51,13 @@
       "Saboteur",
       "Overcharge"
     ],
-    "superBossTypeRatios": "Boss"
+    "superBossTypeRatios": "Boss",
+    "lateWorkshopPriceMultiplier": 1.75,
+    "lateWorkshopPriceStartFraction": 0.8,
+    "workshopCompletionTarget": [
+      400,
+      450
+    ]
   },
   "priceCalibrationFactor": 0.1048459236239592,
   "referenceOverlapFractions": {

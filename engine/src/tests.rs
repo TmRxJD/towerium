@@ -251,16 +251,16 @@ fn power_drop_density_preserves_early_chance_and_scales_late_supply() {
         w.wave = wave;
         let expected = w.power_drop_chance() * planned_kills(&w, wave);
         assert!(
-            (expected - 4.0).abs() < 0.05,
-            "base rate should supply about four drops at wave {wave}: {expected}"
+            (expected - 6.0).abs() < 0.05,
+            "base rate should supply about six drops at wave {wave}: {expected}"
         );
         w.levels[21] = 20;
         let upgraded = w.power_drop_chance() * planned_kills(&w, wave);
         assert!(
-            (upgraded - 6.0).abs() < 0.05,
-            "max rate should supply about six drops at wave {wave}: {upgraded}"
+            (upgraded - 8.0).abs() < 0.05,
+            "max rate should supply about eight drops at wave {wave}: {upgraded}"
         );
-        assert!((upgraded / expected - 1.5).abs() < 0.02);
+        assert!((upgraded / expected - 4.0 / 3.0).abs() < 0.02);
         w.levels[21] = 0;
     }
 }
@@ -282,18 +282,26 @@ fn space_displacer_moves_mines_inward_and_opposite_orbs() {
 }
 
 #[test]
-fn om_chip_tracks_nearest_special_without_locking_on_basic_enemies() {
+fn multiverse_nexus_activates_and_extends_all_three_powers() {
     let mut w = active();
-    w.module_times[OM] = 30.0;
-    w.powers[SPOTLIGHT] = 30.0;
-    w.spawn(0, V::new(0.0, 80.0));
-    w.spawn(SUPERBOSS, V::new(200.0, 0.0));
-    w.advance(DT);
-    assert!(w.spotlight_angle.abs() < 0.0001);
-    w.spawn(COMMANDER, V::new(0.0, 100.0));
-    w.advance(DT);
-    assert!((w.spotlight_angle - std::f32::consts::FRAC_PI_2).abs() < 0.0001);
-    assert_eq!(w.snapshot().spotlights.len(), 3);
+    w.levels[20] = 4;
+    for power in [BLACKHOLE, SPOTLIGHT, GOLDEN] {
+        w.powers[power] = 7.0;
+    }
+    w.power_levels[NEXUS][1] = 2;
+    let before = w.overall_stats.powerups_collected;
+    w.activate(NEXUS);
+    for power in [BLACKHOLE, SPOTLIGHT, GOLDEN] {
+        let duration = (w.c.powers.durations[power] + 4.0) * 1.1;
+        assert!((w.powers[power] - 7.0 - duration).abs() < 0.0001);
+    }
+    assert_eq!(w.overall_stats.powerups_collected, before + 1);
+    assert_eq!(w.module_times[3], 0.0);
+    w.powers = [0.0; 7];
+    w.activate(NEXUS);
+    assert!([BLACKHOLE, SPOTLIGHT, GOLDEN]
+        .iter()
+        .all(|i| w.powers[*i] > 0.0));
 }
 
 #[test]
@@ -437,12 +445,12 @@ fn new_power_timers_stack_and_legacy_seven_power_saves_remain_strict() {
         w.activate(NUKE);
         w.activate(DEMON);
     }
-    assert_eq!(w.fallout_time, 74.0);
-    assert_eq!(w.demon_time, 74.0);
+    assert_eq!(w.fallout_time, 50.0);
+    assert_eq!(w.demon_time, 50.0);
     assert_eq!(w.demon_invincible, 20.0);
     let restored = World::restore(w.c.clone(), &w.save()).unwrap();
     assert_eq!(restored.demon_invincible, 20.0);
-    assert_eq!(restored.fallout_time, 74.0);
+    assert_eq!(restored.fallout_time, 50.0);
     let mut legacy: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
     for key in [
         "fallout_time",
@@ -755,22 +763,25 @@ fn first_superboss_falls_to_starting_in_range_missile_supply() {
 }
 
 #[test]
-fn base_drops_deliver_ammo_every_twenty_and_power_every_twenty_five_kills() {
+fn base_drops_follow_configured_ammo_and_power_rates() {
     let mut w = active();
     let initial = w.ammo;
-    assert_eq!(w.stat(21), 0.04);
-    assert_eq!(w.stat(23), 0.05);
-    for _ in 0..19 {
+    assert_eq!(w.stat(21), 0.06);
+    assert_eq!(w.stat(23), 0.04);
+    for _ in 0..24 {
         w.spawn(0, V::new(100.0, 0.0));
         let i = w.enemies.len() - 1;
         w.hit(i, 1000.0, PROJECTILE);
     }
     assert_eq!(w.ammo, initial);
-    assert!(w.drops.is_empty());
+    assert_eq!(
+        w.drops.len(),
+        1,
+        "the 0.06 chance crosses one whole proc credit by kill 17"
+    );
     w.spawn(0, V::new(100.0, 0.0));
     let i = w.enemies.len() - 1;
     w.hit(i, 1000.0, PROJECTILE);
-    assert!(w.drops.is_empty());
     for (weapon, initial_ammo) in initial.iter().enumerate().skip(1) {
         assert_eq!(
             w.ammo[weapon],
@@ -782,11 +793,15 @@ fn base_drops_deliver_ammo_every_twenty_and_power_every_twenty_five_kills() {
                 }
         );
     }
-    for _ in 20..25 {
+    for _ in 25..100 {
         w.spawn(0, V::new(100.0, 0.0));
         w.hit(w.enemies.len() - 1, 1000.0, PROJECTILE);
     }
-    assert_eq!(w.drops.len(), 1);
+    assert_eq!(
+        w.drops.len(),
+        6,
+        "100 kills at 0.06 chance yield exactly six power drops"
+    );
 }
 fn active() -> World {
     let mut w = world();
@@ -1562,12 +1577,12 @@ fn reference_economy_report_is_finite_and_sensitive_to_rewards() {
     assert!(report.minutes >= 135.0);
     assert!(report.affordable_share > 0.0 && report.affordable_share.is_finite());
     assert!(
-        (0.65..=0.95).contains(&report.affordable_share),
-        "Elite purchasing power must stay near the revised 80% target"
+        (0.35..=0.65).contains(&report.affordable_share),
+        "Elite purchasing power must retain substantial specialization"
     );
     assert!(
-        crate::balance::reference_income(&c, 300).affordable_share >= 0.90,
-        "Exceptional endurance may afford the full workshop"
+        crate::balance::reference_income(&c, 300).affordable_share < 0.65,
+        "Workshop completion should extend beyond exceptional wave 300"
     );
     let mut doubled = c.clone();
     for e in &mut doubled.enemies {
@@ -1594,7 +1609,7 @@ fn range_and_orb_speed_have_tower_style_display_metadata() {
 fn reference_purchasing_power_reports_approximate_timing_targets() {
     let c = Config::standard();
     assert_eq!(c.elite_reference.cleanup_seconds, 10.0);
-    let reports: Vec<_> = (1..=400)
+    let reports: Vec<_> = (1..=500)
         .map(|wave| crate::balance::reference_income(&c, wave))
         .collect();
     assert!(reports.windows(2).all(|pair| {
@@ -1613,7 +1628,7 @@ fn reference_purchasing_power_reports_approximate_timing_targets() {
         let crossing = reports
             .iter()
             .find(|report| report.affordable_share >= target)
-            .expect("purchasing-power target must be reachable by wave 400");
+            .expect("purchasing-power target must be reachable by wave 500");
         println!(
             "PURCHASING_POWER target={target:.2} wave={} minutes={:.2} share={:.4} requested_minutes={earliest}..{latest} within_target={} cleanup_assumption_seconds=10",
             crossing.waves, crossing.minutes, crossing.affordable_share,
@@ -2119,7 +2134,10 @@ fn overcharge_bounces_escalate_and_disappear_when_source_dies() {
     seconds(&mut w, 3.0);
     assert_eq!(w.overcharge.len(), 1, "Only one ball per source");
     assert_eq!(w.overcharge[0].hits, 2);
-    assert!((w.hp - (988.0 - 12.0 * 1.35)).abs() < 0.001);
+    assert!((w.hp - 964.0).abs() < 0.001);
+    seconds(&mut w, 3.0);
+    assert_eq!(w.overcharge[0].hits, 3);
+    assert!((w.hp - 916.0).abs() < 0.001);
     let hp = w.hp;
     w.hit(0, 100.0, LIGHT);
     w.advance(DT);
@@ -2819,7 +2837,7 @@ fn restore_rejects_softlocking_and_inconsistent_states() {
     assert!(World::restore(Config::standard(), &data.to_string()).is_err());
 }
 #[test]
-fn endurance_workshop_completion_tracks_wave_300() {
+fn endurance_workshop_completion_extends_beyond_wave_400() {
     let c = Config::standard();
     let early = crate::balance::reference_income(&c, 100);
     let exceptional = crate::balance::reference_income(&c, 300);
@@ -2828,8 +2846,11 @@ fn endurance_workshop_completion_tracks_wave_300() {
         serde_json::to_string(&exceptional).unwrap()
     );
     assert!(early.affordable_share < 0.15);
-    assert!((0.9..=1.15).contains(&exceptional.affordable_share));
-    assert!(crate::balance::reference_income(&c, 400).affordable_share > 1.0);
+    assert!((0.5..=0.65).contains(&exceptional.affordable_share));
+    assert!(
+        crate::balance::reference_income(&c, 400).affordable_share < 1.0
+            && crate::balance::reference_income(&c, 500).affordable_share > 1.0
+    );
 }
 
 #[test]
@@ -2927,7 +2948,7 @@ fn accurate_lss_sustains_opening_mix_but_waste_costs_ammo() {
         let final_ammo = w.ammo[LIGHT as usize];
         println!("LSS_SUSTAIN quantity={quantity} requested_accuracy={accuracy} measured_accuracy={:.2} rounds={shots} ammo_change={}",w.snapshot().overall_report.accuracy,final_ammo as i64-opening as i64);
         assert_eq!(final_ammo >= opening, sustainable);
-        assert_eq!(w.ammo_pickups, 50);
+        assert_eq!(w.ammo_pickups, 40);
     }
 }
 
@@ -3062,4 +3083,104 @@ fn fractional_ammo_quantity_carries_across_refills_and_saves_with_real_telemetry
     let mut invalid: serde_json::Value = serde_json::from_str(&restored.save()).unwrap();
     invalid["world"]["ammo_remainders"][2] = serde_json::json!(100);
     assert!(World::restore(Config::standard(), &invalid.to_string()).is_err());
+}
+
+#[test]
+fn rapid_fire_is_a_short_fourfold_burst_without_self_renewal() {
+    let mut w = active();
+    assert_eq!(w.c.rapid_multiplier, 4.0);
+    w.levels[4] = w.c.upgrades[4].cap;
+    assert!((w.stat(4) - 0.1).abs() < 0.00001);
+    assert_eq!(w.stat(5), 0.25);
+    w.rapid = w.stat(5);
+    w.fire_timer = 0.0;
+    w.input(300.0, 0.0, true, PROJECTILE);
+    w.advance(DT);
+    assert!((w.fire_timer - w.c.weapons[0].interval / w.stat(0) / 4.0).abs() < 0.00001);
+    seconds(&mut w, 0.3);
+    assert_eq!(w.rapid, 0.0);
+    assert!(w.wave_stats.shots_fired >= 5);
+    w.levels[5] = w.c.upgrades[5].cap;
+    assert_eq!(w.stat(5), 0.5);
+}
+
+#[test]
+fn rapid_fire_chance_domain_rejects_values_above_ten_percent() {
+    let mut c: serde_json::Value = serde_json::from_str(include_str!("../balance.json")).unwrap();
+    c["upgrades"][4]["step"] = serde_json::json!(0.009);
+    assert!(Config::parse(&c.to_string()).is_err());
+}
+
+#[test]
+fn supplies_charge_coins_only_and_obey_stock_and_phase_limits() {
+    let mut w = active();
+    w.coins = 100_000.0;
+    w.stones = 10;
+    assert!(!w.buy_supply(0));
+    w.phase = 2;
+    let cost = w.supply_cost(0);
+    w.ammo[1] = w.ammo_capacity(1) - 2;
+    assert!(w.buy_supply(0));
+    assert_eq!(w.ammo[1], w.ammo_capacity(1));
+    assert_eq!(w.coins, 100_000.0 - cost);
+    assert_eq!(w.stones, 10);
+    assert!(!w.buy_supply(0));
+    w.charges = 2;
+    assert!(w.buy_supply(11));
+    assert_eq!(w.charges, 3);
+    assert!(!w.buy_supply(11));
+    assert!(!w.buy_supply(crate::supplies::SUPPLY_COUNT));
+    w.coins = 0.0;
+    assert!(!w.buy_supply(4));
+}
+
+#[test]
+fn supplied_powers_wait_for_next_wave_and_stack_only_to_fifty_seconds() {
+    let mut w = world();
+    assert!(w.start_wave());
+    w.enemies.clear();
+    w.shots.clear();
+    w.drops.clear();
+    w.hostile.clear();
+    w.phase = 2;
+    w.coins = 100_000.0;
+    assert!(w.buy_supply(9)); // Golden Tower.
+    assert_eq!(w.powers[GOLDEN], w.c.powers.durations[GOLDEN]);
+    let remaining = w.powers[GOLDEN];
+    w.advance(1.0);
+    assert_eq!(w.powers[GOLDEN], remaining);
+    assert!(w.start_wave());
+    assert_eq!(w.powers[GOLDEN], remaining);
+    w.powers[GOLDEN] = 40.0;
+    w.activate(GOLDEN);
+    assert_eq!(w.powers[GOLDEN], 50.0);
+    w.powers[BLACKHOLE] = 49.0;
+    w.powers[SPOTLIGHT] = 49.0;
+    w.activate(NEXUS);
+    assert!([BLACKHOLE, SPOTLIGHT, GOLDEN]
+        .iter()
+        .all(|k| w.powers[*k] == 50.0));
+    w.powers[GOLDEN] = 3000.0;
+    let restored = World::restore(w.c.clone(), &w.save()).unwrap();
+    assert_eq!(restored.powers[GOLDEN], 50.0);
+}
+
+#[test]
+fn supplies_and_duration_cap_have_strict_config_domains() {
+    let original: serde_json::Value =
+        serde_json::from_str(include_str!("../balance.json")).unwrap();
+    for (key, value) in [
+        ("ammo_quantities", serde_json::json!([0, 8, 1])),
+        (
+            "power_prices",
+            serde_json::json!(vec![0; crate::power_shop::POWER_COUNT]),
+        ),
+    ] {
+        let mut c = original.clone();
+        c["supplies"][key] = value;
+        assert!(Config::parse(&c.to_string()).is_err());
+    }
+    let mut c = original;
+    c["powers"]["timer_cap"] = serde_json::json!(10);
+    assert!(Config::parse(&c.to_string()).is_err());
 }

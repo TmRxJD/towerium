@@ -264,7 +264,7 @@
       "speed": 10000,
       "interval": 0.18,
       "ammo": 40,
-      "pickup": 30,
+      "pickup": 35,
       "capacity": 200,
       "pickup_every": 1
     },
@@ -347,18 +347,18 @@
         278,
         324,
         377,
-        1094,
-        1515,
-        1988,
-        2569,
-        3204,
-        3921,
-        4787,
-        5720,
-        6781,
-        7995,
-        9288,
-        10753
+        1915,
+        2651,
+        3479,
+        4496,
+        5607,
+        6862,
+        8377,
+        10010,
+        11867,
+        13991,
+        16254,
+        18818
       ]
     },
     {
@@ -404,14 +404,14 @@
         112,
         139,
         173,
-        525,
-        777,
-        1080,
-        1457,
-        1905,
-        2421,
-        3047,
-        3768
+        919,
+        1360,
+        1890,
+        2550,
+        3334,
+        4237,
+        5332,
+        6594
       ]
     },
     {
@@ -441,10 +441,10 @@
         260,
         422,
         656,
-        2903,
-        5310,
-        8690,
-        13167
+        5080,
+        9293,
+        15208,
+        23042
       ]
     },
     {
@@ -460,40 +460,40 @@
       "costs": [
         75,
         530,
-        101195
+        177091
       ]
     },
     {
       "name": "Rapid Fire Chance",
       "group": "Attack",
-      "base": 0.01,
-      "step": 0.005,
+      "base": 0.02,
+      "step": 0.008,
       "cap": 10,
       "unit": "%",
-      "description": "Projectile and Light Speed volleys can trigger a faster burst.",
+      "description": "Normal volleys trigger short 4× firing bursts; active bursts cannot retrigger.",
       "display_scale": 100,
       "cost_class": "medium",
       "costs": [
-        14,
-        18,
-        24,
-        25,
         30,
-        66,
-        192,
-        518,
-        3782,
-        9364
+        65,
+        140,
+        300,
+        650,
+        1400,
+        3000,
+        6000,
+        17500,
+        35000
       ]
     },
     {
       "name": "Rapid Fire Duration",
       "group": "Attack",
-      "base": 0.5,
-      "step": 0.1,
+      "base": 0.25,
+      "step": 0.025,
       "cap": 10,
       "unit": "s",
-      "description": "Length of each rapid-fire burst.",
+      "description": "Burst duration, from 0.25 to 0.5 seconds.",
       "display_scale": 1,
       "cost_class": "medium",
       "costs": [
@@ -505,8 +505,8 @@
         39,
         103,
         276,
-        2042,
-        5169
+        3574,
+        9046
       ]
     },
     {
@@ -536,10 +536,10 @@
         303,
         502,
         784,
-        3349,
-        5979,
-        9631,
-        14489
+        5861,
+        10463,
+        16854,
+        25356
       ]
     },
     {
@@ -565,9 +565,9 @@
         78,
         144,
         256,
-        1288,
-        2604,
-        4532
+        2254,
+        4557,
+        7931
       ]
     },
     {
@@ -584,7 +584,7 @@
         68,
         88,
         2719,
-        101829
+        178201
       ]
     },
     {
@@ -614,10 +614,10 @@
         200,
         322,
         502,
-        2134,
-        3867,
-        6264,
-        9379
+        3735,
+        6767,
+        10962,
+        16413
       ]
     },
     {
@@ -643,9 +643,9 @@
         93,
         179,
         326,
-        1573,
-        3085,
-        5358
+        2753,
+        5399,
+        9377
       ]
     },
     {
@@ -723,22 +723,22 @@
         224,
         246,
         275,
-        731,
-        942,
-        1181,
-        1421,
-        1707,
-        2005,
-        2371,
-        2767,
-        3178,
-        3638,
-        4130,
-        4695,
-        5330,
-        5954,
-        6650,
-        7389
+        1279,
+        1649,
+        2067,
+        2487,
+        2987,
+        3509,
+        4149,
+        4842,
+        5562,
+        6367,
+        7228,
+        8216,
+        9328,
+        10420,
+        11638,
+        12931
       ]
     },
     {
@@ -800,18 +800,18 @@
         244,
         282,
         324,
-        907,
-        1238,
-        1602,
-        2023,
-        2506,
-        3092,
-        3706,
-        4430,
-        5225,
-        6112,
-        7130,
-        8213
+        1587,
+        2167,
+        2804,
+        3540,
+        4386,
+        5411,
+        6486,
+        7753,
+        9144,
+        10696,
+        12478,
+        14373
       ]
     },
     {
@@ -825,21 +825,21 @@
       "display_scale": 1,
       "cost_class": "medium",
       "costs": [
-        12,
-        15,
-        17,
-        18,
-        23,
-        23,
-        25,
-        34,
-        53,
-        101,
-        199,
-        367,
-        1874,
-        3775,
-        6581
+        35,
+        60,
+        105,
+        185,
+        325,
+        570,
+        1000,
+        1750,
+        3000,
+        5000,
+        6500,
+        9000,
+        21000,
+        28875,
+        39375
       ]
     },
     {
@@ -856,7 +856,7 @@
         113,
         172,
         9313,
-        336677
+        589185
       ]
     },
     {
@@ -882,9 +882,9 @@
         145,
         297,
         554,
-        2837,
-        5695,
-        9961
+        4965,
+        9966,
+        17432
       ]
     },
     {
@@ -914,10 +914,10 @@
         246,
         401,
         620,
-        2624,
-        4675,
-        7520,
-        11303
+        4592,
+        8181,
+        13160,
+        19780
       ]
     },
     {
@@ -943,9 +943,9 @@
         81,
         159,
         289,
-        1431,
-        2839,
-        4973
+        2504,
+        4968,
+        8703
       ]
     },
     {
@@ -970,9 +970,9 @@
         125,
         279,
         562,
-        4846,
-        6897,
-        11720
+        8481,
+        12070,
+        20510
       ]
     },
     {
@@ -1026,16 +1026,16 @@
         276,
         331,
         393,
-        559,
-        781,
-        1055,
-        1364,
-        1746,
-        2179,
-        2680,
-        3254,
-        3922,
-        4662
+        978,
+        1367,
+        1846,
+        2387,
+        3056,
+        3813,
+        4690,
+        5695,
+        6864,
+        8159
       ]
     },
     {
@@ -1064,17 +1064,17 @@
         1791,
         3139,
         5357,
-        7023,
-        8979,
-        13776,
-        21518
+        12290,
+        15713,
+        24108,
+        37657
       ],
       "description": "Extra duration for timed powers, excluding Demon Mode invincibility."
     },
     {
       "name": "Power Drop Chance",
       "group": "Utility",
-      "base": 0.04,
+      "base": 0.06,
       "step": 0.001,
       "cap": 20,
       "unit": "%",
@@ -1097,10 +1097,10 @@
         2944,
         5313,
         9287,
-        12218,
-        15658,
-        25301,
-        40264
+        21382,
+        27402,
+        44277,
+        70462
       ],
       "description": "Chance per kill, adjusted for wave density. Upgrades increase supply by the same proportion at every wave."
     },
@@ -1126,17 +1126,17 @@
         1108,
         2423,
         5037,
-        7256,
-        11363,
-        20784
+        12698,
+        19885,
+        36372
       ],
       "description": "Adds 20% per level to each refill: 30 Light Speed and 2 Smart Missiles; 1 Hook Bomb every fourth pickup."
     },
     {
       "name": "Ammo Drop Chance",
       "group": "Utility",
-      "base": 0.05,
-      "step": 0.002,
+      "base": 0.04,
+      "step": 0.0015,
       "cap": 20,
       "unit": "%",
       "display_scale": 100,
@@ -1158,10 +1158,10 @@
         2944,
         5313,
         9287,
-        12218,
-        15658,
-        25301,
-        40264
+        21382,
+        27402,
+        44277,
+        70462
       ],
       "description": "Ammo pickups per direct weapon kill."
     },
@@ -1187,9 +1187,9 @@
         216,
         480,
         1084,
-        2446,
-        5464,
-        12171
+        4281,
+        9562,
+        21299
       ],
       "description": "Extra health capacity for Recovery Packages."
     },
@@ -1216,10 +1216,10 @@
         2138,
         2764,
         3512,
-        4395,
-        5428,
-        6625,
-        8000
+        7691,
+        9499,
+        11594,
+        14000
       ],
       "cost_class": "medium",
       "display_scale": 0.08333333333333333,
@@ -1249,10 +1249,10 @@
         3201,
         4141,
         5263,
-        6590,
-        8140,
-        9936,
-        12000
+        11533,
+        14245,
+        17388,
+        21000
       ],
       "cost_class": "medium",
       "display_scale": 1,
@@ -1290,12 +1290,12 @@
         3252,
         3821,
         4459,
-        5171,
-        5961,
-        6833,
-        7794,
-        8848,
-        10000
+        9049,
+        10432,
+        11958,
+        13640,
+        15484,
+        17500
       ],
       "cost_class": "deep",
       "display_scale": 1,
@@ -1317,8 +1317,8 @@
         802,
         1482,
         2513,
-        3987,
-        6000
+        6977,
+        10500
       ],
       "cost_class": "medium",
       "display_scale": 1,
@@ -1348,10 +1348,10 @@
         2006,
         2592,
         3293,
-        4121,
-        5090,
-        6211,
-        7500
+        7212,
+        8908,
+        10869,
+        13125
       ],
       "cost_class": "medium",
       "display_scale": 100,
@@ -11813,7 +11813,8 @@
     "chrono_margin": 30,
     "swamp_stun": 0.35,
     "swamp_stun_interval": 1.5,
-    "drop_reference_kills": 100
+    "drop_reference_kills": 100,
+    "timer_cap": 50
   },
   "defense": {
     "orb_radius": 160,
@@ -11831,7 +11832,7 @@
   "direct_hit_padding": 4,
   "missile_turn_rate": 4.8,
   "child_damage": 20,
-  "rapid_multiplier": 1.5,
+  "rapid_multiplier": 4,
   "starting_coins": 15,
   "elite_reference": {
     "waves": 270,
@@ -11879,7 +11880,7 @@
     "ray_charge": 2.5,
     "sabotage_duration": 3,
     "sabotage_cooldown": 7,
-    "overcharge_multiplier": 1.35,
+    "overcharge_multiplier": 2,
     "overcharge_speed": 240,
     "scatter_children": 3,
     "superboss_deathwave_damage": 150
@@ -12314,9 +12315,9 @@
         "unit": "%"
       },
       {
-        "name": "Om Chip",
-        "weight": 1,
-        "weight_step": 0.2,
+        "name": "Multiverse Nexus",
+        "weight": 0.25,
+        "weight_step": 0.05,
         "weight_costs": [
           2,
           4,
@@ -12324,7 +12325,7 @@
           16,
           32
         ],
-        "effect_label": "Boss Damage Multiplier",
+        "effect_label": "Activation Duration",
         "effect_base": 1,
         "effect_step": 0.05,
         "effect_costs": [
@@ -12338,7 +12339,235 @@
           50
         ],
         "unit": "×"
+      },
+      {
+        "name": "Extra Orbs",
+        "weight": 0.5,
+        "weight_step": 0.1,
+        "weight_costs": [
+          2,
+          5,
+          10,
+          20,
+          40
+        ],
+        "effect_label": "Orb Coin Bonus",
+        "effect_base": 1.25,
+        "effect_step": 0.01,
+        "effect_costs": [
+          2,
+          4,
+          7,
+          11,
+          17,
+          25,
+          36,
+          50,
+          70,
+          95
+        ],
+        "unit": "×"
+      },
+      {
+        "name": "Area Of Effect",
+        "weight": 0.5,
+        "weight_step": 0.1,
+        "weight_costs": [
+          2,
+          5,
+          10,
+          20,
+          40
+        ],
+        "effect_label": "Duration",
+        "effect_base": 20,
+        "effect_step": 1,
+        "effect_costs": [
+          2,
+          4,
+          7,
+          11,
+          17,
+          25,
+          36,
+          50,
+          70,
+          95
+        ],
+        "unit": "s"
+      },
+      {
+        "name": "Gold Bot",
+        "weight": 0.5,
+        "weight_step": 0.1,
+        "weight_costs": [
+          2,
+          5,
+          10,
+          20,
+          40
+        ],
+        "effect_label": "Radius",
+        "effect_base": 140,
+        "effect_step": 5,
+        "effect_costs": [
+          2,
+          4,
+          7,
+          11,
+          17,
+          25,
+          36,
+          50,
+          70,
+          95
+        ],
+        "unit": "m"
+      },
+      {
+        "name": "Amp Bot",
+        "weight": 0.5,
+        "weight_step": 0.1,
+        "weight_costs": [
+          2,
+          5,
+          10,
+          20,
+          40
+        ],
+        "effect_label": "Radius",
+        "effect_base": 140,
+        "effect_step": 5,
+        "effect_costs": [
+          2,
+          4,
+          7,
+          11,
+          17,
+          25,
+          36,
+          50,
+          70,
+          95
+        ],
+        "unit": "m"
+      },
+      {
+        "name": "Flame Bot",
+        "weight": 0.5,
+        "weight_step": 0.1,
+        "weight_costs": [
+          2,
+          5,
+          10,
+          20,
+          40
+        ],
+        "effect_label": "Radius",
+        "effect_base": 140,
+        "effect_step": 5,
+        "effect_costs": [
+          2,
+          4,
+          7,
+          11,
+          17,
+          25,
+          36,
+          50,
+          70,
+          95
+        ],
+        "unit": "m"
+      },
+      {
+        "name": "Thunder Bot",
+        "weight": 0.5,
+        "weight_step": 0.1,
+        "weight_costs": [
+          2,
+          5,
+          10,
+          20,
+          40
+        ],
+        "effect_label": "Radius",
+        "effect_base": 140,
+        "effect_step": 5,
+        "effect_costs": [
+          2,
+          4,
+          7,
+          11,
+          17,
+          25,
+          36,
+          50,
+          70,
+          95
+        ],
+        "unit": "m"
       }
     ]
+  },
+  "supplies": {
+    "ammo_quantities": [
+      80,
+      8,
+      1
+    ],
+    "ammo_prices": [
+      200,
+      500,
+      750
+    ],
+    "power_prices": [
+      800,
+      800,
+      800,
+      1000,
+      1000,
+      800,
+      1200,
+      400,
+      2500,
+      900,
+      900,
+      1500,
+      1200,
+      1000,
+      1200,
+      2200,
+      1200,
+      1500,
+      1500,
+      1500,
+      1200,
+      1200
+    ],
+    "wave_price_step": 0.01
+  },
+  "expansion": {
+    "durations": [
+      30,
+      20,
+      30,
+      30,
+      30,
+      30
+    ],
+    "aoe_multiplier": 2,
+    "extra_orb_coin_multiplier": 1.25,
+    "bot_radius": 140,
+    "bot_speed": 25,
+    "bot_padding": 24,
+    "gold_coin_multiplier": 1.2,
+    "gold_stone_chance": 0.05,
+    "flame_interval": 5,
+    "burn_seconds": 5,
+    "thunder_interval": 8,
+    "thunder_stun": 3,
+    "thunder_slow_duration": 5,
+    "thunder_slow": 0.5
   }
 }

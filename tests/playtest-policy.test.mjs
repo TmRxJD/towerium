@@ -1,10 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction,baselineWeapon,baselinePurchase,baselinePowerPurchase,weaponDamage,predictedDamage,decisionDue} from '../scripts/playtest-policy.mjs';
+import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction,baselineWeapon,baselinePurchase,baselinePowerPurchase,baselineSupplyPurchase,weaponDamage,predictedDamage,decisionDue} from '../scripts/playtest-policy.mjs';
 const config=JSON.parse(readFileSync(new URL('../engine/balance.json',import.meta.url),'utf8'));
 const state={wave:1,hp:100,max_hp:100,coins:50,enemies:[[1,0,100,0,2,2,0],[2,5,200,0,45,45,0],[3,1,500,0,1,1,0]],drops:[[4,8,150,0,8]],range:360,
-  ammo:[0,0,18,0],powers:[0,0,0,0,0,0,0],module_times:[0,0,0,0],power_effects:config.power_workshop.upgrades.map(u=>u.effect_base),power_levels:Array.from({length:16},()=>[0,0]),power_costs:config.power_workshop.upgrades.map(u=>[u.weight_costs[0],u.effect_costs[0]]),stones:0,shots:[],charges:0,remaining:10,weapon:0,levels:Array(config.upgrades.length).fill(0),values:config.upgrades.map(u=>u.base),costs:config.upgrades.map(u=>u.costs[0])};
+  ammo:[0,0,18,0],powers:[0,0,0,0,0,0,0],module_times:[0,0,0,0],power_effects:config.power_workshop.upgrades.map(u=>u.effect_base),power_levels:Array.from({length:config.power_workshop.upgrades.length},()=>[0,0]),power_costs:config.power_workshop.upgrades.map(u=>[u.weight_costs[0],u.effect_costs[0]]),stones:0,shots:[],charges:0,remaining:10,weapon:0,levels:Array(config.upgrades.length).fill(0),values:config.upgrades.map(u=>u.base),costs:config.upgrades.map(u=>u.costs[0])};
 
 test('pressure does not prevent collecting a missing defensive power',()=>{
   const pressured={...state,enemies:[[1,0,50,0,20,20,0],[2,0,0,70,20,20,0],[3,0,-90,0,20,20,0]],drops:[[4,1,120,0,20]]};
@@ -46,7 +46,7 @@ test('outside enemies and pickups are targetable with travelling weapons, never 
   }
 });
 
-test('late HP bands and upgraded Spotlight Demon and Om Chip use native effective damage',()=>{
+test('late HP bands and upgraded Spotlight and Demon use native effective damage',()=>{
   const effects=[...state.power_effects];effects[4]=4.2;effects[11]=2.2;effects[15]=1.3;
   const s={...state,wave:300,power_effects:effects,enemies:[[1,0,120,0,12,32,0]],drops:[]};
   const basic=targets(s,config)[0];
@@ -54,7 +54,7 @@ test('late HP bands and upgraded Spotlight Demon and Om Chip use native effectiv
   assert(Math.abs(weaponDamage(s,config,basic,1)-32/31)<.00001);
   assert.equal(weaponDamage(s,config,basic,3,{x:470,y:0}),16);
   const bossState={...s,powers:[0,0,0,0,30,0,0],module_times:[0,0,0,30],demon_time:30,spotlights:[0,Math.PI*2/3,Math.PI*4/3],enemies:[[2,12,200,0,390,390,0]]};
-  assert(Math.abs(weaponDamage(bossState,config,targets(bossState,config)[0],2)-18*1.5*4.2*1.3*2.2)<.00001);
+  assert(Math.abs(weaponDamage(bossState,config,targets(bossState,config)[0],2)-18*1.5*4.2*2.2)<.00001);
 });
 
 test('Power Stone strategies specialize and never purchase with coins alone',()=>{
@@ -248,4 +248,36 @@ test('weapon controls never invent ammo and fixed/rotating tests remain explicit
   assert.equal(baselineWeapon({...state,ammo:[0,1,1,1],disabled_weapon:2},0,'missile'),0);
   assert.equal(baselineWeapon({...state,time:12,ammo:[0,1,1,1],disabled_weapon:-1},0,'rotate'),3);
   assert.throws(()=>baselineWeapon(state,0,'unknown'),/Unknown baseline weapon mode/);
+});
+
+
+test('crowd sweeps favor a nearby group and advance through it without sweeping empty transfers',()=>{
+  const s={...state,enemies:[[1,0,-200,0,20,20,0],[2,0,200,20,20,20,0],[3,0,200,40,20,20,0]],drops:[],ammo:[0,0,0,0],values:[...state.values]};
+  s.values[2]=.4;s.values[3]=3;
+  const candidates=targets(s,config,'crowd');
+  const first=baselineAction(s,config,candidates,'crowd',2,{human:true,aim:[200,0]});
+  assert.equal(first.target,'enemy_2');assert.equal(first.sweep,true);assert.equal(first.weapon,0);
+  const next=baselineAction(s,config,candidates,'crowd',2,{human:true,aim:[200,20],lastTarget:first.target});
+  assert.equal(next.target,'enemy_3');
+  const transfer={...s,enemies:[s.enemies[0]]};
+  assert.equal(baselineAction(transfer,config,targets(transfer,config,'crowd'),'crowd',2,{human:true,aim:[200,0]}).sweep,false);
+});
+
+test('crowd sweeps retain charged Ray priority and never sweep premium shots',()=>{
+  const s={...state,enemies:[[1,7,-360,0,20,20,0],[2,0,200,20,20,20,0],[3,0,200,40,20,20,0]],enemy_effects:[[1,.9,0]],drops:[],ammo:[0,0,0,0]};
+  const a=baselineAction(s,config,targets(s,config,'crowd'),'crowd',2,{human:true,aim:[200,0]});
+  assert.equal(a.target,'enemy_1');assert.equal(a.sweep,false);
+  const boss={...s,enemies:[[1,12,200,0,360,360,0]],enemy_effects:[],ammo:[0,0,20,5]};
+  const b=baselineAction(boss,config,targets(boss,config,'crowd'),'crowd',2,{human:true,aim:[200,0]});
+  assert(b.weapon>=2);assert.equal(b.sweep,false);
+});
+
+
+test('Supplies spending preserves workshop specialization and only stocks needed items after maxing',()=>{
+  const stocked={...state,coins:100000,ammo_caps:[0,200,30,6],supply_costs:Array(19).fill(1000),supply_available:Array(19).fill(true),powers:Array(7).fill(50)};
+  assert.equal(baselineSupplyPurchase(stocked,config),undefined);
+  const maxed={...stocked,levels:config.upgrades.map(u=>u.cap),wave:399,charges:0};
+  assert.equal(baselineSupplyPurchase(maxed,config),11);
+  assert.equal(baselineSupplyPurchase({...maxed,charges:1},config),0);
+  assert.equal(baselinePowerPurchase({...state,stones:1000},config,'none'),undefined);
 });

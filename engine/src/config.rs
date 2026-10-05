@@ -165,6 +165,7 @@ impl Waves {
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Powers {
+    pub timer_cap: f32,
     pub drop_reference_kills: f32,
     pub durations: [f32; 7],
     pub drop_lifetime: f32,
@@ -253,6 +254,7 @@ pub struct Modules {
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    pub expansion: crate::power_expansion::Expansion,
     pub tower_radius: f32,
     pub enemies: [EnemyDef; ENEMY_COUNT],
     pub weapons: [WeaponDef; 4],
@@ -272,6 +274,7 @@ pub struct Config {
     pub modules: Modules,
     pub coin_multipliers: [f32; 5],
     pub power_workshop: crate::power_shop::PowerWorkshop,
+    pub supplies: crate::supplies::Supplies,
 }
 impl Config {
     pub fn parse(json: &str) -> Result<Self, String> {
@@ -318,6 +321,11 @@ impl Config {
             || c.coin_multipliers.iter().any(|m| !(1.0..=2.0).contains(m))
         {
             return Err("Invalid module or coin bonus settings".into());
+        }
+        c.supplies.validate()?;
+        c.expansion.validate(&c)?;
+        if !(30.0..=120.0).contains(&c.powers.timer_cap) {
+            return Err("Invalid power timer cap".into());
         }
         Ok(c)
     }
@@ -418,6 +426,9 @@ fn validate_stat_domains(c: &Config) -> Result<(), String> {
         {
             return Err(format!("{} must use bounded whole quantities", u.name));
         }
+    }
+    if endpoints(4).iter().any(|v| *v > 0.1 + f32::EPSILON) {
+        return Err("Rapid Fire chance cannot exceed 10%".into());
     }
     if c.upgrades[14].base != 0.0
         || c.upgrades[18].base + c.upgrades[18].step * c.upgrades[18].cap as f32 <= 0.0

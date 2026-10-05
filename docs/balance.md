@@ -1,48 +1,41 @@
 # Balance Contract
 
-## Waves And Combat
+## Combat
 
-Waves spawn for 30 seconds: ramp-in through 5 seconds, sustained pressure through 20, peak pressure through 30. Cleanup follows; shopping opens when survivors die. Difficulty grows through arrivals, composition, SDK speed/mass and one extra cannon hit of enemy health every tenth wave. Wave 300 is exceptional, 400+ extreme, with no hard cap. See [enemy progression](enemy-spawn-adaptation.md) for source limits and authored adjustments.
+Spawning lasts 30 seconds: ramp-in for 5, sustained pressure through 20, peak pressure through 30. Cleanup follows. Wave 300 is exceptional; 400+ is extreme, without a hard cap. SDK waves 1–10,000 map into Towerium 1–400 for speed, mass and composition. Enemy health gains one base cannon hit every tenth wave.
 
-Projectiles are unlimited. Light Speed derives damage from full current-wave health: one fewer base cannon hit, minimum one, before type matchups. Smart Missiles fire twice per second. Hook Bomb homes toward the enemy nearest the cursor; its six children are unguided. Bombs kill non-bosses inside range; outside they deal half full-wave health. Travelling shots deal half damage outside range, or a quarter against bosses. Death Penalty is an explicit instant-kill exception.
+Projectiles are unlimited. Light Speed needs one fewer base cannon hit before matchups. Smart Missiles fire twice per second. Hook Bomb homes toward the enemy nearest the cursor; its six children are unguided. In-range bombs kill non-bosses. Outside range, travelling damage halves, or quarters against bosses. Death Penalty is an explicit instant-kill exception.
 
-Contact attacks once per second and triggers Thorns; bosses take half Thorns damage. Vampire drain and Overcharge bounces do not trigger Thorns. Protector shields block passive damage; direct weapons, Nuke's Basic clear and Death Wave remain effective. Orb kills can generate landmines; mine/swamp/Death Wave kills cannot recursively create mines.
+Rapid Fire gives 4× firing speed for 0.25–0.5 seconds. Normal volleys build its deterministic proc credit; active bursts cannot renew themselves. Chance starts at 2%, caps at 10%, and has a steep price curve. Contact attacks once per second and triggers Thorns; bosses take half retaliation damage. Overcharge doubles damage each tower hit. Destroying its source ends the volley. Vampire drain and Overcharge do not trigger Thorns.
 
-## Workshop Coins
+## Coins And Supplies
 
-Each stat has an explicit price array. Early prices establish a build; late specialization is expensive. Deep, medium and milestone stats use separate curves. Effects remain as promised, without hidden diminishing returns.
+Each workshop stat has an explicit curve. Earlier effects remain unchanged; the last 20% of levels now cost 75% more. Reference affordability is approximately 55% at wave 300 and 94% at 400, with completion beyond 400. Supplies spending delays completion further. These are accounting targets, not survival predictions.
 
-Kill income is base enemy coins times Coins/Kill times overlapping coin bonuses. GT, BH, SL, Orb and DW each give 1.15x at base, approximately 2.01x with all five. GT applies while active; BH/SL require death in their fields; Orb requires the killing hit; DW marks the enemy for its eventual death. Duplicate fields do not multiply a bonus twice. Stones can upgrade GT's multiplier.
+Kill coins equal base reward × Coins/Kill × overlapping bonuses. GT, BH, SL, Orbs and DW each contribute 1.15× at baseline. Gold Bot adds a separate 1.2× spatial bonus and 5% deterministic extra-Stone supply for non-child kills; reference income excludes this bonus. GT applies while active; BH/SL require death within their fields; Orbs require the killing hit; DW marks its target. Duplicate fields do not multiply the same bonus twice. The reference reinvests up to 25% in Coins/Kill, assumes ten seconds of cleanup and uses the configured joint overlap fractions.
 
-Reference income clears all arrivals, reinvests at most 25% in Coins/Kill and assumes ten seconds of cleanup. Joint overlap probabilities are: no bonuses 20%; GT alone 35%; GT+BH, GT+SL and GT+Orb 10% each; GT+DW, GT+BH+SL and all five 5% each. Expected overlap is approximately 1.24x. This is accounting, not survival prediction.
+Supplies sells fixed bundles of 80 LSS, 8 missiles or 1 Hook Bomb, Death Wave charges and ready powers. Prices rise with the upcoming wave. Charges cap at three; ammo obeys capacity. Timers do not drain during shopping. The Fallout supply buys Nuke's attack slow, while the Basic clear is pickup-only. The bot buys needed supplies after maximizing its workshop.
 
-Repricing preserves each stat's first third of levels. Later costs target approximately full workshop affordability at wave 300, replacing wave 100. Tests require below 15% at wave 100, 90-115% at 300 and eventual completion beyond it. GT upgrades and actual overlap uptime change income. Wave 300 takes at least 150 active minutes before cleanup/shopping; earlier short-run time targets are superseded.
+## Stones And Powers
 
-## Power Stones
+Stones are run-local and separate from Coins. Specials give Stones; ordinary enemies and Scatter children do not. All kill sources collect rewards automatically. Each power offers Drop Share and Effect upgrades, with strict caps and purchase accounting. Drop Share changes the weighted mix, not total frequency. The Stone reference budget stays below 40% of total power-shop cost at wave 300.
 
-Stones are run-local and separate from coins. Protector, elite and fleet kills give one; Bosses two; Super Bosses five. Ordinary enemies and Scatter children give none. All kill sources collect rewards automatically.
+Power generation normalizes after 100 planned enemies, including a Scatter-child allowance. Base/max global investment supplies roughly 6/8 pickups per cleared late wave. Timed grants add to remaining time up to 50 seconds; excess is discarded. Legacy banks clamp to 50 on restore. Demon grants ten seconds of invulnerability; its pickups have a separate minimum interval.
 
-Each of the 16 powers has two paths:
+Pulsar Harvester uses a 2.5% per-hit baseline to reduce speed and mass by 5% per proc, down to 25%. Death Penalty marks an immutable seed/identity fraction for death on a damaging hit. Space Displacer spaces persistent mines inside the Orbs and rotates them oppositely. Multiverse Nexus activates GT, SL and BH together, adding their individual durations up to each bank's cap.
 
-- Drop Share: five levels add 20% of original weight each, doubling it at maximum. Shares normalize across eligible powers, changing the mix without increasing total drop frequency.
-- Effect: eight small, explicit increments strengthen the selected mechanic. No generic duration path exists here; GC's unique added-time effect has its own upgrade.
+Ammo starts at 40/20/5 with capacities 200/30/6. Direct weapon kills alone generate ammo: 4% initially, up to 7%. Each pickup gives 35 LSS and 2 missiles; every fourth adds 1 Hook Bomb. Ammo Quantity adds 20% of each original bundle per level, carrying fractional rounds. The 80–85% sustainability test covers an opening enemy mix with investment; it does not establish late-wave sustainability.
 
-Drop costs are 2/4/8/16/32 Stones; effect costs 2/4/7/11/17/25/36/50. Full completion costs 3,424 Stones. The cleared-special reference budget must stay below 40% by wave 300. Several selected powers can develop deeply; everything remains an endurance outcome. Saves validate caps and exact purchase accounting.
+## Evidence And Persistence
 
-Effect paths: CL proc chance; CF slow; Swamp generation; BH radius; SL damage; Death Ray damage; GT coins; Recovery healing; DW boss damage; Shield healing on block; Nuke enemy-attack reduction; Demon damage; DP marked chance; SD mine damage; GC added time; Om Chip boss damage in Spotlight. The shop shows exact current/next values.
+Human retries restore the last cleared tenth-wave checkpoint, including both shops. Fresh fiftieth-wave starts use empty shops and preceding-wave reference budgets. Auto Play spends its funded build before combat, remains isolated from personal progress and continues out of focus.
 
-## Powers And Ammo
+Finite reaction and aiming profiles are automated evidence, not human skill measurements. Record cleanup, accuracy, weapon utility, pickup collection, discarded duration and overlap income. See [playtesting](../PLAYTESTING.md) and [validation](../VALIDATION.md).
 
-Power drops start at 4% of kills using an accumulation meter. Demon generation has a 60-second minimum interval; during cooldown it is excluded from the eligible pool so every successful roll still creates one drop. This bounds GC/Demon extension cycles below sustainable permanent invulnerability under maximum GC upgrades. Timed pickups add their duration.
+## Extra Orbs, AOE And Bots
 
-Swamp starts at 12% generation, capped at six separated swamps; damage is 1 every four seconds per enemy, shared across swamps, with separate stun timing. Death Ray fires three seconds, rests two, then restarts at a seeded random angle. Nuke clears Basics and halves enemy attack speed for 30 seconds. Demon grants ten seconds of invulnerability and double damage for 30. Workshop Power Duration extends timed effects except Demon invulnerability.
+Six additional pickup identities extend the catalog to 22. Extra Orbs creates three Orbs at the 245-unit Black Hole orbit, counter-rotating at twice workshop Orb Speed. They hit for normal Orb damage plus one cannon hit, with independent hit cooldowns. While active, Orb coin reward starts at 1.25× instead of 1.15×; Stones upgrade that multiplier.
 
-GC adds its current extension to active timed effects once on activation and to future timed pickups while active. Recollecting an active GC only extends GC itself. DP marks an immutable seed/identity-based fraction, including bosses, for death on a damaging hit. SD moves active mines inside Orbs to radius 120, orbiting opposite them. Om Chip aims one of three Spotlight beams at the nearest boss, elite or fleet.
+AOE doubles Hook contact radius, mine and Swamp radius/damage, Flame pulse radius/burn damage, and BH/Chrono/Shockwave reach. Missile direct hits and Orb paths are unchanged. Its Effect upgrade adds duration; the 50-second bank limit applies. Out-of-range Hook hits remain capped at half normal-enemy maximum HP after buffs.
 
-Starting ammo is 40/20/5 LSS/SM/Hook, capacities 200/30/6. Direct weapon kills alone supply ammo: 5% initially, 30 LSS and 2 SM per pickup; every fourth also adds one Hook round. Ammo Quantity adds 20% of each original bundle per level; fractional rounds carry across refills/saves. The older 80-85% LSS sustainability test covers an opening mix, not late health bands. Multishot, bounce, power damage and passive kills alter real efficiency; recheck late sustainability rather than claiming that opening proof covers endurance.
-
-## Persistence And Evidence
-
-Three human retries restore the last cleared tenth-wave checkpoint, including both shops and currencies. Fresh fiftieth-wave starts have empty shops and preceding-wave reference coin/Stone budgets. Auto Play is separate from human saves/progression, spends both currencies for its selected build and continues out of focus.
-
-Scripted controls reveal regressions and cheese, not human skill thresholds or mobile frame rates. Record wave, build, cleanup, accuracy, weapon use, powers and overlap income. See [playtesting](../PLAYTESTING.md) and [validation](../VALIDATION.md).
+Bots use seeded, saved random paths at 25 units/s. Centers remain within tower range minus 24 units and half their base aura radius. Radius upgrades run 140→190 in ten +5 steps, between base Swamp (120) and Black Hole (200). Gold and Amp are support-only: +20% kill income/extra Stones or 2× incoming damage. Flame pulses every 5s, with five one-second burn ticks worth 1/2/3/4/5 cannon hits; refreshes do not create duplicate stacks. Thunder pulses every 8s with 3s stun then 5s half speed. Boss control immunity and Protector shields apply.

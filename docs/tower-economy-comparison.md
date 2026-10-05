@@ -17,10 +17,10 @@ Chance increments below are percentage points. A multiplier increment adds to th
 | Coins/Kill | 1× | 0.01× | 10 | 1× | 0.01× | 8 |
 | Multishot Chance | 0% | 0.5 pp | 10 | 0% | 1.75 pp | 17 |
 | Multishot Quantity | 2 | 1 | 125 | 3 | 1 | 95 |
-| Thorns | 0% | 1 pp | 10 | 1 bullet hit | 1 hit | 12 |
+| Thorns | 0% | 1 pp | 10 | 1 bullet hit | 1 hit | 35 |
 | Overheal | 1.5× | 0.03× | 30 | 1× | 0.10× | 12 |
-| Rapid Fire Chance | 0% | 0.4 pp | 20 | 0% | 0.5 pp | 14 |
-| Rapid Fire Duration | 0.6 s | 0.05 s | 20 | 0.5 s | 0.10 s | 11 |
+| Rapid Fire Chance | 0% | 0.4 pp | 20 | 2% | 0.8 pp | 30 |
+| Rapid Fire Duration | 0.6 s | 0.05 s | 20 | 0.25 s | 0.025 s | 11 |
 | Knockback Chance | 0% | 1 pp | 10 | 0% | 3 pp | 14 |
 | Knockback Force | 0.4 | 0.15 | 10 | 25 px | 4 px | 12 |
 | Bounce Chance | 0% | 0.8 pp | 20 | 0% | 1.75 pp | 18 |
@@ -44,7 +44,7 @@ Tower's first Attack Speed cash prices are 5, 7, 10; its last purchase costs 9,1
 
 Tower Multishot Targets costs 125, 350, 800, 2,000, 8,000, 20,000 and 40,000. Towerium's three purchases cost 95, 671 and 128,095. Orb Quantity costs 143, 218, 11,789 and 426,174. Orb Quantity accounts for 29.2% of total workshop cost; Multishot, Bounce and Orb Quantity together account for approximately 47%. Total-workshop affordability can therefore understate how cheaply a strong combat build develops.
 
-The current SDK progression repricing preserves the first third of each price curve and targets full workshop affordability near wave 300 under the reference income model. It changes acquisition costs, not promised upgrade effects. See [balance rules](balance.md) for accounting assumptions and the separate Power Stone budget.
+The latest repricing preserves the first 80% of each existing price curve and increases the final 20% by 75%; it targets full workshop affordability beyond wave 400 under the reference income model. It changes acquisition costs, not promised upgrade effects. See [balance rules](balance.md) for accounting assumptions and the separate Power Stone budget.
 
 ## Enemy Rewards
 
@@ -60,6 +60,8 @@ Current Towerium base rewards, before Coins/Kill and overlapping coin bonuses:
 Scatter children use the Fast definition, including its reward. The SDK's `ENEMY_TYPE_BASE_COIN_VALUE` in `mechanics/enemies/type-mix.ts` gives ordinary relative coin weights: Basic 1, Fast 2, Tank 4, Ranged 2. `PROTECTOR_COIN_VALUE` in `mechanics/resource-drops/wave-ordinary-coin-weight.ts` adds Protector 1. These are relative coin values, not a verified table of absolute battle-cash rewards or boss/elite/fleet payouts. Do not label Towerium's current rewards as copied from The Tower or substitute permanent coin rewards for battle cash without validation.
 
 Uniform five-coin rewards make cheap, one-hit enemies unusually productive. Reward differentiation should be tested alongside prices, accounting for enemy mix, Scatter families and stacked Golden Tower uptime. Cutting rewards alone could make the opening harder without fixing cheap early combat multipliers.
+
+Rapid Fire now uses 4× bursts, with 2–10% chance and 0.25–0.5-second duration. Only normal volleys build proc credit, preventing a burst from sustaining itself. Chance prices escalate from 30 to 35,000 coins; Thorns from 35 to 39,375. These paths deliberately demand specialization.
 
 ## Historical Gameplay Evidence
 

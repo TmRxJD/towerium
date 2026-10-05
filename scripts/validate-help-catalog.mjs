@@ -37,10 +37,10 @@ const assertAssetExists = async (assetPath, label) => {
 };
 
 assert.equal(weapons.length, 4, 'weapon labels must match four engine weapon slots');
-assert.equal(powers.length, 16, 'power labels must match sixteen engine pickup types');
+assert.equal(powers.length, 22, 'power labels must match engine pickup types');
 assertUnique(weapons, 'weapon labels');
 assertUnique(powers, 'power labels');
-assert.equal(balance.power_workshop.upgrades.length,16);
+assert.equal(balance.power_workshop.upgrades.length,22);
 assert.deepEqual(balance.power_workshop.upgrades.map(u=>u.name),powers,'power shop labels must match pickup identities');
 for(const u of balance.power_workshop.upgrades){
   assertKeys(u,['name','weight','weight_step','weight_costs','effect_label','effect_base','effect_step','effect_costs','unit'],'power upgrade');
@@ -104,3 +104,9 @@ for (const track of music) {
 }
 
 console.log(`Help catalogs valid: ${balance.enemies.length} enemies, ${workshop.length} workshop entries, ${powers.length} power upgrades, ${balance.waves.milestones.length} SDK wave rows, ${cosmetics.skins.length} skins, ${cosmetics.backgrounds.length} backgrounds, and ${music.length} music tracks.`);
+
+assertKeys(balance.supplies,['ammo_quantities','ammo_prices','power_prices','wave_price_step'],'Supplies');
+assert.equal(balance.supplies.ammo_quantities.length,3);
+assert.equal(balance.supplies.power_prices.length,22);
+assert.ok([...balance.supplies.ammo_prices,...balance.supplies.power_prices].every(n=>Number.isFinite(n)&&n>0));
+assert.equal(balance.powers.timer_cap,50);

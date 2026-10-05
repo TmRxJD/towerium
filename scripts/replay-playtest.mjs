@@ -28,6 +28,7 @@ for(const row of records){
     if(row.usedDeathWave)game.death_wave();advance(row.frames);
   }
   if(row.event==='human_combat')for(const input of row.inputs){game.input(...input.pointer,input.fire,input.weapon);if(input.usedDeathWave)game.death_wave();advance(1);}
+  if(row.event==='supply_shop'&&!game.buy_supply(row.item))throw new Error('Replay Supplies purchase rejected');
   if(row.event==='power_shop'&&!game.buy_power(row.power,row.path))throw new Error('Replay Power Stone purchase rejected');
   if(row.event==='shop'){if(row.choice<0){if(row.startedNext??true)game.start_wave();}else if(!game.buy(row.choice))throw new Error('Replay purchase rejected');}
 }

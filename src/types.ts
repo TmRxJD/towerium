@@ -24,6 +24,7 @@ export interface Snapshot {
   overcharge:[sourceId:number,x:number,y:number,hits:number,toTower:boolean][];
   coins:number; earned:number; kills:number; weapon:Weapon; ammo:number[]; charges:number;
   stones:number; stones_earned:number; power_levels:[number,number][];
+  supply_costs:number[]; supply_available:boolean[];
   power_costs:[number,number][]; power_effects:number[]; power_weights:number[];
   shields:number; overheal:number;
   wall_hp:number; wall_max_hp:number; wall_rebuild:number; ammo_caps:number[];
@@ -31,6 +32,7 @@ export interface Snapshot {
   module_times:[number,number,number,number];
   coin_bonus_kills:number[]; coin_bonus_coins:number[];
   coin_overlap_kills:number[];
+  enemy_burns:[number,number,number][]; extra_power_times:number[]; extra_orbs:[number,number][]; bots:[number,number,number,number,number][]; aoe_scale:number;
   powers:number[]; remaining:number; total:number; spawned:number; range:number; view_extent:number; rapid:number;
   shock_in:number; orb_angle:number; orb_count:number; spotlight_angle:number; ray_angle:number; ray_active:boolean;
   enemies:Enemy[]; shots:Shot[]; drops:Drop[]; areas:[number,number,number,number][];

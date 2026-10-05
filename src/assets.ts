@@ -6,7 +6,7 @@ export const workshop=workshopCatalog;
 export const skins=catalog.skins;
 export const enemyNames = balance.enemies.map(enemy => enemy.name);
 export { powers as powerNames } from '../scripts/playtest-policy.mjs';
-const powerArt = ['Weapon Chain Lightning', 'Weapon Chrono Field', 'Weapon Swamp', 'Weapon Black Hole', 'Weapon Spotlight', 'Death Ray', 'Weapon Golden Tower', 'Recovery Package', 'Weapon Death Wave','Shield','protector-nuke','demon-mode','death-penalty','space-displacer','pulsar-harvester','om-chip'];
+const powerArt = ['Weapon Chain Lightning', 'Weapon Chrono Field', 'Weapon Swamp', 'Weapon Black Hole', 'Weapon Spotlight', 'Death Ray', 'Weapon Golden Tower', 'Recovery Package', 'Weapon Death Wave','Shield','protector-nuke','demon-mode','death-penalty','space-displacer','pulsar-harvester','multiverse-nexus','extra-orb','aoe','golden-bot','amplify-bot','flame-bot','thunder-bot'];
 const base = `${import.meta.env.BASE_URL}tower-assets`;
 export const assetUrl = (name:string, domain:string, size:'md'|'lg'='md'):string => {
   const url=towerAssetUrl(gameAssetPath(name, { domain, size }),base);
@@ -14,7 +14,7 @@ export const assetUrl = (name:string, domain:string, size:'md'|'lg'='md'):string
   return url;
 };
 export const enemyUrls = enemyNames.map(name => assetUrl(name==='Super Boss'?'Enemy Boss Ultimate':`Enemy ${name}`, 'enemies'));
-export const powerUrls = powerArt.map((name,i) => assetUrl(name,i>=12?'modules':i===9?'icons':i===5||i>=10 ? 'cards' : i===7 ? 'workshop' : 'ultimate-weapons'));
+export const powerUrls = powerArt.map((name,i) => assetUrl(name,i>=18?'icons':i>=16?'cards':i>=12?'modules':i===9?'icons':i===5||i>=10 ? 'cards' : i===7 ? 'workshop' : 'ultimate-weapons'));
 export const workshopUrls=workshop.map(item=>assetUrl(item.asset,item.domain));
 export const coinUrl=assetUrl('Coin','icons');
 export const stoneUrl=assetUrl('coin_ultimate','icons');
