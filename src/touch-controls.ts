@@ -7,6 +7,7 @@ interface TouchInput {
   fire:(held:boolean)=>void;
   weapon:()=>number;
   spent:()=>number;
+  scale?:()=>number;
 }
 
 export class TouchControls {
@@ -42,9 +43,10 @@ export class TouchControls {
     this.pad.addEventListener('pointermove',e=>{
       const previous=this.aimPointer;
       if(!previous||previous.id!==e.pointerId||!this.input.ready())return;
-      const scale=1100/this.canvas.getBoundingClientRect().width*this.sensitivity;
+      const scale=(this.input.scale?.()??550)*2/this.canvas.getBoundingClientRect().width*this.sensitivity;
       const [x,y]=this.input.aim();
-      this.input.move([Math.max(-535,Math.min(535,x+(e.clientX-previous.x)*scale)),Math.max(-535,Math.min(535,y+(e.clientY-previous.y)*scale))]);
+      const limit=(this.input.scale?.()??550)-15;
+      this.input.move([Math.max(-limit,Math.min(limit,x+(e.clientX-previous.x)*scale)),Math.max(-limit,Math.min(limit,y+(e.clientY-previous.y)*scale))]);
       previous.x=e.clientX;previous.y=e.clientY;
     });
     const endAim=(e:PointerEvent)=>{if(this.aimPointer?.id===e.pointerId){this.aimPointer=null;this.pad.classList.remove('tracking');}};

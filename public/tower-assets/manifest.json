@@ -484,14 +484,14 @@
       "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
       "sha256": "7ca1774c2d091072be42ba1b6adf1718c71bf853bd9a71bf6071305cf950e8d7"
     },
-    "module-gc": {
-      "name": "galaxy-compressor",
+    "module-ph": {
+      "name": "pulsar-harvester",
       "domain": "modules",
-      "path": "modules/galaxy-compressor-md.webp",
+      "path": "modules/pulsar-harvester-md.webp",
       "size": "md",
-      "sourceSprite": "galaxy-compressor",
+      "sourceSprite": "pulsar-harvester",
       "provenance": "The Tower extracted assets; packages/tower-assets/assets/game/modules",
-      "sha256": "0449c6ef7cb8409132164522b5f6778b146b5ed09dcb78770257acb653a136f3"
+      "sha256": "323e19b6f61bcd9fe5aa00011bc8e8412f5b4d13af3956c3daaec4dd694177a4"
     },
     "module-om": {
       "name": "om-chip",
@@ -510,6 +510,46 @@
       "sourceSprite": "coin_ultimate",
       "provenance": "The Tower v29.0.0 arm64 extraction; tower-extractor asset-extract full-extract/icons/coin-ultimate-md.webp",
       "sha256": "eef672d90406aa1a831c2e549034fa979cadd09f040f17d09addec34a687dc79"
+    },
+    "workshop-25": {
+      "name": "Land Mine Radius",
+      "domain": "workshop",
+      "path": "workshop/land-mine-radius-md.webp",
+      "authoredIcon": "defense-12.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "41c31d19ff08f4f8c83e970260c8831ca85c330f88b794ad20e0299cc63b6304"
+    },
+    "workshop-26": {
+      "name": "Land Mine Damage",
+      "domain": "workshop",
+      "path": "workshop/land-mine-damage-md.webp",
+      "authoredIcon": "defense-12.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "41c31d19ff08f4f8c83e970260c8831ca85c330f88b794ad20e0299cc63b6304"
+    },
+    "workshop-27": {
+      "name": "Wall Health",
+      "domain": "workshop",
+      "path": "workshop/wall-health-md.webp",
+      "authoredIcon": "wall-rebuild.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "50d201328a8f6f765dc7b44aa882dfdbea7e4fd4009ce9cef4adb4ed54444b35"
+    },
+    "workshop-28": {
+      "name": "Wall Rebuild",
+      "domain": "workshop",
+      "path": "workshop/wall-rebuild-md.webp",
+      "authoredIcon": "wall-rebuild.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "50d201328a8f6f765dc7b44aa882dfdbea7e4fd4009ce9cef4adb4ed54444b35"
+    },
+    "workshop-29": {
+      "name": "Ammo Capacity",
+      "domain": "workshop",
+      "path": "workshop/ammo-capacity-md.webp",
+      "authoredIcon": "attack-07.webp",
+      "provenance": "assets/workshop-icons/provenance.json",
+      "sha256": "0e7bef75fa743b388413198e3a3cf1b65df7669cb0d532d6dfab93e7ab80c04d"
     }
   }
 }

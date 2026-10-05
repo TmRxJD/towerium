@@ -55,6 +55,12 @@ impl Game {
             world: World::milestone_start(c, seed, wave).map_err(|e| JsValue::from_str(&e))?,
         })
     }
+    pub fn autoplay_start(seed: u32, config_json: &str, wave: u32) -> Result<Game, JsValue> {
+        let c = Config::parse(config_json).map_err(|e| JsValue::from_str(&e))?;
+        Ok(Self {
+            world: World::autoplay_start(c, seed, wave).map_err(|e| JsValue::from_str(&e))?,
+        })
+    }
     pub fn input(&mut self, x: f32, y: f32, firing: bool, weapon: u8) {
         self.world.input(x, y, firing, weapon);
     }

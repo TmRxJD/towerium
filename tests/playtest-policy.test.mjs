@@ -6,6 +6,33 @@ const config=JSON.parse(readFileSync(new URL('../engine/balance.json',import.met
 const state={wave:1,hp:100,max_hp:100,coins:50,enemies:[[1,0,100,0,2,2,0],[2,5,200,0,45,45,0],[3,1,500,0,1,1,0]],drops:[[4,8,150,0,8]],range:360,
   ammo:[0,0,18,0],powers:[0,0,0,0,0,0,0],module_times:[0,0,0,0],power_effects:config.power_workshop.upgrades.map(u=>u.effect_base),power_levels:Array.from({length:16},()=>[0,0]),power_costs:config.power_workshop.upgrades.map(u=>[u.weight_costs[0],u.effect_costs[0]]),stones:0,shots:[],charges:0,remaining:10,weapon:0,levels:Array(config.upgrades.length).fill(0),values:config.upgrades.map(u=>u.base),costs:config.upgrades.map(u=>u.costs[0])};
 
+test('pressure does not prevent collecting a missing defensive power',()=>{
+  const pressured={...state,enemies:[[1,0,50,0,20,20,0],[2,0,0,70,20,20,0],[3,0,-90,0,20,20,0]],drops:[[4,1,120,0,20]]};
+  assert.equal(baselineAction(pressured,config,targets(pressured,config),'nearest').target,'drop_4');
+  const alreadyActive={...pressured,powers:[0,100,0,0,0,0,0]};
+  assert.equal(baselineAction(alreadyActive,config,targets(alreadyActive,config),'nearest').target,'enemy_1');
+});
+
+test('safe lit targets receive deliberate Spotlight priority',()=>{
+  const s={...state,enemies:[[1,0,140,0,3,3,0],[2,0,0,200,3,3,0]],drops:[],powers:[0,0,0,0,30,0,0],spotlights:[Math.PI/2],ammo:[0,0,0,0]};
+  assert.equal(baselineAction(s,config,targets(s,config),'nearest',2,{human:true}).target,'enemy_2');
+});
+test('DW uses an in-range Super Boss opportunity and never stacks an active pulse',()=>{
+  const s={...state,enemies:[[1,12,250,0,360,360,0]],drops:[],charges:1};
+  assert.equal(baselineAction(s,config,targets(s,config)).deathWave,true);
+  const active={...s,deathwaves:[100]};assert.equal(baselineAction(active,config,targets(active,config)).deathWave,false);
+});
+test('weapon preferences do not spend bombs collecting powerups',()=>{
+  const s={...state,enemies:[],drops:[[1,0,100,0,10]],ammo:[0,100,20,5]};
+  const action=baselineAction(s,config,targets(s,config),'nearest',2,{human:true,weaponMode:'hook'});
+  assert.equal(action.weapon,0);assert.equal(action.hitDamage,1);
+});
+test('zoomed range exposes targets beyond the original square',()=>{
+  const s={...state,range:600,view_extent:750,enemies:[[1,0,650,0,5,5,0]],drops:[],ammo:[0,0,0,0]};
+  const action=baselineAction(s,config,targets(s,config),'nearest',2,{human:true});
+  assert(action.pointer[0]>550);
+});
+
 test('outside enemies and pickups are targetable with travelling weapons, never LSS',()=>{
   for(const fixture of [
     {enemies:[[8,6,470,0,12,12,0]],drops:[]},
@@ -159,7 +186,7 @@ test('circle control is blind and cannot silently select special weapons or Deat
 });
 test('no-upgrade control saves and dependent baseline upgrades need their prerequisite',()=>{
   assert.equal(baselinePurchase(state,config,'none'),-1);
-  const rich={...state,coins:10000};for(let i=0;i<config.upgrades.length;i++)if(![3,5,7,8,15].includes(i))rich.costs=[...rich.costs.slice(0,i),Infinity,...rich.costs.slice(i+1)];
+  const rich={...state,coins:10000,values:[...state.values]};for(const i of [2,4,6,14])rich.values[i]=0;for(let i=0;i<config.upgrades.length;i++)if(![3,5,7,8,15].includes(i))rich.costs=[...rich.costs.slice(0,i),Infinity,...rich.costs.slice(i+1)];
   assert.equal(baselinePurchase(rich,config,'balanced'),-1);
 });
 
@@ -177,7 +204,7 @@ test('shop nominations cover every upgrade without eliminating the final buy-or-
   const request=shopRequest({...state,coins:10000},config,'balanced');
   const nomination=shopNominations(request);
   const groups=Object.values(nomination.questions);
-  assert.deepEqual(groups.map(group=>Object.keys(group.criteria).length),[10,10,5]);
+  assert.deepEqual(groups.map(group=>Object.keys(group.criteria).length),[10,10,10]);
   assert(groups.every(group=>!Object.hasOwn(group.criteria,'save')));
   assert.deepEqual(groups.flatMap(group=>Object.keys(group.criteria)),Object.keys(request.questions.purchase.criteria).filter(key=>key!=='save'));
   assert(Object.hasOwn(request.questions.purchase.criteria,'save'));
@@ -200,10 +227,10 @@ test('expanded enemy observations stay within 16 choices and prioritize a charge
   assert.equal(baselineAction(expanded,config,candidates,'priority').target,'enemy_8');
 });
 
-test('priority control clears approaching mobs before draining a boss and reserves boss missiles for range',()=>{
+test('priority control spends boss ammunition while still clearing immediate contacts',()=>{
   const bossWave={...state,enemies:[[60,12,350,0,600,600,0],[61,0,160,0,2,2,0]],drops:[],ammo:[0,100,40,5]};
   const action=baselineAction(bossWave,config,targets(bossWave,config),'priority');
-  assert.equal(action.target,'enemy_61');
+  assert.equal(action.target,'enemy_60');
   const distant={...bossWave,enemies:[[60,12,state.range+100,0,600,600,0]]};
   const distantAction=baselineAction(distant,config,targets(distant,config),'priority');
   assert.equal(distantAction.target,'enemy_60');assert.equal(distantAction.weapon,0);

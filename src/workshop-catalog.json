@@ -169,5 +169,40 @@
     "label": "Powerup Duration",
     "asset": "Lab Queue On",
     "domain": "icons"
+  },
+  {
+    "index": 25,
+    "label": "Landmine Radius",
+    "asset": "Land Mine Radius",
+    "domain": "workshop",
+    "source": "defense-12.webp"
+  },
+  {
+    "index": 26,
+    "label": "Landmine Damage",
+    "asset": "Land Mine Damage",
+    "domain": "workshop",
+    "source": "defense-12.webp"
+  },
+  {
+    "index": 27,
+    "label": "Wall HP",
+    "asset": "Wall Health",
+    "domain": "workshop",
+    "source": "wall-rebuild.webp"
+  },
+  {
+    "index": 28,
+    "label": "Wall Rebuild Time",
+    "asset": "Wall Rebuild",
+    "domain": "workshop",
+    "source": "wall-rebuild.webp"
+  },
+  {
+    "index": 29,
+    "label": "Max Ammo Capacity",
+    "asset": "Ammo Capacity",
+    "domain": "workshop",
+    "source": "attack-07.webp"
   }
 ]

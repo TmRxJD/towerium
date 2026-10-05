@@ -44,7 +44,7 @@ for(const enemy of balance.enemies){
 balance.waves={spawn_seconds:30,hp_hits_every:10,boss_every:balance.waves.boss_every,fleet_first_wave:fleet.firstWave,fleet_repeat_waves:fleet.repeatEveryWaves,milestones:profile};
 delete balance.powers.golden_multiplier;
 balance.coin_multipliers=Array(5).fill(1.15);
-balance.modules={durations:[30,30,30,30],death_penalty_chance:.05,space_displacer_radius:120,space_displacer_speed:70,galaxy_extension:10};
+balance.modules={durations:[30,30,30,30],death_penalty_chance:.05,space_displacer_radius:120,space_displacer_speed:70,pulsar_chance:.025,pulsar_reduction:.05,pulsar_min_multiplier:.25};
 delete balance.elite_reference.golden_kill_fraction;
 const masks={0:.20,1:.35,3:.10,5:.10,9:.10,17:.05,7:.05,31:.05};
 balance.elite_reference.overlap_fractions=Array.from({length:32},(_,mask)=>masks[mask]??0);

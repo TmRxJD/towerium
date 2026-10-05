@@ -5,6 +5,91 @@ fn world() -> World {
 }
 
 #[test]
+fn wall_blocks_contact_rebuilds_and_ranged_damage_bypasses_it() {
+    let mut w = active();
+    w.levels[27] = 1;
+    w.wall_hp = 50.0;
+    w.spawn(2, V::new(100.0, 0.0));
+    w.spawn(3, V::new(300.0, 0.0));
+    let hp = w.hp;
+    w.tower_hit(0, 60.0);
+    assert_eq!(w.hp, hp);
+    assert_eq!(w.wall_hp, 0.0);
+    assert_eq!(w.wall_rebuild, 30.0);
+    w.wall_rebuild = DT;
+    w.advance(DT);
+    assert_eq!(w.wall_hp, 50.0);
+    let wall_hp = w.wall_hp;
+    w.tower_hit(1, 5.0);
+    assert_eq!(w.wall_hp, wall_hp);
+    assert_eq!(w.hp, hp - 5.0);
+}
+
+#[test]
+fn persistent_mines_survive_elapsed_time_and_displacer_spaces_them() {
+    let mut w = active();
+    w.module_times[SD] = 60.0;
+    for _ in 0..6 {
+        w.areas.push(Area {
+            p: V::new(250.0, 0.0),
+            kind: 1,
+            life: 1.0,
+        });
+    }
+    // A distant survivor keeps the test wave active without contacting the mines.
+    w.spawn(2, V::new(500.0, 500.0));
+    w.enemies[0].stun = 60.0;
+    for _ in 0..600 {
+        w.advance(DT);
+    }
+    assert_eq!(w.areas.len(), 6);
+    let mut angles: Vec<_> = w
+        .areas
+        .iter()
+        .map(|a| a.p.angle().rem_euclid(std::f32::consts::TAU))
+        .collect();
+    angles.sort_by(f32::total_cmp);
+    for i in 0..6 {
+        let gap = (angles[(i + 1) % 6] - angles[i]).rem_euclid(std::f32::consts::TAU);
+        assert!((gap - std::f32::consts::TAU / 6.0).abs() < 0.01);
+        assert!((w.areas[i].p.len() - w.c.modules.space_displacer_radius).abs() < 0.01);
+    }
+}
+
+#[test]
+fn arbitrary_auto_start_and_legacy_workshop_save_have_valid_roundtrips() {
+    let c = Config::standard();
+    for wave in [1, 27, 63] {
+        let mut w = World::autoplay_start(c.clone(), 42, wave).unwrap();
+        w.buy(0);
+        let loaded = World::restore(c.clone(), &w.save()).unwrap();
+        assert_eq!(loaded.pending_start_wave, wave);
+    }
+    let mut w = active();
+    w.levels[29] = 2;
+    w.ammo[1] = w.ammo_capacity(1);
+    assert!(World::restore(c.clone(), &w.save()).is_ok());
+    w.levels[29] = 0;
+    w.ammo[1] = 0;
+    let mut legacy: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+    legacy["world"]["levels"]
+        .as_array_mut()
+        .unwrap()
+        .truncate(25);
+    assert_eq!(
+        World::restore(c.clone(), &legacy.to_string())
+            .unwrap()
+            .levels[29],
+        0
+    );
+    legacy["world"]["levels"]
+        .as_array_mut()
+        .unwrap()
+        .truncate(24);
+    assert!(World::restore(c, &legacy.to_string()).is_err());
+}
+
+#[test]
 fn all_five_coin_bonuses_multiply_once_and_account_for_extra_coins() {
     let mut w = active();
     w.powers[GOLDEN] = 30.0;
@@ -65,31 +150,119 @@ fn death_penalty_is_immutable_per_enemy_and_can_select_super_bosses() {
 }
 
 #[test]
-fn galaxy_extends_active_and_future_timers_but_cannot_regrant_while_active() {
+fn pulsar_harvester_activates_and_slows_direct_hit_targets() {
     let mut w = active();
     w.powers[CHAIN] = 10.0;
     w.fallout_time = 5.0;
     w.demon_time = 20.0;
     w.demon_invincible = 4.0;
     w.module_times[DP] = 8.0;
-    w.activate(14);
-    assert_eq!(w.powers[CHAIN], 20.0);
-    assert_eq!(w.fallout_time, 15.0);
-    assert_eq!(w.demon_invincible, 14.0);
-    assert_eq!(w.module_times[DP], 18.0);
-    let own = w.module_times[GC];
-    w.activate(14);
-    assert_eq!(w.module_times[GC], own * 2.0);
-    assert_eq!(w.powers[CHAIN], 20.0);
-    w.activate(CHRONO);
-    assert_eq!(w.powers[CHRONO], w.c.powers.durations[CHRONO] + 10.0);
-    w.activate(DEMON);
-    assert_eq!(
+    w.levels[20] = 10;
+    let timers = (
+        w.powers[CHAIN],
+        w.fallout_time,
+        w.demon_time,
         w.demon_invincible,
-        14.0 + w.c.powers.demon_invincible_duration + 10.0
+        w.module_times[DP],
     );
-    w.activate(12);
-    assert_eq!(w.module_times[DP], 18.0 + w.c.modules.durations[DP] + 10.0);
+    w.activate(14);
+    assert_eq!(w.module_times[PH], w.c.modules.durations[PH] + 10.0);
+    assert_eq!(
+        (
+            w.powers[CHAIN],
+            w.fallout_time,
+            w.demon_time,
+            w.demon_invincible,
+            w.module_times[DP]
+        ),
+        timers
+    );
+    w.module_times[PH] = 20.0;
+    for _ in 0..40 {
+        w.spawn(0, V::new(400.0, 0.0));
+        let i = w.enemies.len() - 1;
+        w.hit(i, 0.001, PROJECTILE);
+    }
+    assert_eq!(
+        w.enemies
+            .iter()
+            .filter(|e| (e.mobility - 0.95).abs() < 0.0001)
+            .count(),
+        1
+    );
+    for _ in 0..100 {
+        w.spawn(0, V::new(400.0, 0.0));
+        let i = w.enemies.len() - 1;
+        w.hit(i, 0.001, ORB_DAMAGE);
+    }
+    assert!(
+        w.enemies.iter().skip(40).all(|e| e.mobility == 1.0),
+        "passive hits do not proc Pulsar Harvester"
+    );
+    let slowed = w.enemies.iter().find(|e| e.mobility < 1.0).unwrap().id;
+    let mut mobility_save = active();
+    mobility_save.spawn(0, V::new(400.0, 0.0));
+    let saved_id = mobility_save.enemies[0].id;
+    mobility_save.enemies[0].mobility = 0.95;
+    mobility_save.total = mobility_save.spawned;
+    let restored = World::restore(mobility_save.c.clone(), &mobility_save.save()).unwrap();
+    assert_eq!(
+        restored
+            .enemies
+            .iter()
+            .find(|e| e.id == saved_id)
+            .unwrap()
+            .mobility,
+        0.95
+    );
+    w.enemies
+        .iter_mut()
+        .find(|e| e.id == slowed)
+        .unwrap()
+        .mobility = w.c.modules.pulsar_min_multiplier;
+    for _ in 0..40 {
+        let i = w.enemies.iter().position(|e| e.id == slowed).unwrap();
+        w.hit(i, 0.001, PROJECTILE);
+    }
+    assert_eq!(
+        w.enemies.iter().find(|e| e.id == slowed).unwrap().mobility,
+        w.c.modules.pulsar_min_multiplier
+    );
+}
+
+#[test]
+fn power_drop_density_preserves_early_chance_and_scales_late_supply() {
+    let mut w = active();
+    let early = w.power_drop_chance();
+    assert!(
+        (early - w.stat(21)).abs() < 0.0001,
+        "Wave 1 chance stays unscaled"
+    );
+    let planned_kills = |world: &World, wave: u32| {
+        let pressure = world.c.waves.pressure(wave);
+        pressure.count
+            + if wave >= world.c.enemies[SCATTER].unlock {
+                pressure.elite_per_wave * world.c.specials.scatter_children as f32
+            } else {
+                0.0
+            }
+    };
+    for wave in [160, 300] {
+        w.wave = wave;
+        let expected = w.power_drop_chance() * planned_kills(&w, wave);
+        assert!(
+            (expected - 4.0).abs() < 0.05,
+            "base rate should supply about four drops at wave {wave}: {expected}"
+        );
+        w.levels[21] = 20;
+        let upgraded = w.power_drop_chance() * planned_kills(&w, wave);
+        assert!(
+            (upgraded - 6.0).abs() < 0.05,
+            "max rate should supply about six drops at wave {wave}: {upgraded}"
+        );
+        assert!((upgraded / expected - 1.5).abs() < 0.02);
+        w.levels[21] = 0;
+    }
 }
 
 #[test]
@@ -433,15 +606,15 @@ fn reports_count_multishot_rounds_once_despite_bounces() {
     w.spawn(0, V::new(160.0, 0.0));
     w.input(100.0, 0.0, true, LIGHT);
     w.advance(DT);
-    assert_eq!(w.wave_stats.shots_fired, 3);
-    assert_eq!(w.wave_stats.shots_landed, 3);
+    assert_eq!(w.wave_stats.shots_fired, 1);
+    assert_eq!(w.wave_stats.shots_landed, 1);
     assert!(w.enemies.iter().all(|e| e.hp < 1000.0));
     assert_eq!(w.snapshot().wave_report.accuracy, 100.0);
     w.input(0.0, -100.0, true, LIGHT);
     w.fire_timer = 0.0;
     w.advance(DT);
-    assert_eq!(w.wave_stats.shots_fired, 6);
-    assert_eq!(w.wave_stats.shots_landed, 3);
+    assert_eq!(w.wave_stats.shots_fired, 2);
+    assert_eq!(w.wave_stats.shots_landed, 1);
     assert_eq!(w.snapshot().wave_report.accuracy, 50.0);
 }
 
@@ -1635,7 +1808,7 @@ fn overlapping_swamps_apply_one_damage_tick_while_mines_remain_independent() {
             });
         }
         w.advance(DT);
-        let expected = w.c.enemies[5].hp - w.c.powers.swamp_damage - 2.0 * w.c.defense.mine_damage;
+        let expected = w.c.enemies[5].hp - w.c.powers.swamp_damage - 2.0 * w.stat(26);
         assert!((w.enemies[0].hp - expected).abs() < 0.0001);
         assert_eq!(w.areas.iter().filter(|a| a.kind == 1).count(), 0);
         assert_eq!(w.areas.iter().filter(|a| a.kind == 0).count(), swamp_count);
@@ -1781,10 +1954,12 @@ fn ranged_enemies_stop_at_live_range_and_chrono_extends_beyond_it() {
 #[test]
 fn vampire_drains_only_alive_unstunned_in_range_and_ignores_contact_thorns() {
     let mut w = active();
+    w.c.upgrades[12].base = 0.0;
+    let initial_hp = w.hp;
     w.levels[13] = w.c.upgrades[13].cap;
     w.spawn(VAMPIRE, V::new(w.stat(1), 0.0));
     seconds(&mut w, 1.0);
-    assert!((w.hp - 95.0).abs() < 0.002);
+    assert!((w.hp - (initial_hp - w.c.enemies[VAMPIRE].damage)).abs() < 0.002);
     assert_eq!(w.enemies[0].hp, w.c.enemies[VAMPIRE].hp);
     assert!(w.snapshot().enemy_effects[0].3);
     w.enemies[0].stun = 2.0;
@@ -1800,20 +1975,22 @@ fn vampire_drains_only_alive_unstunned_in_range_and_ignores_contact_thorns() {
 #[test]
 fn ray_has_visible_windup_and_can_be_killed_before_firing() {
     let mut w = active();
+    let initial_hp = w.hp;
     w.spawn(RAY, V::new(w.stat(1), 0.0));
     w.enemies[0].attack = 0.0;
     seconds(&mut w, 1.0);
-    assert_eq!(w.hp, 100.0);
+    assert_eq!(w.hp, initial_hp);
     assert!(w.snapshot().enemy_effects[0].1 > 0.0);
     assert!(w.hostile.is_empty());
     w.hit(0, 100.0, LIGHT);
     seconds(&mut w, 4.0);
-    assert_eq!(w.hp, 100.0);
+    assert_eq!(w.hp, initial_hp);
     let mut firing = active();
+    firing.c.upgrades[12].base = 0.0;
     firing.spawn(RAY, V::new(firing.stat(1), 0.0));
     firing.enemies[0].attack = 0.0;
     seconds(&mut firing, 4.0);
-    assert!((firing.hp - (100.0 - firing.c.enemies[RAY].damage)).abs() < 0.001);
+    assert!((firing.hp - (initial_hp - firing.c.enemies[RAY].damage)).abs() < 0.001);
 }
 
 #[test]
@@ -2423,6 +2600,7 @@ fn hook_children_share_parent_collision_size_and_never_rehit_origin() {
 #[test]
 fn ray_spin_accelerates_during_charge_and_is_exported_from_simulation() {
     let mut w = active();
+    let initial_hp = w.hp;
     w.spawn(RAY, V::new(w.stat(1), 0.0));
     w.enemies[0].attack = 0.0;
     w.advance(DT);
@@ -2438,7 +2616,7 @@ fn ray_spin_accelerates_during_charge_and_is_exported_from_simulation() {
         w.snapshot().ray_spins,
         vec![(w.enemies[0].id, w.enemies[0].spin)]
     );
-    assert!(w.hp == 100.0, "Spin-up precedes the shot");
+    assert_eq!(w.hp, initial_hp, "Spin-up precedes the shot");
 }
 
 #[test]

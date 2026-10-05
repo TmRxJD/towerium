@@ -291,8 +291,8 @@
     {
       "name": "Attack Speed",
       "group": "Attack",
-      "base": 1,
-      "step": 0.016666666666666666,
+      "base": 1.2,
+      "step": 0.025,
       "cap": 60,
       "unit": "",
       "description": "Projectiles, Light Speed and Hook Bomb fire faster. Smart Missiles stay at two per second.",
@@ -417,7 +417,7 @@
     {
       "name": "Multishot Chance",
       "group": "Attack",
-      "base": 0,
+      "base": 0.1,
       "step": 0.0175,
       "cap": 20,
       "unit": "%",
@@ -458,15 +458,15 @@
       "display_scale": 1,
       "cost_class": "milestone",
       "costs": [
-        95,
-        671,
-        128095
+        75,
+        530,
+        101195
       ]
     },
     {
       "name": "Rapid Fire Chance",
       "group": "Attack",
-      "base": 0,
+      "base": 0.01,
       "step": 0.005,
       "cap": 10,
       "unit": "%",
@@ -512,7 +512,7 @@
     {
       "name": "Bounce Shot Chance",
       "group": "Control",
-      "base": 0,
+      "base": 0.08,
       "step": 0.0175,
       "cap": 20,
       "unit": "%",
@@ -581,10 +581,10 @@
       "display_scale": 1,
       "cost_class": "milestone",
       "costs": [
-        86,
-        112,
-        3442,
-        128898
+        68,
+        88,
+        2719,
+        101829
       ]
     },
     {
@@ -651,7 +651,7 @@
     {
       "name": "Max HP",
       "group": "Survival",
-      "base": 100,
+      "base": 120,
       "step": 10,
       "cap": 80,
       "unit": "",
@@ -744,7 +744,7 @@
     {
       "name": "HP Regeneration",
       "group": "Survival",
-      "base": 0,
+      "base": 0.75,
       "step": 0.25,
       "cap": 60,
       "unit": "/s",
@@ -853,10 +853,10 @@
       "display_scale": 1,
       "cost_class": "milestone",
       "costs": [
-        143,
-        218,
-        11789,
-        426174
+        113,
+        172,
+        9313,
+        336677
       ]
     },
     {
@@ -1102,7 +1102,7 @@
         25301,
         40264
       ],
-      "description": "Power drops per kill, including passive kills."
+      "description": "Chance per kill, adjusted for wave density. Upgrades increase supply by the same proportion at every wave."
     },
     {
       "name": "Ammo Quantity",
@@ -1192,6 +1192,171 @@
         12171
       ],
       "description": "Extra health capacity for Recovery Packages."
+    },
+    {
+      "name": "Landmine Radius",
+      "group": "Defense",
+      "base": 90,
+      "step": 3,
+      "cap": 20,
+      "costs": [
+        25,
+        25,
+        28,
+        37,
+        59,
+        100,
+        166,
+        267,
+        411,
+        608,
+        869,
+        1203,
+        1622,
+        2138,
+        2764,
+        3512,
+        4395,
+        5428,
+        6625,
+        8000
+      ],
+      "cost_class": "medium",
+      "display_scale": 0.08333333333333333,
+      "unit": "m",
+      "description": "Increases landmine explosion radius."
+    },
+    {
+      "name": "Landmine Damage",
+      "group": "Defense",
+      "base": 5,
+      "step": 1,
+      "cap": 20,
+      "costs": [
+        30,
+        30,
+        35,
+        49,
+        81,
+        142,
+        242,
+        393,
+        610,
+        906,
+        1296,
+        1797,
+        2427,
+        3201,
+        4141,
+        5263,
+        6590,
+        8140,
+        9936,
+        12000
+      ],
+      "cost_class": "medium",
+      "display_scale": 1,
+      "unit": " Hits",
+      "description": "Adds one hit of landmine damage per level."
+    },
+    {
+      "name": "Wall HP",
+      "group": "Defense",
+      "base": 0,
+      "step": 50,
+      "cap": 30,
+      "costs": [
+        30,
+        30,
+        31,
+        34,
+        40,
+        51,
+        70,
+        99,
+        140,
+        196,
+        270,
+        365,
+        484,
+        631,
+        809,
+        1022,
+        1274,
+        1568,
+        1908,
+        2300,
+        2746,
+        3252,
+        3821,
+        4459,
+        5171,
+        5961,
+        6833,
+        7794,
+        8848,
+        10000
+      ],
+      "cost_class": "deep",
+      "display_scale": 1,
+      "unit": "",
+      "description": "Unlocks a wall that absorbs contact damage. Ranged attacks bypass it."
+    },
+    {
+      "name": "Wall Rebuild Time",
+      "group": "Defense",
+      "base": 30,
+      "step": -2,
+      "cap": 10,
+      "costs": [
+        40,
+        43,
+        71,
+        167,
+        389,
+        802,
+        1482,
+        2513,
+        3987,
+        6000
+      ],
+      "cost_class": "medium",
+      "display_scale": 1,
+      "unit": "s",
+      "description": "Time to rebuild a destroyed wall. Requires Wall HP."
+    },
+    {
+      "name": "Max Ammo Capacity",
+      "group": "Utility",
+      "base": 1,
+      "step": 0.2,
+      "cap": 20,
+      "costs": [
+        25,
+        25,
+        28,
+        37,
+        57,
+        95,
+        157,
+        252,
+        387,
+        572,
+        816,
+        1129,
+        1522,
+        2006,
+        2592,
+        3293,
+        4121,
+        5090,
+        6211,
+        7500
+      ],
+      "cost_class": "medium",
+      "display_scale": 100,
+      "unit": "%",
+      "description": "Raises every finite ammo reserve. Does not refill ammo."
     }
   ],
   "waves": {
@@ -11613,7 +11778,7 @@
       10,
       15
     ],
-    "drop_lifetime": 14,
+    "drop_lifetime": 22,
     "warning": 3,
     "recovery_fraction": 0.65,
     "chain_chance": 0.65,
@@ -11647,16 +11812,14 @@
     "spotlight_count": 3,
     "chrono_margin": 30,
     "swamp_stun": 0.35,
-    "swamp_stun_interval": 1.5
+    "swamp_stun_interval": 1.5,
+    "drop_reference_kills": 100
   },
   "defense": {
     "orb_radius": 160,
     "orb_damage": 8,
     "orb_hit_interval": 0.35,
-    "mine_damage": 5,
-    "mine_radius": 90,
     "mine_stun": 1.5,
-    "mine_lifetime": 18,
     "mine_cap": 60,
     "shock_force": 75,
     "protector_radius": 85,
@@ -11665,6 +11828,7 @@
     "mine_trigger_radius": 32
   },
   "projectile_lifetime": 2.5,
+  "direct_hit_padding": 4,
   "missile_turn_rate": 4.8,
   "child_damage": 20,
   "rapid_multiplier": 1.5,
@@ -11738,7 +11902,9 @@
     "death_penalty_chance": 0.05,
     "space_displacer_radius": 120,
     "space_displacer_speed": 70,
-    "galaxy_extension": 10
+    "pulsar_chance": 0.025,
+    "pulsar_reduction": 0.05,
+    "pulsar_min_multiplier": 0.25
   },
   "power_workshop": {
     "stones_per_enemy": [
@@ -11885,7 +12051,7 @@
           36,
           50
         ],
-        "unit": "\u00d7"
+        "unit": "×"
       },
       {
         "name": "Death Ray",
@@ -11937,7 +12103,7 @@
           36,
           50
         ],
-        "unit": "\u00d7"
+        "unit": "×"
       },
       {
         "name": "Recovery Package",
@@ -12041,7 +12207,7 @@
           36,
           50
         ],
-        "unit": "\u00d7"
+        "unit": "×"
       },
       {
         "name": "Demon Mode",
@@ -12067,7 +12233,7 @@
           36,
           50
         ],
-        "unit": "\u00d7"
+        "unit": "×"
       },
       {
         "name": "Death Penalty",
@@ -12119,10 +12285,10 @@
           36,
           50
         ],
-        "unit": "\u00d7"
+        "unit": "×"
       },
       {
-        "name": "Galaxy Compressor",
+        "name": "Pulsar Harvester",
         "weight": 1,
         "weight_step": 0.2,
         "weight_costs": [
@@ -12132,9 +12298,9 @@
           16,
           32
         ],
-        "effect_label": "Added Time",
-        "effect_base": 10,
-        "effect_step": 0.5,
+        "effect_label": "Hit Chance",
+        "effect_base": 0.025,
+        "effect_step": 0.0025,
         "effect_costs": [
           2,
           4,
@@ -12145,7 +12311,7 @@
           36,
           50
         ],
-        "unit": "s"
+        "unit": "%"
       },
       {
         "name": "Om Chip",
@@ -12171,7 +12337,7 @@
           36,
           50
         ],
-        "unit": "\u00d7"
+        "unit": "×"
       }
     ]
   }

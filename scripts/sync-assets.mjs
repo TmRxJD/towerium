@@ -30,7 +30,7 @@ const entries = [
   ['demon-wing','demon-wing-glow','unidentified','lg'],
   ['module-dp','death-penalty','modules'],
   ['module-sd','space-displacer','modules'],
-  ['module-gc','galaxy-compressor','modules'],
+  ['module-ph','pulsar-harvester','modules'],
   ['module-om','om-chip','modules'],
   ['coin','Coin','icons'],
   ['power-stone','coin_ultimate','icons'],

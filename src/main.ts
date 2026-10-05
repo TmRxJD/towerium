@@ -14,6 +14,7 @@ import { renderHelp, weaponNames } from './help';
 import { TouchControls } from './touch-controls';
 import { RunRetries, retryStorageKey } from './run-retries';
 import { createSaveCompatibility } from './save-compatibility';
+import { assistAim } from '../scripts/aim-assist.mjs';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
 const number=(n:number)=>formatNumberForDisplay(n,'Period (.)',{mode:'compact',smallNumberMaxFractionDigits:0,notationMaxFractionDigits:1});
@@ -39,7 +40,7 @@ let runRetries:RunRetries;
 let compatibleConfig:(config:unknown)=>boolean=config=>config===configJson;
 let postWaveView:'report'|'shop'='report';
 let shopCategory:'workshop'|'powers'='workshop',selectedPower=0;
-let autoPlayer:AutoPlayer|null=null;
+let autoPlayer:AutoPlayer|null=null,autoPreparing=false,autoStartWave=1;
 let humanGame:Game|null=null,humanSeed=seed;
 function resumeAudio(){void audio.resume().catch(error=>{console.error('Audio could not resume:',error);setText('notice','Audio Unavailable');});}
 function saveRun() {
@@ -56,22 +57,25 @@ function showIntro(){
   el('intro').innerHTML=`<img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2>${savedRun?'<button id="restore-run" class="primary">Resume Run</button>':'<button id="start" class="primary">Play</button>'}<div class="intro-options">${savedRun?'<button id="new-run" class="quiet">New Run</button>':''}${retry}${milestone?`<button id="milestone-run" class="secondary" title="Empty Shops With Coin And Power Stone Budgets">Fresh Wave ${milestone}<small>Empty Shops + Budget</small></button>`:''}<button id="auto-play" class="secondary">Auto Play</button></div>`;
 }
 function configureAutoPlay(){
-  modalContent('<div class="modal-top"><h2 id="modal-title">Auto Play</h2></div><div class="auto-settings"><label>Build<select id="auto-build"><option value="balanced">Balanced</option><option value="offense">Offense</option><option value="defense">Defense</option><option value="economy">Economy</option></select></label><label>Aim<select id="auto-aim"><option value="nearest">Closest Threat</option><option value="priority">Priority Targets</option><option value="circle">Circle Sweep</option></select></label><label>Weapons<select id="auto-weapons"><option value="all">All Weapons</option><option value="projectile">Primary Only</option><option value="light">Favor Light Speed</option><option value="missile">Favor Smart Missiles</option><option value="hook">Favor Hook Bomb</option><option value="rotate">Rotate Weapons</option></select></label></div><div class="modal-actions"><button id="cancel-auto-play" class="quiet">Cancel</button><button id="watch-auto-play" class="primary">Watch</button></div>');
+  modalContent('<div class="modal-top"><h2 id="modal-title">Auto Play</h2></div><div class="auto-settings"><label>Start Wave<input id="auto-start-wave" type="number" min="1" max="10000" step="1" value="1" required></label><label>Reaction Delay (ms)<input id="auto-reaction" type="number" min="0" max="2000" step="10" value="250" required></label><label>Aim Speed (Battlefield Pixels/s)<input id="auto-speed" type="number" min="50" max="10000" step="50" value="900" required></label><label>Weapon Switch Delay (ms)<input id="auto-switch" type="number" min="0" max="2000" step="10" value="200" required></label><label>Build<select id="auto-build"><option value="balanced">Balanced</option><option value="offense">Offense</option><option value="defense">Defense</option><option value="economy">Economy</option></select></label><label>Aim<select id="auto-aim"><option value="nearest">Closest Threat</option><option value="priority">Priority Targets</option><option value="circle">Circle Sweep</option></select></label><label>Weapons<select id="auto-weapons"><option value="all">All Weapons</option><option value="projectile">Primary Only</option><option value="light">Favor Light Speed</option><option value="missile">Favor Smart Missiles</option><option value="hook">Favor Hook Bomb</option><option value="rotate">Rotate Weapons</option></select></label></div><div class="modal-actions"><button id="cancel-auto-play" class="quiet">Cancel</button><button id="watch-auto-play" class="primary">Prepare Build</button></div>');
+  if(touchDevice){el<HTMLInputElement>('auto-reaction').value='400';el<HTMLInputElement>('auto-speed').value='550';el<HTMLInputElement>('auto-switch').value='300';}
 }
 function startAutoPlay(){
   if(autoPlayer || snapshot.phase!==0)return;
-  humanGame=game;humanSeed=seed;autoPlayer=new AutoPlayer(el<HTMLSelectElement>('auto-build').value,el<HTMLSelectElement>('auto-aim').value,el<HTMLSelectElement>('auto-weapons').value);
-  seed=crypto.getRandomValues(new Uint32Array(1))[0];game=new Game(seed,configJson);
-  firing=false;weapon=0;uiPhase=-1;resultSent=false;read();startWave();
+  for(const field of modal.querySelectorAll<HTMLInputElement>('input'))if(!field.reportValidity())return;
+  autoStartWave=Number(el<HTMLInputElement>('auto-start-wave').value);
+  humanGame=game;humanSeed=seed;autoPlayer=new AutoPlayer(el<HTMLSelectElement>('auto-build').value,el<HTMLSelectElement>('auto-aim').value,el<HTMLSelectElement>('auto-weapons').value,{reactionMs:Number(el<HTMLInputElement>('auto-reaction').value),aimSpeed:Number(el<HTMLInputElement>('auto-speed').value),switchMs:Number(el<HTMLInputElement>('auto-switch').value),assistPixels:touchDevice?14:0,arenaWidth:canvas.clientWidth});
+  seed=crypto.getRandomValues(new Uint32Array(1))[0];game=Game.autoplay_start(seed,configJson,autoStartWave);autoPreparing=true;
+  firing=false;weapon=0;uiPhase=-1;resultSent=false;read();postWaveView='shop';syncPhase();updateHud();
 }
 function stopAutoPlay(){
   if(!autoPlayer || !humanGame)return;
-  audio.pause();game.free();game=humanGame;humanGame=null;seed=humanSeed;autoPlayer=null;
+  audio.pause();game.free();game=humanGame;humanGame=null;seed=humanSeed;autoPlayer=null;autoPreparing=false;
   firing=false;weapon=0;helpOpen=false;restartPrompt=false;uiPhase=-1;last=0;resultSent=false;
   closeModal();read();syncPhase();updateHud();showIntro();el('auto-play').focus();
 }
 function runAutoPlayer(dt:number){
-  if(!autoPlayer || helpOpen || restartPrompt)return;
+  if(!autoPlayer || autoPreparing || helpOpen || restartPrompt)return;
   const action=autoPlayer.update(snapshot,dt);if(!action)return;
   if(action.kind==='combat'){
     aim=action.aim;weapon=action.weapon;firing=action.fire;input();
@@ -132,7 +136,7 @@ app.innerHTML=`
         <span id="run-mode" class="auto-badge" hidden>Auto Play</span><div class="hud">
           <div class="wave-stat"><span class="eyebrow">WAVE</span><strong id="wave">01</strong><span id="wave-timer" aria-label="Wave Timer">00:00</span></div>
           <div class="health-stat"><div class="stat-label"><span>HP</span><strong id="health-text">100 / 100</strong></div><div class="health-track" role="meter" aria-label="Tower health" aria-valuemin="0" aria-valuemax="200" aria-valuenow="100"><span id="health-fill"></span><span id="overheal-fill"></span></div></div>
-          <div class="coin-stat" title="Coins">${coinIcon}<strong id="coins" aria-label="Coins">0</strong></div>
+          <div class="coin-stat" title="Coins">${coinIcon}<strong id="coins" aria-label="Coins">0</strong><span class="stone-balance" title="Power Stones">${stoneIcon}<strong id="stones" aria-label="Power Stones">0</strong></span></div>
         </div>
         <div class="arena-wrap">
           <canvas id="arena" width="1100" height="1100" tabindex="0" aria-label="Tower battlefield. Mouse aims; hold to fire. On touch, use Trackpad Aim and Fire below the battlefield. Arrow keys aim; Space fires. Weapons 1 through 4 or mouse wheel; Q or right click for Death Wave."></canvas>
@@ -157,6 +161,7 @@ touchControls=new TouchControls(el('touch-controls'),canvas,{
   fire:held=>{firing=held;if(game)input();if(held)resumeAudio();},
   weapon:()=>weapon,
   spent:()=>snapshot?.weapon_report[3].ammo_spent??0,
+  scale:()=>renderer?.worldExtent??650,
 });
 const setText=(id:string,text:string)=>{const node=el(id);if(node.textContent!==text)node.textContent=text;};
 function post(type:string,payload:Record<string,unknown>={}) {
@@ -168,8 +173,9 @@ function post(type:string,payload:Record<string,unknown>={}) {
 function read() {snapshot=JSON.parse(game.snapshot()) as Snapshot;return snapshot;}
 // Read-only diagnostics for integration tests. No test-only simulation controls.
 export function getRenderSnapshot():Snapshot {return JSON.parse(game.snapshot()) as Snapshot;}
-export function getControlState(){return {aim:[...aim],firing,weapon};}
-function input() {game.input(...aim,firing,weapon);}
+export function getControlState(){return {aim:[...aim],effectiveAim:[...displayedAim()],firing,weapon};}
+function displayedAim():[number,number] {return touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;}
+function input() {game.input(...displayedAim(),firing,weapon);}
 function canFireWeapon(){return !!snapshot&&snapshot.disabled_weapon!==weapon&&(weapon===0||snapshot.ammo[weapon]>0);}
 function stopFiring() {touchControls.reset();firing=false;if(game)input();}
 function selectWeapon(index:number) {if(snapshot.disabled_weapon===index)return;if(index!==weapon)touchControls.releaseFire();weapon=index;input();read();updateHud();}
@@ -181,12 +187,12 @@ function pause(show=true) {
   if(show && !helpOpen)modalContent(`<div class="modal-top"><h2 id="modal-title">Paused</h2></div><div class="modal-actions"><button class="quiet" id="request-restart">${autoPlayer?'Restart Auto Play':'Restart'}</button>${autoPlayer?'<button class="quiet" id="stop-auto-play">Stop Auto Play</button>':''}<button class="primary" id="resume">Resume</button></div>`);
 }
 function resume() {helpOpen=false;closeModal();game.pause(false);stopFiring();resumeAudio();last=0;read();updateHud();if(snapshot.phase===2)returnRunScreen();else canvas.focus({preventScroll:true});}
-function startWave() {closeModal();helpOpen=false;if(game.start_wave()){resumeAudio();last=0;read();syncPhase();updateHud();saveRun();canvas.focus({preventScroll:true});}}
+function startWave() {autoPreparing=false;closeModal();helpOpen=false;if(game.start_wave()){resumeAudio();last=0;read();syncPhase();updateHud();saveRun();canvas.focus({preventScroll:true});}}
 function restart() {
   restartPrompt=false;
-  if(!autoPlayer){savedRun=null;runRetries.reset();}else autoPlayer=new AutoPlayer(autoPlayer.strategy,autoPlayer.aim,autoPlayer.weapons);
-  closeModal();game.free();seed=crypto.getRandomValues(new Uint32Array(1))[0];game=new Game(seed,configJson);
-  aim=[0,-220];weapon=0;firing=false;resultSent=false;uiPhase=-1;read();startWave();
+  if(!autoPlayer){savedRun=null;runRetries.reset();}else autoPlayer=new AutoPlayer(autoPlayer.strategy,autoPlayer.aim,autoPlayer.weapons,autoPlayer.options);
+  closeModal();game.free();seed=crypto.getRandomValues(new Uint32Array(1))[0];game=autoPlayer?Game.autoplay_start(seed,configJson,autoStartWave):new Game(seed,configJson);autoPreparing=!!autoPlayer;
+  aim=[0,-220];weapon=0;firing=false;resultSent=false;uiPhase=-1;read();if(autoPreparing){postWaveView='shop';syncPhase();updateHud();}else startWave();
 }
 function help() {
   const live=snapshot.phase===1;helpOpen=true;if(live)pause(false);
@@ -199,6 +205,7 @@ function statText(value:number,index:number) {
   if(index===13)return `${formatted} ${n===1?'Hit':'Hits'}`;
   return `${index===20?'+':''}${formatted}${u.unit}`;
 }
+function wallet(){return `<div class="shop-wallet" aria-label="Balances"><span title="Coins">${coinIcon}<strong>${number(snapshot.coins)}</strong></span><span title="Power Stones">${stoneIcon}<strong>${number(snapshot.stones)}</strong></span></div>`;}
 function shopSoundButtons() {
   return ['music','effects'].map(id=>{
     const original=el<HTMLButtonElement>(id).cloneNode(true) as HTMLButtonElement;
@@ -227,7 +234,7 @@ function runFooter(ended=false) {
   const pauseOrRestart=ended?'':autoPlayer?'<button id="auto-pause" class="quiet">Pause</button>':'<button id="request-restart" class="quiet">Restart</button>';
   let actions=ended
     ? autoPlayer?'<button class="secondary" id="stop-auto-play">Stop Auto Play</button><button class="primary" id="restart">Watch Again</button>':'<button class="primary" id="restart">Play Again</button>'
-    : navigation+`<button id="next-wave" class="primary" ${autoPlayer?'disabled title="Auto Play Starts The Next Wave"':''}>Next Wave →</button>`;
+    : navigation+`<button id="next-wave" class="primary" ${autoPlayer&&!autoPreparing?'disabled title="Auto Play Starts The Next Wave"':''}>Next Wave →</button>`;
   if(ended&&!autoPlayer&&runRetries.available&&runRetries.checkpoint?.seed===seed)actions=`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint.wave} · ${3-runRetries.used} Left</button>`+actions;
   if(ended&&!autoPlayer&&cosmetics.completed>=50)actions=`<button id="milestone-run" class="secondary">Fresh Wave ${Math.floor(cosmetics.completed/50)*50}</button>`+actions;
   if(!ended&&snapshot.pending_start_wave>0)actions=`<button id="next-wave" class="primary">Start Wave ${snapshot.pending_start_wave} →</button>`;
@@ -240,7 +247,7 @@ function renderReport() {
   if(snapshot.pending_start_wave>0){renderShop();return;}
   postWaveView='report';
   if(!autoPlayer)cosmetics.clear(snapshot.wave);
-  modalContent(`<div class="shop-heading"><h2 id="modal-title">Wave ${snapshot.wave} Cleared</h2><div class="shop-wallet">${coinIcon}<strong>${number(snapshot.coins)}</strong></div></div><div class="report-body">${reportSection('This Wave',snapshot.wave_report,'wave-report-heading')}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter()}`);
+  modalContent(`<div class="shop-heading"><h2 id="modal-title">Wave ${snapshot.wave} Cleared</h2>${wallet()}</div><div class="report-body">${reportSection('This Wave',snapshot.wave_report,'wave-report-heading')}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter()}`);
   modal.classList.add('report-modal');
 }
 function renderShop() {
@@ -248,12 +255,12 @@ function renderShop() {
   if(!autoPlayer)cosmetics.clear(snapshot.wave);
   const categories=`<div class="shop-categories" role="group" aria-label="Shop Category"><button id="category-workshop" class="secondary" aria-pressed="${shopCategory==='workshop'}">Workshop</button><button id="category-powers" class="secondary" aria-pressed="${shopCategory==='powers'}">Powerups</button></div>`;
   if(shopCategory==='powers'){
-    modalContent(`<div class="shop-heading"><h2 id="modal-title" class="sr-only">Powerups</h2>${categories}<div class="shop-wallet stone-wallet">${stoneIcon}<strong>${number(snapshot.stones)}</strong><span class="wallet-label">Stones</span></div></div><div class="shop-body">${powerShop(snapshot,selectedPower,!!autoPlayer)}</div>${runFooter()}`);
+    modalContent(`<div class="shop-heading"><h2 id="modal-title" class="sr-only">Powerups</h2>${categories}${wallet()}</div><div class="shop-body">${powerShop(snapshot,selectedPower,!!autoPlayer&&!autoPreparing)}</div>${runFooter()}`);
     modal.classList.add('shop-modal');return;
   }
-  modalContent(`<div class="shop-heading"><h2 id="modal-title" class="sr-only">${snapshot.pending_start_wave>0?`Build For Wave ${snapshot.pending_start_wave}`:'Workshop'}</h2>${categories}<div class="shop-wallet">${coinIcon}<strong>${number(snapshot.coins)}</strong></div></div><div class="shop-body"><div class="upgrade-grid">${workshop.map((item,position)=>{const i=item.index,u=balance.upgrades[i];
+  modalContent(`<div class="shop-heading"><h2 id="modal-title" class="sr-only">${snapshot.pending_start_wave>0?`Build For Wave ${snapshot.pending_start_wave}`:'Workshop'}</h2>${categories}${wallet()}</div><div class="shop-body"><div class="upgrade-grid">${workshop.map((item,position)=>{const i=item.index,u=balance.upgrades[i];
     const capped=snapshot.levels[i]>=u.cap,afford=snapshot.coins>=snapshot.costs[i];
-    return `<button class="upgrade" data-upgrade="${i}" title="${autoPlayer?'Auto Play Chooses Upgrades':capped?'Maximum Level':!afford?'Not Enough Coins':item.label}" ${autoPlayer||capped||!afford?'disabled':''} aria-label="Buy ${item.label} for ${snapshot.costs[i]} coins"><span class="upgrade-title"><img src="${workshopUrls[position]}" width="20" height="20" alt=""><strong>${item.label}</strong></span><div class="upgrade-bottom"><span><span class="upgrade-value">${statText(snapshot.values[i],i)}</span>${capped?'':' <span class="upgrade-value upgrade-preview">→ '+statText(snapshot.values[i]+u.step,i)+'</span>'}</span><b>${capped?'MAX':coinIcon+number(snapshot.costs[i])}</b></div></button>`;
+    return `<button class="upgrade" data-upgrade="${i}" title="${autoPlayer&&!autoPreparing?'Auto Play Chooses Upgrades':capped?'Maximum Level':!afford?'Not Enough Coins':item.label}" ${autoPlayer&&!autoPreparing||capped||!afford?'disabled':''} aria-label="Buy ${item.label} for ${snapshot.costs[i]} coins"><span class="upgrade-title"><img src="${workshopUrls[position]}" width="20" height="20" alt=""><strong>${item.label}</strong></span><div class="upgrade-bottom"><span><span class="upgrade-value">${statText(snapshot.values[i],i)}</span>${capped?'':' <span class="upgrade-value upgrade-preview">→ '+statText(snapshot.values[i]+u.step*(i===21?snapshot.power_drop_scale:1),i)+'</span>'}</span><b>${capped?'MAX':coinIcon+number(snapshot.costs[i])}</b></div></button>`;
   }).join('')}</div></div>${runFooter()}`);
   modal.classList.add('shop-modal');
 }
@@ -297,7 +304,7 @@ function updateHud() {
   touchControls.update(mobile&&snapshot.phase===1&&!snapshot.paused&&!modal.open,canFireWeapon());
   const s=snapshot;
   el('run-mode').hidden=!autoPlayer;
-  setText('wave',String(s.wave||1).padStart(2,'0'));setText('coins',number(s.coins));
+  setText('wave',String(s.wave||1).padStart(2,'0'));setText('coins',number(s.coins));setText('stones',number(s.stones));
   const cleanup=s.wave_time>=balance.waves.spawn_seconds;
   setText('wave-timer',cleanup?`+${clock(s.cleanup_seconds)}`:clock(s.wave_time));
   el('wave-timer').title=cleanup?'Cleanup':'Wave Timer';
@@ -326,8 +333,8 @@ document.addEventListener('click',event=>{
   if(button.dataset.weapon!==undefined&&!autoPlayer){selectWeapon(Number(button.dataset.weapon));return;}
   if(button.dataset.skin!==undefined&&!autoPlayer){if(cosmetics.select(Number(button.dataset.skin))){renderer.skin=cosmetics.selected;returnRunScreen();el('shop-skins').focus({preventScroll:true});}return;}
   if(button.dataset.powerSelect!==undefined){selectedPower=Number(button.dataset.powerSelect);renderShop();modal.querySelector<HTMLButtonElement>(`[data-power-select="${selectedPower}"]`)?.focus({preventScroll:true});return;}
-  if(button.dataset.powerBuy!==undefined&&!autoPlayer){const power=Number(button.dataset.powerBuy),path=Number(button.dataset.powerPath);if(game.buy_power(power,path)){read();saveRun();renderShop();const next=modal.querySelector<HTMLButtonElement>(`[data-power-buy="${power}"][data-power-path="${path}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else modal.querySelector<HTMLButtonElement>(`[data-power-select="${power}"]`)?.focus({preventScroll:true});updateHud();}return;}
-  if(button.dataset.upgrade!==undefined&&!autoPlayer){const id=Number(button.dataset.upgrade);if(game.buy(id)){read();saveRun();const top=modal.querySelector('.shop-body')?.scrollTop??0;renderShop();const body=modal.querySelector('.shop-body');if(body)body.scrollTop=top;const next=modal.querySelector<HTMLButtonElement>(`[data-upgrade="${id}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else el('next-wave').focus({preventScroll:true});updateHud();}return;}
+  if(button.dataset.powerBuy!==undefined&&(!autoPlayer||autoPreparing)){const power=Number(button.dataset.powerBuy),path=Number(button.dataset.powerPath);if(game.buy_power(power,path)){read();saveRun();renderShop();const next=modal.querySelector<HTMLButtonElement>(`[data-power-buy="${power}"][data-power-path="${path}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else modal.querySelector<HTMLButtonElement>(`[data-power-select="${power}"]`)?.focus({preventScroll:true});updateHud();}return;}
+  if(button.dataset.upgrade!==undefined&&(!autoPlayer||autoPreparing)){const id=Number(button.dataset.upgrade);if(game.buy(id)){read();saveRun();const top=modal.querySelector('.shop-body')?.scrollTop??0;renderShop();const body=modal.querySelector('.shop-body');if(body)body.scrollTop=top;const next=modal.querySelector<HTMLButtonElement>(`[data-upgrade="${id}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else el('next-wave').focus({preventScroll:true});updateHud();}return;}
   switch(button.id){
     case 'auto-play':configureAutoPlay();break;
     case 'watch-auto-play':startAutoPlay();break;
@@ -335,7 +342,7 @@ document.addEventListener('click',event=>{
     case 'stop-auto-play':stopAutoPlay();break;
     case 'auto-pause':snapshot.paused?resume():pause();break;
     case 'start':if(!autoPlayer){runRetries.reset();startWave();}break;
-    case 'next-wave':if(!autoPlayer)startWave();break;
+    case 'next-wave':if(!autoPlayer||autoPreparing)startWave();break;
     case 'retry-run':retryRun();break;
     case 'milestone-run':milestoneRun();break;
     case 'pause':snapshot.paused?resume():pause();break;
@@ -395,7 +402,13 @@ window.addEventListener('message',e=>{if(e.source===window.parent && e.origin===
 window.addEventListener('pagehide',()=>{cancelAnimationFrame(animation);audio.pause();stopFiring();saveRun();});
 window.addEventListener('pageshow',e=>{if(e.persisted){last=0;animation=requestAnimationFrame(frame);}});
 let backgroundLast=performance.now();
-function stepGame(dt:number){runAutoPlayer(dt);game.advance(dt);read();syncPhase();}
+let autoAccumulator=0;
+function stepGame(dt:number){
+  if(autoPlayer&&!autoPreparing){
+    autoAccumulator+=dt;
+    while(autoAccumulator+1e-8>=1/60){autoAccumulator-=1/60;runAutoPlayer(1/60);game.advance(1/60);read();syncPhase();}
+  }else{autoAccumulator=0;if(touchDevice&&firing)input();game.advance(dt);read();syncPhase();}
+}
 // Hidden tabs suspend animation frames. Catch up in bounded native steps instead.
 window.setInterval(()=>{
   const now=performance.now(),elapsed=(now-backgroundLast)/1000;backgroundLast=now;
@@ -406,7 +419,7 @@ window.setInterval(()=>{
 function frame(now:number) {
   if(autoPlayer&&document.hidden){last=0;animation=requestAnimationFrame(frame);return;}
   const dt=last?Math.min((now-last)/1000,0.1):0;last=now;
-  stepGame(dt);renderer.draw(snapshot,aim,dt);audio.update(snapshot);
+  stepGame(dt);renderer.draw(snapshot,displayedAim(),dt);audio.update(snapshot);
   if(firing&&!snapshot.paused&&snapshot.phase===1&&snapshot.fx.some(f=>f[0]===0))audio.shot(snapshot.time,weapon);
   touchControls.finishShot();
   if(now-lastSave>1000){saveRun();lastSave=now;}

@@ -161,7 +161,7 @@ fn malformed_power_prices_effects_and_weights_fail_schema_validation() {
         assert!(Config::parse(&data.to_string()).is_err());
     }
     let mut timing = original.clone();
-    timing["powers"]["demon_drop_interval"] = serde_json::json!(30);
+    timing["powers"]["demon_drop_interval"] = serde_json::json!(0);
     assert!(Config::parse(&timing.to_string()).is_err());
     let mut data = original;
     data["power_workshop"]["upgrades"][0]["weight_costs"] = serde_json::json!([2, 1]);
@@ -204,14 +204,11 @@ fn demon_strength_applies_to_death_wave_and_orbs_can_generate_displaced_mines() 
 }
 
 #[test]
-fn demon_generation_interval_bounds_gc_invisibility_extension_loop() {
+fn demon_invulnerability_is_bounded_by_the_power_cooldown() {
     let c = Config::standard();
-    let gc = &c.power_workshop.upgrades[14];
-    let extension = gc.effect_base + gc.effect_step * gc.effect_costs.len() as f32;
-    let duty = (c.powers.demon_invincible_duration + extension) / c.powers.demon_drop_interval
-        + extension / c.modules.durations[2];
+    let duty = c.powers.demon_invincible_duration / c.powers.demon_drop_interval;
     assert!(
         duty < 0.9,
-        "GC expiry/reactivation must not support permanent Demon invulnerability: {duty}"
+        "Demon invulnerability must remain below its minimum cooldown: {duty}"
     );
 }

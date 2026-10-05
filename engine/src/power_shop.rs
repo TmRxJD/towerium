@@ -42,7 +42,7 @@ impl PowerWorkshop {
             (1.0, 3.0),
             (0.0, 0.1),
             (1.0, 2.0),
-            (1.0, 15.0),
+            (0.0, 0.1),
             (1.0, 1.5),
         ];
         let bases = effect_bases(c);
@@ -79,16 +79,6 @@ impl PowerWorkshop {
         {
             return Err("Invalid Power Stone rewards".into());
         }
-        let gc = &self.upgrades[14];
-        let maximum_extension = gc.effect_base + gc.effect_step * gc.effect_costs.len() as f32;
-        let invulnerability_duty = (c.powers.demon_invincible_duration + maximum_extension)
-            / c.powers.demon_drop_interval
-            + maximum_extension / c.modules.durations[2];
-        if invulnerability_duty >= 1.0 {
-            return Err(
-                "Galaxy Compressor and Demon timing permit permanent invulnerability".into(),
-            );
-        }
         Ok(())
     }
 }
@@ -109,7 +99,7 @@ fn effect_bases(c: &Config) -> [f32; 16] {
         c.powers.demon_damage_multiplier,
         c.modules.death_penalty_chance,
         1.0,
-        c.modules.galaxy_extension,
+        c.modules.pulsar_chance,
         1.0,
     ]
 }

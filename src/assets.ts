@@ -6,7 +6,7 @@ export const workshop=workshopCatalog;
 export const skins=catalog.skins;
 export const enemyNames = balance.enemies.map(enemy => enemy.name);
 export { powers as powerNames } from '../scripts/playtest-policy.mjs';
-const powerArt = ['Weapon Chain Lightning', 'Weapon Chrono Field', 'Weapon Swamp', 'Weapon Black Hole', 'Weapon Spotlight', 'Death Ray', 'Weapon Golden Tower', 'Recovery Package', 'Weapon Death Wave','Shield','protector-nuke','demon-mode','death-penalty','space-displacer','galaxy-compressor','om-chip'];
+const powerArt = ['Weapon Chain Lightning', 'Weapon Chrono Field', 'Weapon Swamp', 'Weapon Black Hole', 'Weapon Spotlight', 'Death Ray', 'Weapon Golden Tower', 'Recovery Package', 'Weapon Death Wave','Shield','protector-nuke','demon-mode','death-penalty','space-displacer','pulsar-harvester','om-chip'];
 const base = `${import.meta.env.BASE_URL}tower-assets`;
 export const assetUrl = (name:string, domain:string, size:'md'|'lg'='md'):string => {
   const url=towerAssetUrl(gameAssetPath(name, { domain, size }),base);

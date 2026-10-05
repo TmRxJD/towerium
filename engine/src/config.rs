@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const ENEMY_COUNT: usize = 13;
-pub const UPGRADE_COUNT: usize = 25;
+pub const UPGRADE_COUNT: usize = 30;
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -165,6 +165,7 @@ impl Waves {
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Powers {
+    pub drop_reference_kills: f32,
     pub durations: [f32; 7],
     pub drop_lifetime: f32,
     pub warning: f32,
@@ -208,10 +209,7 @@ pub struct Defense {
     pub orb_radius: f32,
     pub orb_damage: f32,
     pub orb_hit_interval: f32,
-    pub mine_damage: f32,
-    pub mine_radius: f32,
     pub mine_stun: f32,
-    pub mine_lifetime: f32,
     pub mine_cap: usize,
     pub shock_force: f32,
     pub protector_radius: f32,
@@ -248,7 +246,9 @@ pub struct Modules {
     pub death_penalty_chance: f32,
     pub space_displacer_radius: f32,
     pub space_displacer_speed: f32,
-    pub galaxy_extension: f32,
+    pub pulsar_chance: f32,
+    pub pulsar_reduction: f32,
+    pub pulsar_min_multiplier: f32,
 }
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -262,6 +262,7 @@ pub struct Config {
     pub defense: Defense,
     pub specials: Specials,
     pub projectile_lifetime: f32,
+    pub direct_hit_padding: f32,
     pub missile_turn_rate: f32,
     pub child_damage: f32,
     pub bomb_radius: f32,
@@ -309,7 +310,11 @@ impl Config {
             || c.modules.space_displacer_radius <= c.tower_radius
             || c.modules.space_displacer_radius >= c.defense.orb_radius
             || c.modules.space_displacer_speed <= 0.0
-            || c.modules.galaxy_extension <= 0.0
+            || !(0.0..=1.0).contains(&c.modules.pulsar_chance)
+            || !(0.0..1.0).contains(&c.modules.pulsar_reduction)
+            || c.modules.pulsar_reduction <= 0.0
+            || !(0.0..=1.0).contains(&c.modules.pulsar_min_multiplier)
+            || c.modules.pulsar_min_multiplier <= 0.0
             || c.coin_multipliers.iter().any(|m| !(1.0..=2.0).contains(m))
         {
             return Err("Invalid module or coin bonus settings".into());
@@ -391,12 +396,15 @@ fn validate_stat_domains(c: &Config) -> Result<(), String> {
         let u = &c.upgrades[i];
         [u.base, u.base + u.step * u.cap as f32]
     };
-    for i in [0, 1, 3, 8, 11, 18, 19, 22] {
+    for i in [0, 1, 3, 8, 11, 18, 19, 22, 25, 26, 28, 29] {
         if endpoints(i).iter().any(|v| *v <= 0.0) {
             return Err(format!("{} must stay positive", c.upgrades[i].name));
         }
     }
-    if endpoints(1).iter().any(|v| *v <= c.tower_radius) {
+    if endpoints(1)
+        .iter()
+        .any(|v| *v <= c.tower_radius || *v > 1000.0)
+    {
         return Err("Range must extend beyond the Tower".into());
     }
     for i in [2, 4, 6, 9, 16, 21, 23] {
@@ -415,6 +423,14 @@ fn validate_stat_domains(c: &Config) -> Result<(), String> {
         || c.upgrades[18].base + c.upgrades[18].step * c.upgrades[18].cap as f32 <= 0.0
     {
         return Err("Invalid defense baseline".into());
+    }
+    if c.upgrades[27].base != 0.0
+        || c.upgrades[27].step <= 0.0
+        || endpoints(25).iter().any(|v| *v > 250.0)
+        || endpoints(29).iter().any(|v| !(1.0..=10.0).contains(v))
+        || c.direct_hit_padding > 16.0
+    {
+        return Err("Invalid workshop or hitbox bounds".into());
     }
     Ok(())
 }
@@ -448,6 +464,7 @@ fn validate_effects(c: &Config) -> Result<(), String> {
         p.demon_invincible_duration,
         p.demon_damage_multiplier,
         p.demon_drop_interval,
+        p.drop_reference_kills,
         p.swamp_damage,
         p.swamp_hit_interval,
         p.swamp_stun,
@@ -466,10 +483,7 @@ fn validate_effects(c: &Config) -> Result<(), String> {
         d.orb_radius,
         d.orb_damage,
         d.orb_hit_interval,
-        d.mine_damage,
-        d.mine_radius,
         d.mine_stun,
-        d.mine_lifetime,
         d.shock_force,
         d.protector_radius,
         d.mine_trigger_radius,
@@ -484,6 +498,7 @@ fn validate_effects(c: &Config) -> Result<(), String> {
         c.specials.overcharge_speed,
         c.specials.superboss_deathwave_damage,
         c.projectile_lifetime,
+        c.direct_hit_padding,
         c.missile_turn_rate,
         c.child_damage,
         c.bomb_radius,
@@ -521,6 +536,7 @@ fn validate_timing(c: &Config) -> Result<(), String> {
         || p.swamp_cap > 8
         || p.fallout_attack_multiplier > 1.0
         || p.demon_invincible_duration > p.demon_duration
+        || p.drop_reference_kills > 1000.0
         || p.demon_drop_interval <= p.demon_invincible_duration
         || p.demon_damage_multiplier < 1.0
         || c.specials.sabotage_duration >= c.specials.sabotage_cooldown

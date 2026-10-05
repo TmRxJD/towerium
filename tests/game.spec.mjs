@@ -240,14 +240,15 @@ test('mobile controls preserve aim, separate hold fire, and fit portrait and lan
   const cdp=await context.newCDPSession(page);
   const aimPoint={id:1,x:pad.x+pad.width/2,y:pad.y+pad.height/2};
   const initial=await readControlState(page),arena=await page.locator('#arena').boundingBox();
+  const viewExtent=(await readSnapshot(page)).view_extent*2;
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[aimPoint]});
   expect((await readControlState(page)).aim).toEqual(initial.aim);
   const initialAmmo=Number(await page.locator('#ammo-1').textContent());
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...aimPoint,x:aimPoint.x+24,y:aimPoint.y-16}]});
   const moved=await readControlState(page);
   expect(moved.aim).not.toEqual(initial.aim);expect(moved.firing).toBe(false);
-  expect(moved.aim[0]-initial.aim[0]).toBeCloseTo(24*1100/arena.width,1);
-  expect(moved.aim[1]-initial.aim[1]).toBeCloseTo(-16*1100/arena.width,1);
+  expect(moved.aim[0]-initial.aim[0]).toBeCloseTo(24*viewExtent/arena.width,1);
+  expect(moved.aim[1]-initial.aim[1]).toBeCloseTo(-16*viewExtent/arena.width,1);
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   expect((await readControlState(page)).aim).toEqual(moved.aim);
   expect(Number(await page.locator('#ammo-1').textContent())).toBe(initialAmmo);
@@ -297,6 +298,43 @@ test('mobile controls preserve aim, separate hold fire, and fit portrait and lan
   await context.close();
 });
 
+test('held touch aim snaps to a nearby live enemy without changing raw aim',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const page=await context.newPage();
+  await page.goto('/?seed=42');
+  const saved=await page.evaluate(async()=>{
+    const {default:init,Game}=await import('/src/wasm/towerium.js');await init();
+    const config=await(await fetch('/engine/balance.json')).json(),game=new Game(42,JSON.stringify(config));
+    game.start_wave();let state=JSON.parse(game.snapshot());
+    for(let frame=0;frame<600&&state.enemies.length===0;frame++){
+      game.advance(1/60);state=JSON.parse(game.snapshot());
+    }
+    const record=JSON.parse(game.save());game.free();
+    if(!record.world.enemies.length)throw new Error('Touch-snap fixture wave did not spawn a live enemy');
+    record.world.enemies.forEach((enemy,index)=>{enemy.p={x:0,y:index===0?-210:500};});
+    record.world.drops=[];
+    return {seed:42,config:JSON.stringify(config),state:JSON.stringify(record)};
+  });
+  await page.addInitScript(saved=>localStorage.setItem('towerium.run.v1',JSON.stringify(saved)),saved);
+  await page.reload();await page.locator('#restore-run').click();
+  await page.getByRole('dialog').getByRole('button',{name:'Resume',exact:true}).click();
+  const arena=await page.locator('#arena').boundingBox(),pad=await page.locator('#aim-pad').boundingBox(),fire=await page.locator('#touch-fire').boundingBox();
+  const cdp=await context.newCDPSession(page),aimPoint={id:31,x:pad.x+pad.width/2,y:pad.y+pad.height/2},firePoint={id:32,x:fire.x+fire.width/2,y:fire.y+fire.height/2};
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[aimPoint]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[aimPoint,firePoint]});
+  const snapped=await readControlState(page),nearby=await readSnapshot(page);
+  expect(snapped.firing).toBe(true);expect(snapped.aim).toEqual([0,-220]);
+  const liveTarget=nearby.enemies.find(enemy=>enemy[4]>0&&Math.hypot(enemy[2]-snapped.aim[0],enemy[3]-snapped.aim[1])<14*nearby.view_extent*2/arena.width);
+  expect(liveTarget).toBeTruthy();
+  expect(snapped.effectiveAim[0]).toBeCloseTo(liveTarget[2],2);expect(snapped.effectiveAim[1]).toBeCloseTo(liveTarget[3],2);
+  const movedAim={...aimPoint,x:aimPoint.x+60};
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[movedAim,firePoint]});
+  const outside=await readControlState(page);
+  expect(outside.aim).not.toEqual(snapped.aim);expect(outside.effectiveAim).toEqual(outside.aim);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+  await context.close();
+});
+
 test('touch settings restore, malformed settings fall back, and desktop hides touch controls',async({browser,page})=>{
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const mobile=await context.newPage(),errors=[];mobile.on('pageerror',error=>errors.push(error.message));
@@ -308,7 +346,7 @@ test('touch settings restore, malformed settings fall back, and desktop hides to
   await mobile.locator('#touch-hand').selectOption('left');await mobile.reload();
   await expect(mobile.locator('#touch-sensitivity')).toHaveValue('1.5');
   await expect(mobile.locator('#touch-hand')).toHaveValue('left');
-  await mobile.locator('#auto-play').click();await mobile.locator('#watch-auto-play').click();
+  await mobile.locator('#auto-play').click();await mobile.locator('#watch-auto-play').click();await mobile.locator('#next-wave').click();
   await expect(mobile.locator('#touch-controls')).toBeHidden();
   expect(errors).toEqual([]);
   await context.close();
@@ -330,7 +368,8 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
       const e=s.enemies.filter(e=>Math.hypot(e[2],e[3])<=s.range+0.1).sort((a,b)=>Math.hypot(a[2],a[3])-Math.hypot(b[2],b[3]))[0];
       return e?[e[2],e[3]]:[0,220];
     })();
-    await page.mouse.move(box.x+(target[0]+550)/1100*box.width,box.y+(target[1]+550)/1100*box.height);
+    const extent=s.view_extent;
+    await page.mouse.move(box.x+(target[0]+extent)/(extent*2)*box.width,box.y+(target[1]+extent)/(extent*2)*box.height);
     await page.clock.runFor(250);
   }
   await page.mouse.up();
@@ -352,7 +391,7 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
   await page.locator('#shop-skins').click();await expect(page.getByRole('heading',{name:'Tower Skins'})).toBeVisible();
   await page.locator('#back-shop').click();await expect(page.getByRole('heading',{name:'Wave 1 Cleared'})).toBeVisible();
   expect(await expectReportMatchesSnapshot(page,await readSnapshot(page))).toEqual(reportBefore);
-  for(const [width,height] of [[1440,1080],[390,844],[320,568],[844,390],[667,375]]) {
+  for(const [width,height] of [[1440,1080],[390,844],[320,568],[844,390],[568,320],[667,375]]) {
     await page.setViewportSize({width,height});
     const documentBounds=await page.evaluate(()=>({scrollHeight:document.documentElement.scrollHeight,innerHeight,bodyHeight:document.body.scrollHeight}));
     expect(documentBounds.scrollHeight<=documentBounds.innerHeight,JSON.stringify({width,height,...documentBounds})).toBe(true);
@@ -372,7 +411,7 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
   await page.locator('#shop-skins').click();await page.locator('#back-shop').click();
   await expect(page.getByRole('heading',{name:'Workshop',exact:true})).toBeVisible();
   await expectRunFooter(page,'wave-report');
-  for(const [width,height] of [[1440,1080],[390,844],[320,568],[844,390],[667,375]]) {
+  for(const [width,height] of [[1440,1080],[390,844],[320,568],[844,390],[568,320],[667,375]]) {
     await page.setViewportSize({width,height});
     await expectWeaponControls(page);
     const documentBounds=await page.evaluate(()=>({scrollHeight:document.documentElement.scrollHeight,innerHeight,bodyHeight:document.body.scrollHeight}));
@@ -450,8 +489,8 @@ test('play through shop purchases, next wave, defeat, and restart',async({page})
   await page.screenshot({path:'test-results/towerium-game-over-320x568.png',fullPage:true});
   await page.setViewportSize({width:1440,height:1080});
   await page.getByRole('button',{name:'Play Again',exact:true}).click();await expect(page.locator('#wave')).toHaveText('01');
-  const maxHp=balance.upgrades.find(upgrade=>upgrade.name==='Max HP').base;
-  await expect(page.locator('#health-text')).toHaveText(`${maxHp} / ${maxHp}`);
+  const startingHp=balance.upgrades.find(upgrade=>upgrade.name==='Max HP').base;
+  await expect(page.locator('#health-text')).toHaveText(`${startingHp} / ${startingHp}`);
 });
 
 test('browser WASM completes a wave, upgrades, and ends a full run',async({page})=>{
@@ -474,9 +513,15 @@ test('browser WASM completes a wave, upgrades, and ends a full run',async({page}
       game.advance(1/60);state=JSON.parse(game.snapshot());
     }
     const phase=state.phase,coins=state.coins,kills=state.kills;
-    const bought=game.buy(0);game.start_wave();const upgraded=JSON.parse(game.snapshot()).levels[0];
+    const bought=game.buy(0);if(!game.start_wave())throw new Error('Could not start the second wave');state=JSON.parse(game.snapshot());const upgraded=state.levels[0];
     game.input(0,0,false,0);
-    for(let i=0;i<9000 && state.phase!==3;i++){game.advance(1/60);state=JSON.parse(game.snapshot());}
+    for(let i=0;i<9000 && state.phase!==3;i++){
+      if(state.phase===2){
+        if(!game.start_wave())break;
+        state=JSON.parse(game.snapshot());
+      }
+      game.advance(1/60);state=JSON.parse(game.snapshot());
+    }
     const out={phase,coins,kills,expectedKills,rewardFloor,rewardCeiling,upgradeCost,bought,upgraded,ended:state.phase,hp:state.hp};game.free();return out;
   });
   expect(result.phase).toBe(2);expect(result.kills).toBe(result.expectedKills);expect(result.coins).toBeGreaterThanOrEqual(result.rewardFloor);expect(result.coins).toBeLessThanOrEqual(result.rewardCeiling);expect(result.bought).toBe(result.coins>=result.upgradeCost);expect(result.upgraded).toBe(1);expect(result.ended).toBe(3);expect(result.hp).toBe(0);
@@ -502,7 +547,8 @@ test('active power indicators appear only after a real drop activation',async({p
         .sort((a,b)=>Math.hypot(a[2],a[3])-Math.hypot(b[2],b[3]))[0];
       return d?[d[2],d[3]]:e?[e[2],e[3]]:[0,220];
     })();
-    await page.mouse.move(box.x+(target[0]+550)/1100*box.width,box.y+(target[1]+550)/1100*box.height);
+    const extent=s.view_extent;
+    await page.mouse.move(box.x+(target[0]+extent)/(extent*2)*box.width,box.y+(target[1]+extent)/(extent*2)*box.height);
     await page.clock.runFor(100);
   }
   await page.mouse.up();
@@ -524,18 +570,18 @@ test('active power indicators appear only after a real drop activation',async({p
     const renderer=new Renderer(canvas,art);const original=CanvasRenderingContext2D.prototype.arc;
     const radii=[];
     CanvasRenderingContext2D.prototype.arc=function(x,y,r,start,end,...rest){radii.push(Math.round(r*100)/100);return original.call(this,x,y,r,start,end,...rest);};
-    const snapshot=getRenderSnapshot(),chronoRadius=snapshot.chrono_radius??snapshot.range+30;
+    const snapshot=getRenderSnapshot(),chronoRadius=snapshot.chrono_radius??snapshot.range+30,spotlightRadius=snapshot.view_extent*1.5;
     const fixture={...snapshot,enemies:[],shots:[],drops:[],areas:[],fx:[],
       chrono_radius:chronoRadius,blackholes:[[100,0],[-100,0]],spotlights:[0,2*Math.PI/3,4*Math.PI/3],powers:Array(9).fill(0)};
     renderer.draw(fixture,[0,-220],1/60);
     const inactive={chrono:radii.filter(r=>r===chronoRadius).length,
-      blackHoles:radii.filter(r=>r===200).length,spotlights:radii.filter(r=>r===740).length};
+      blackHoles:radii.filter(r=>r===200).length,spotlights:radii.filter(r=>r===spotlightRadius).length};
     radii.length=0;
     const active={...fixture,time:fixture.time+1,powers:[...fixture.powers],areas:[[0,180,0,1]]};
     active.powers[1]=10;active.powers[3]=10;active.powers[4]=10;
     renderer.draw(active,[0,-220],1/60);
     const result={inactive,chrono:radii.filter(r=>r===chronoRadius).length,blackHoles:radii.filter(r=>r===200).length,
-      spotlights:radii.filter(r=>r===740).length,swamp:radii.filter(r=>r===120).length};
+      spotlights:radii.filter(r=>r===spotlightRadius).length,swamp:radii.filter(r=>r===120).length};
     CanvasRenderingContext2D.prototype.arc=original;
     return result;
   });
@@ -657,7 +703,8 @@ test('shop skin selection is accessible and fits all supported viewport sizes',a
       const e=s.enemies.filter(e=>Math.hypot(e[2],e[3])<=s.range+0.1).sort((a,b)=>Math.hypot(a[2],a[3])-Math.hypot(b[2],b[3]))[0];
       return e?[e[2],e[3]]:[0,220];
     })();
-    await page.mouse.move(box.x+(target[0]+550)/1100*box.width,box.y+(target[1]+550)/1100*box.height);
+    const extent=s.view_extent;
+    await page.mouse.move(box.x+(target[0]+extent)/(extent*2)*box.width,box.y+(target[1]+extent)/(extent*2)*box.height);
     await page.clock.runFor(250);
   }
   await page.mouse.up();await expect(page.getByRole('heading',{name:'Wave 1 Cleared'})).toBeVisible();
@@ -764,7 +811,8 @@ test('contacting enemies stay outside the visible tower wall',async({page})=>{
     await page.clock.runFor(100);
   }
   expect(contact.nearest).toBeLessThanOrEqual(contact.wall+0.1);
-  expect(contact.hp).toBeLessThan(100);expect(contact.nearest).toBeGreaterThanOrEqual(contact.wall-0.01);
+  const startingHp=(await readBalance(page)).upgrades.find(upgrade=>upgrade.name==='Max HP').base;
+  expect(contact.hp).toBeLessThan(startingHp);expect(contact.nearest).toBeGreaterThanOrEqual(contact.wall-0.01);
   expect(contact.nearest).toBeLessThan(contact.wall+0.1);
   await page.screenshot({path:'test-results/towerium-wall-contact.png',fullPage:true});
 });
@@ -822,6 +870,7 @@ test('unknown run and retry configs are rejected while malformed storage is clea
     sessionStorage.setItem('towerium.test-unknown-config','1');
   },{saved,retry});
   await page.reload();
+  await expect(page.locator('#start')).toBeEnabled();
   await expect(page.locator('#restore-run')).toHaveCount(0);
   expect(await page.evaluate(()=>[localStorage.getItem('towerium.run.v1'),localStorage.getItem('towerium.retries.v1')])).toEqual([null,null]);
 });
@@ -837,7 +886,7 @@ test('all four module HUD timers persist and restore with their module art',asyn
   });
   await stageRunOnNextNavigation(page,saved,'towerium.test-module-timers');
   await page.reload();await expect(page.locator('#restore-run')).toBeVisible();await page.locator('#restore-run').click();
-  const expected=['Death Penalty, 42 seconds','Space Displacer, 41 seconds','Galaxy Compressor, 40 seconds','Om Chip, 39 seconds'];
+  const expected=['Death Penalty, 42 seconds','Space Displacer, 41 seconds','Pulsar Harvester, 40 seconds','Om Chip, 39 seconds'];
   const snapshot=await readSnapshot(page);
   expect(snapshot.module_times).toEqual([42,41,40,39]);
   for(const label of expected)await expect(page.locator('#powers [aria-label="'+label+'"]')).toBeVisible();
@@ -875,6 +924,7 @@ test('tenth-wave retry count persists, caps at three, and survives reload',async
 
 test('wave fifty start unlocks from progression, stays empty, and resumes its purchased run',async({page})=>{
   await page.goto('/');
+  const balance=await readBalance(page);
   await expect(page.locator('#milestone-run')).toHaveCount(0);
   await page.evaluate(()=>localStorage.setItem('towerium.cosmetics.v1',JSON.stringify({completed:50,selected:'cyber'})));
   await page.reload();
@@ -883,7 +933,7 @@ test('wave fifty start unlocks from progression, stays empty, and resumes its pu
   await page.locator('#milestone-run').click();
   const fresh=await readSnapshot(page);
   expect(fresh.pending_start_wave).toBe(50);expect(fresh.phase).toBe(2);expect(fresh.coins).toBeGreaterThan(0);
-  expect(fresh.levels).toEqual(Array(25).fill(0));
+  expect(fresh.levels).toEqual(Array(balance.upgrades.length).fill(0));
   await page.locator('[data-upgrade="0"]').click();
   const purchased=await readSnapshot(page);
   expect(purchased.levels[0]).toBe(1);expect(purchased.coins).toBeLessThan(fresh.coins);
@@ -905,14 +955,14 @@ test('shop save restores upgrades and Title Case labels without scrolling',async
       workshopImageResponses.push({url:response.url(),status:response.status(),contentType:response.headers()['content-type']});
     }
   });
-  await page.goto('/');await page.locator('#start').click();
+  await page.goto('/');const balance=await readBalance(page);await page.locator('#start').click();
   const saved=await makeClearedWaveSave(page);
   // Set a valid shield balance in this save fixture to verify that restore preserves its HUD display.
   const state=JSON.parse(saved.state);state.world.shields=2;saved.state=JSON.stringify(state);
   await stageRunOnNextNavigation(page,saved,'towerium.test-shop-ready');
   await page.reload();await page.locator('#restore-run').click();
   const initial=await readSnapshot(page);const initialReport=await expectReportMatchesSnapshot(page,initial);
-  await page.locator('#open-shop').click();await expect(page.locator('.upgrade')).toHaveCount(25);
+  await page.locator('#open-shop').click();await expect(page.locator('.upgrade')).toHaveCount(balance.upgrades.length);
   for(const label of await page.locator('.upgrade-title strong').allTextContents())expect(label.split(/\s+/).every(word=>!/[a-z]/.test(word[0]))).toBe(true);
   expect(await page.locator('.upgrade-title strong').allTextContents()).toEqual([
     'Attack Speed','Range','Health','Regen','Coins/Kill',
@@ -920,6 +970,7 @@ test('shop save restores upgrades and Title Case labels without scrolling',async
     'Rapid Fire Chance','Rapid Fire Duration','Knockback Chance','Knockback Force','Ammo Qty',
     'Bounce Chance','Bounce Targets','Orb Speed','Orb Qty','Power Up Chance',
     'Bounce Range','Landmine Chance','Shockwave Size','Shockwave Freq','Powerup Duration',
+    'Landmine Radius','Landmine Damage','Wall HP','Wall Rebuild Time','Max Ammo Capacity',
   ]);
   try{
     await expect.poll(()=>page.locator('.upgrade-title img').evaluateAll(images=>images.every(image=>image.complete&&image.naturalWidth>0))).toBe(true);
@@ -928,7 +979,8 @@ test('shop save restores upgrades and Title Case labels without scrolling',async
     console.error('WORKSHOP_ICON_DIAGNOSTIC',JSON.stringify({imageState,workshopImageResponses}));
     throw error;
   }
-  expect(await page.locator('.shop-wallet img').getAttribute('src')).toContain('/icons/coin-md.webp');
+  await expect(page.locator('.shop-wallet span[title="Coins"]')).toBeVisible();
+  await expect(page.locator('.shop-wallet span[title="Power Stones"]')).toBeVisible();
   await page.locator('[data-upgrade="0"]').click();const bought=await readSnapshot(page);
   await page.locator('#wave-report').click();
   expect((await readSnapshot(page)).wave_report).toEqual(initial.wave_report);
@@ -939,13 +991,14 @@ test('shop save restores upgrades and Title Case labels without scrolling',async
   expect(restored.wave_report).toEqual(initial.wave_report);expect(restored.overall_report).toEqual(initial.overall_report);
   expect(await expectReportMatchesSnapshot(page,restored)).toEqual(initialReport);
   await page.locator('#open-shop').click();
-  for(const viewport of [{width:320,height:568},{width:844,height:390}]){
+  for(const viewport of [{width:320,height:568},{width:844,height:390},{width:568,height:320}]){
     await page.setViewportSize(viewport);
     const shopGeometry=await page.locator('#modal').evaluate(el=>({scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,rect:el.getBoundingClientRect().toJSON()}));
     expect(shopGeometry.scrollHeight<=shopGeometry.clientHeight+1,JSON.stringify({viewport,...shopGeometry})).toBe(true);
     const footer=await page.locator('.shop-footer').boundingBox();expect(footer.x+footer.width).toBeLessThanOrEqual(viewport.width);
+    const wallet=await page.locator('.shop-wallet').boundingBox();expect(wallet.y).toBeGreaterThanOrEqual(0);expect(wallet.y+wallet.height).toBeLessThanOrEqual(viewport.height);
   }
-  await page.locator('#request-restart').click();await page.locator('#cancel-restart').click();await expect(page.locator('.upgrade')).toHaveCount(25);
+  await page.locator('#request-restart').click();await page.locator('#cancel-restart').click();await expect(page.locator('.upgrade')).toHaveCount(balance.upgrades.length);
   await page.locator('#next-wave').click();
   await expect(page.locator('#powers [aria-label="Energy Shield, 2 of 3 charges"]')).toBeVisible();
 });
@@ -963,31 +1016,33 @@ test('Powerups shop spends run-local Stones, restores purchases, and fits phone 
   await expect(page.locator('#category-workshop')).toHaveAttribute('aria-pressed','false');
   await expect(page.locator('.power-choice')).toHaveCount(16);
   await expect(page.locator('#modal h2')).toHaveText('Powerups');
-  await expect(page.locator('.shop-wallet .wallet-label')).toHaveText('Stones');
-  await expect(page.locator('.shop-wallet .stone-icon')).toBeVisible();
+  await expect(page.locator('.shop-wallet span[title="Coins"]')).toBeVisible();
+  await expect(page.locator('.shop-wallet span[title="Power Stones"]')).toBeVisible();
   const before=await readSnapshot(page),cost=before.power_costs[0][0];
   expect(before.stones).toBe(10000);expect(before.coins).toBeGreaterThan(0);
   await page.locator('[data-power-buy="0"][data-power-path="0"]').click();
   const bought=await readSnapshot(page);
   expect(bought.power_levels[0][0]).toBe(1);expect(bought.stones).toBe(before.stones-cost);expect(bought.coins).toBe(before.coins);
-  for(const viewport of [{width:320,height:568},{width:844,height:390}]){
+  for(const viewport of [{width:320,height:568},{width:844,height:390},{width:568,height:320}]){
     await page.setViewportSize(viewport);
     expect(await page.locator('#modal').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     expect(await page.locator('.power-selector').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
     const footer=await page.locator('.shop-footer').boundingBox();expect(footer.x+footer.width).toBeLessThanOrEqual(viewport.width);
+    const wallet=await page.locator('.shop-wallet').boundingBox();expect(wallet.y).toBeGreaterThanOrEqual(0);expect(wallet.y+wallet.height).toBeLessThanOrEqual(viewport.height);
   }
   await page.reload();await expect(page.locator('#restore-run')).toBeVisible();await page.locator('#restore-run').click();
   const restored=await readSnapshot(page);
   expect(restored.stones).toBe(bought.stones);expect(restored.coins).toBe(bought.coins);expect(restored.power_levels).toEqual(bought.power_levels);
   await page.locator('#open-shop').click();await page.locator('#category-powers').click();
   await expect(page.locator('[data-power-buy="0"][data-power-path="0"]')).toBeEnabled();
-  for(const viewport of [{width:320,height:568},{width:844,height:390}]){
+  for(const viewport of [{width:320,height:568},{width:844,height:390},{width:568,height:320}]){
     await page.setViewportSize(viewport);
     expect(await page.locator('#modal').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     expect(await page.locator('.power-selector').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
     const footer=await page.locator('.shop-footer').boundingBox();expect(footer.x+footer.width).toBeLessThanOrEqual(viewport.width);
+    const wallet=await page.locator('.shop-wallet').boundingBox();expect(wallet.y).toBeGreaterThanOrEqual(0);expect(wallet.y+wallet.height).toBeLessThanOrEqual(viewport.height);
     await page.screenshot({path:`.local/powerups-purchased-${viewport.width}x${viewport.height}.png`,fullPage:true});
   }
 });
@@ -1031,23 +1086,23 @@ test('Auto Play buys upgrades and advances without changing personal progress',a
   },saved);
   await page.reload();await expect(page.locator('#restore-run')).toBeVisible();
   const personal=await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])));
-  await page.locator('#auto-play').click();await page.locator('#watch-auto-play').click();
+  await page.locator('#auto-play').click();await page.locator('#watch-auto-play').click();await page.locator('#next-wave').click();
   await expect(page.locator('#run-mode')).toBeVisible();
   await expect(page.locator('#wave')).toHaveText('02',{timeout:60000});
   await page.locator('#pause').click();await expect(page.locator('#stop-auto-play')).toBeVisible();
   expect(await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])))).toEqual(personal);
   await page.locator('#request-restart').click();await page.locator('#confirm-restart').click();
-  await expect(page.locator('#wave')).toHaveText('01');await page.locator('#pause').click();await page.locator('#stop-auto-play').click();
+  await expect(page.locator('#wave')).toHaveText('01');await page.locator('#next-wave').click();await page.locator('#pause').click();await page.locator('#stop-auto-play').click();
   await expect(page.locator('#restore-run')).toBeVisible();await expect(page.locator('#run-mode')).toBeHidden();
   expect(await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])))).toEqual(personal);
-  await page.locator('#auto-play').click();await page.locator('#auto-aim').selectOption('circle');await page.locator('#auto-weapons').selectOption('projectile');await page.locator('#watch-auto-play').click();
+  await page.locator('#auto-play').click();await page.locator('#auto-aim').selectOption('circle');await page.locator('#auto-weapons').selectOption('projectile');await page.locator('#watch-auto-play').click();await page.locator('#next-wave').click();
   await page.waitForTimeout(1200);await page.reload();await expect(page.locator('#restore-run')).toBeVisible();
   expect(await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])))).toEqual(personal);
 });
 
 test('Auto Play advances out of focus while a human run pauses on blur',async({page})=>{
   await page.clock.install();await page.goto('/?seed=42');
-  await page.locator('#auto-play').click();await page.locator('#watch-auto-play').click();
+  await page.locator('#auto-play').click();await page.locator('#watch-auto-play').click();await page.locator('#next-wave').click();
   await expect(page.locator('#run-mode')).toBeVisible();
   await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
   expect((await readSnapshot(page)).paused).toBe(false);
@@ -1098,7 +1153,7 @@ test('Nuke, Demon, and all module assets decode and render drops without errors'
   expect(result.modules.map(image=>image.width).every(width=>width>0)).toBe(true);
   expect(result.modules.map(image=>image.src)).toEqual([
     '/tower-assets/modules/death-penalty-md.webp','/tower-assets/modules/space-displacer-md.webp',
-    '/tower-assets/modules/galaxy-compressor-md.webp','/tower-assets/modules/om-chip-md.webp',
+    '/tower-assets/modules/pulsar-harvester-md.webp','/tower-assets/modules/om-chip-md.webp',
   ]);
   expect(result.demonWing.complete).toBe(true);expect(result.demonWing.width).toBeGreaterThan(0);expect(result.demonWing.height).toBeGreaterThan(0);
   expect(result.pixelColors).toBeGreaterThan(20);expect(pageErrors).toEqual([]);

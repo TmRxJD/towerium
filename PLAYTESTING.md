@@ -23,7 +23,9 @@ npm run playtest -- --policy=kev --laya=/path/to/laya --model-file=/path/to/mode
 
 The harness does not start Kev automatically. Check `npm run playtest -- --help` for the current options before launching a longer run.
 
-Baseline decisions run every 50 ms, matching Auto Play. It tracks observed movement and reserves predicted first-hit damage from shots already in flight. Intentional waits for lethal incoming shots are logged separately from stalls. Forecasts exclude speculative procs, secondary hits and Black Hole contacts; guided turns and future crowd control remain uncertain. The opening purchase plan favors Coins/Kill when survival is comfortable, then compares useful upgrade effects against their costs.
+Baseline and browser Auto Play share a 60 Hz input controller. Decisions use discrete observations, finite cursor movement, and a weapon-switch delay. Defaults are 250 ms reaction, 900 battlefield units/s, and 200 ms switching; touch defaults are 400/550/300. These are tuning assumptions, not measurements of player ability. Mobile adds a bounded 14-screen-pixel aim snap. Use `--assist-pixels=14 --arena-width=320` to model it at that viewport width.
+
+Use `--reaction-ms`, `--aim-speed`, `--switch-ms`, and `--start-wave` to vary the controls and funded starting workshop. Every run begins in preparation, including wave one. Only explicit `--reference=true` enables instant aim and exact projectile forecasting; zero reaction delay alone does not. Human profiles estimate damage committed by their own shots and observe deaths at the next reaction boundary. The opening plan buys two Coins/Kill levels when safe, then develops Multishot before broader specialization. Premium ammunition is reserved for bosses or useful groups, and Death Wave requires a worthwhile boss or crowd.
 
 The harness records the build/configuration and WebAssembly hashes, run outcome, upgrade purchases, weapon shots/hits/kills/damage, ammo pickups, and collected power-ups. Use a new output directory for each run. Exact replay uses the saved run log and archived WebAssembly/bindings; see `npm run playtest -- --help` and `scripts/replay-playtest.mjs` for current options.
 
@@ -39,9 +41,25 @@ The balance target is an endurance run: approximately wave 300 is exceptional an
 
 The historical runs below predate SDK progression, health bands, Power Stones, modules and overlap income; they do not validate the current candidate.
 
-## Current Controlled Runs
+## Power Supply Audit
 
-Seed 100, balanced purchases, current SDK progression and health bands. WASM `f46072d4`, policy `0a2bb844`; no model decisions. These are accelerated native-WASM simulations, not human play or browser performance measurements.
+The former per-kill supply generated approximately 22–33 pickups per wave at wave 160. Additive durations and Galaxy Compressor then generated more uptime than combat consumed, producing thousands of banked seconds. Galaxy Compressor has been replaced by Pulsar Harvester; it no longer extends any timers.
+
+Current supply uses `purchased chance × min(1, 100 / planned kills)`, including an allowance for Scatter children. Early waves retain their original chance. At later waves, global chance investment raises expected supply from approximately four to six pickups per cleared wave. The shop displays the adjusted per-kill chance and its actual next-level improvement. Collection still grants the entire advertised duration; existing banks are preserved.
+
+Audit evenly developed powers separately from concentrated drop-share builds. Record actual uptime, peak remaining time, missed pickups, passive/direct kill shares, ammo use, upgrades, and cleanup times. A selected power becoming permanent can be intentional; every power accumulating an ever-growing bank in a general build is a balance failure. Perfect-collection generation models are conservative supply tests, not proof of human combat viability.
+
+Run `npm run audit:power-supply` for the reproducible generation audit. It captures the configuration, four seeds, fixed waves 160/300, five builds, and 180,000 simulated seconds per case in `playtest-results/power-supply`. It fails if a maximum general build has positive timer-bank drift. Use `-- --snapshot` to repeat the captured configuration.
+
+## Bounded Human-Control Checks
+
+With the current Pulsar Harvester and density-adjusted power supply, seed 100 cleared 39 waves with mouse controls and 38 with touch controls within a 1,600-second test window. Mouse accuracy was 77.9%; touch accuracy was 68.0%. These are simulated control profiles, not measured human performance.
+
+Funded wave-160 starts exposed a policy defect: contact pressure prevented the controller from collecting useful defensive powers. After prioritizing needed pickups, seed 100 died at wave 164, while seed 101 cleared wave 180 at the requested stop limit. Both input logs replayed exactly. The surviving sample's largest power banks were approximately 93 seconds of Spotlight, 88 seconds of Pulsar Harvester, and 84 seconds of Space Displacer. These short funded runs test late-wave interactions; they do not establish survival from wave one or balanced utility across all weapons. More matched seeds and physical-phone feedback remain necessary.
+
+## Historical Reference Runs
+
+Seed 100, balanced purchases, earlier SDK progression and health bands. WASM `f46072d4`, policy `0a2bb844`; no model decisions. These used unrestricted aiming before the human controller and must not be treated as evidence of human reachability. They are accelerated native-WASM simulations, not browser performance measurements.
 
 | Control | Result | Pickups And Purchases | Weapon Shots P/LSS/SM/HB |
 |---|---|---|---|

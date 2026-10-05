@@ -59,11 +59,11 @@ assert.equal(provenance.sdkVersion,lock.packages['node_modules/thetowersdk'].ver
 for (const label of [...weapons, ...powers]) assertNonEmpty(label, 'gameplay label');
 assert.equal(balance.enemies.length, 13, 'enemy catalog must contain 13 entries');
 assertUnique(balance.enemies.map(enemy => enemy.name), 'enemy names');
-assert.equal(balance.upgrades.length, 25, 'balance must contain 25 upgrades');
-assert.equal(workshop.length, 25, 'workshop catalog must contain 25 entries');
+assert.equal(balance.upgrades.length, 30, 'balance must contain 30 upgrades');
+assert.equal(workshop.length, 30, 'workshop catalog must contain 30 entries');
 assertUnique(workshop.map(item => item.index), 'workshop indices');
 assert.deepEqual([...workshop.map(item => item.index)].sort((a, b) => a - b),
-  Array.from({ length: 25 }, (_, index) => index), 'workshop indices must cover 0–24');
+  Array.from({ length: 30 }, (_, index) => index), 'workshop indices must cover 0–29');
 assertUnique(workshop.map(item => item.label), 'workshop labels');
 assertUnique(workshop.map(item => `${item.domain}/${item.asset}`), 'workshop asset paths');
 for (const item of workshop) {
@@ -103,4 +103,4 @@ for (const track of music) {
   await access(new URL(`../public/tower-assets/music/${track}`, import.meta.url));
 }
 
-console.log(`Help catalogs valid: 13 enemies, 25 workshop entries, 16 power upgrades, 400 SDK wave rows, ${cosmetics.skins.length} skins, ${cosmetics.backgrounds.length} backgrounds, and ${music.length} music tracks.`);
+console.log(`Help catalogs valid: ${balance.enemies.length} enemies, ${workshop.length} workshop entries, ${powers.length} power upgrades, ${balance.waves.milestones.length} SDK wave rows, ${cosmetics.skins.length} skins, ${cosmetics.backgrounds.length} backgrounds, and ${music.length} music tracks.`);

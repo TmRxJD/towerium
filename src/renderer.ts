@@ -15,10 +15,12 @@ export class Renderer {
   private current=new Map<number,[number,number]>();
   private snapshotTime=-1;
   private renderSinceTick=0;
+  private extent=650;
   constructor(private canvas:HTMLCanvasElement,private art:Art) {
     const context=canvas.getContext('2d',{alpha:false});if(!context)throw new Error('Canvas 2D is not available in this browser.');this.ctx=context;
   }
-  point(clientX:number,clientY:number):[number,number] {const r=this.canvas.getBoundingClientRect();return [(clientX-r.left)/r.width*1100-550,(clientY-r.top)/r.height*1100-550];}
+  get worldExtent(){return this.extent;}
+  point(clientX:number,clientY:number):[number,number] {const r=this.canvas.getBoundingClientRect();return [((clientX-r.left)/r.width*2-1)*this.extent,((clientY-r.top)/r.height*2-1)*this.extent];}
   private circle(x:number,y:number,r:number,stroke:string,fill?:string,width=1) {
     if(!Number.isFinite(r)||r<=0)return;
     const c=this.ctx;c.beginPath();c.arc(x,y,r,0,TAU);if(fill){c.fillStyle=fill;c.fill();}c.strokeStyle=stroke;c.lineWidth=width;c.stroke();
@@ -27,6 +29,8 @@ export class Renderer {
     const c=this.ctx;
     const width=this.canvas.clientWidth,ratio=window.devicePixelRatio || 1;
     if(width!==this.size || ratio!==this.ratio) {this.size=width;this.ratio=ratio;this.canvas.width=Math.round(width*ratio);this.canvas.height=this.canvas.width;}
+    const extent=s.view_extent;
+    this.extent=extent;
     c.setTransform(this.canvas.width/1100,0,0,this.canvas.height/1100,this.canvas.width/2,this.canvas.height/2);
     c.fillStyle='#090f19';c.fillRect(-550,-550,1100,1100);
     const cleared=s.phase===2?s.wave:Math.max(0,s.wave-1);
@@ -35,13 +39,19 @@ export class Renderer {
     if(background){
       const scale=Math.max(1100/background.width,1100/background.height);
       c.drawImage(background,-background.width*scale/2,-background.height*scale/2,background.width*scale,background.height*scale);
-      c.fillStyle='#060e1973';c.fillRect(-550,-550,1100,1100);
+      c.fillStyle='#060e1910';c.fillRect(-550,-550,1100,1100);
     }
     const glow=c.createRadialGradient(0,0,10,0,0,550);glow.addColorStop(0,background?'#11212b00':'#11212b');glow.addColorStop(1,background?'#090f1933':'#090f19');c.fillStyle=glow;c.fillRect(-550,-550,1100,1100);
-    c.setLineDash([3,12]);this.circle(0,0,s.range,'#83b9bd99',undefined,1.5);c.setLineDash([]);
+    c.setTransform(this.canvas.width/(extent*2),0,0,this.canvas.height/(extent*2),this.canvas.width/2,this.canvas.height/2);
+    const screenPixel=extent*2/Math.max(1,width);
+    c.setLineDash([3*screenPixel,7*screenPixel]);this.circle(0,0,s.range,'#08131dcc',undefined,3*screenPixel);this.circle(0,0,s.range,'#baf7e0bb',undefined,screenPixel);c.setLineDash([]);
     this.fields(s);
     if(s.module_times[1]>0)this.circle(0,0,balance.modules.space_displacer_radius,'#dd8cb822');
     if(s.shields>0)this.circle(0,0,balance.tower_radius+10,'#83e9ffbb',undefined,2);
+    if(s.wall_max_hp>0){
+      this.circle(0,0,balance.tower_radius+5,s.wall_hp>0?'#8ca7bb77':'#8ca7bb22',undefined,4);
+      if(s.wall_hp>0){c.beginPath();c.arc(0,0,balance.tower_radius+5,-Math.PI/2,-Math.PI/2+TAU*s.wall_hp/s.wall_max_hp);c.strokeStyle='#b8d7ed';c.lineWidth=4;c.stroke();}
+    }
     if(s.time!==this.snapshotTime) {
       this.previous=this.current;this.current=new Map(s.enemies.map(e=>[e[0],[e[2],e[3]]]));
       for(const p of s.shots)this.current.set(p[0],[p[2],p[3]]);
@@ -56,9 +66,11 @@ export class Renderer {
     const effects=new Map((s.enemy_effects??[]).map(effect=>[effect[0],effect]));
     const raySpins=new Map(s.ray_spins??[]);
     const enemyRadii=new Map(s.enemy_radii??[]);
+    const mobility=new Map(s.enemy_mobility);
     for(const [id,kind,ex,ey,hp,maxHp,stun] of s.enemies) {
       const [x,y]=position(id,ex,ey);const radius=enemyRadii.get(id)??balance.enemies[kind].radius;
       const effect=effects.get(id);
+      if(mobility.has(id))this.circle(x,y,radius+3,'#82d4faaa',undefined,1.5);
       if(kind===4){this.circle(x,y,balance.defense.protector_radius,'#8ee78870','#61ca5b10',2);this.circle(x,y,radius+6,'#a8ffad',undefined,2);}
       if(kind===9)this.circle(x,y,balance.specials.commander_radius,'#ffb55e77','#ce8c3610',2);
       if(effect?.[2])this.circle(x,y,radius+5,'#ffd192',undefined,2);
@@ -114,7 +126,7 @@ export class Renderer {
     else{c.beginPath();for(let i=0;i<6;i++){const a=i*TAU/6;const x=Math.cos(a)*25,y=Math.sin(a)*25;if(i===0)c.moveTo(x,y);else c.lineTo(x,y);}c.closePath();c.fillStyle='#122934';c.fill();c.strokeStyle='#b6fff2';c.lineWidth=3;c.stroke();}
     if(s.hp>s.max_hp)this.circle(0,0,46,'#b899fa99',undefined,3);
     if(s.phase===1 && !s.paused){
-      const [x,y]=aim,scale=this.touchAim?1100/width:1,radius=this.touchAim?7*scale:10;
+      const [x,y]=aim,scale=this.touchAim?extent*2/width:1,radius=this.touchAim?7*scale:10;
       if(this.touchAim)this.circle(x,y,radius,'#080d14',undefined,5*scale);
       this.circle(x,y,radius,'#c5f7e4',undefined,this.touchAim?2*scale:1);
       c.strokeStyle='#c5f7e4';c.lineWidth=this.touchAim?2*scale:1;
@@ -140,7 +152,7 @@ export class Renderer {
       }
     }
     if(s.powers[3]>0)for(const [x,y] of s.blackholes??[]){this.circle(x,y,s.power_effects[3],'#a495ca55','#6950881c');for(let i=0;i<6;i++)this.circle(x,y,22+i*14,'#ad96ea'+['aa','88','66','44','33','22'][i],i===0?'#04060d':undefined,2);}
-    if(s.powers[4]>0)for(const angle of s.spotlights??[]){c.beginPath();c.moveTo(0,0);c.arc(0,0,740,angle-p.spotlight_angle*Math.PI/360,angle+p.spotlight_angle*Math.PI/360);c.closePath();c.fillStyle='#ffe08420';c.fill();}
+    if(s.powers[4]>0)for(const [i,angle] of (s.spotlights??[]).entries()){c.beginPath();c.moveTo(0,0);c.arc(0,0,this.extent*1.5,angle-p.spotlight_angle*Math.PI/360,angle+p.spotlight_angle*Math.PI/360);c.closePath();c.fillStyle=i===0&&s.module_times[3]>0&&s.enemies.some(e=>e[1]>=5&&e[4]>0)?'#ffe8914d':'#ffe08420';c.fill();}
     if(s.ray_active){c.save();c.rotate(s.ray_angle);c.fillStyle='#ff486533';c.fillRect(0,-10,740,20);c.fillStyle='#ffc3cb';c.fillRect(0,-3,740,6);c.restore();}
     if(s.powers[6]>0){
       const glow=c.createRadialGradient(0,0,25,0,0,110);glow.addColorStop(0,'#ffdc6320');glow.addColorStop(1,'#ffdc6300');c.fillStyle=glow;c.fillRect(-110,-110,220,220);

@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import init,{Game} from '../src/wasm/towerium.js';
 import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction, baselineWeapon,baselinePurchase,baselinePowerPurchase} from './playtest-policy.mjs';
 import {openKev} from './kev-local.mjs';
+import {HumanController} from './human-controls.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{const [key,...rest]=arg.replace(/^--/,'').split('=');return [key,rest.join('=')||'true'];}));
@@ -36,6 +37,10 @@ Kev options:
   process.exit(0);
 }
 const policy=args.policy||'baseline',strategy=args.strategy||'balanced';
+const humanOptions={reactionMs:Number(args['reaction-ms']??250),aimSpeed:Number(args['aim-speed']??900),switchMs:Number(args['switch-ms']??200),reference:args.reference==='true',assistPixels:Number(args['assist-pixels']??0),arenaWidth:Number(args['arena-width']??320)};
+new HumanController(humanOptions); // Validate before writing artifacts.
+const startWave=Number(args['start-wave']??1);
+if(!Number.isInteger(startWave)||startWave<1||startWave>10000)throw new Error('Invalid start-wave');
 if(!['balanced','offense','defense','economy','none'].includes(strategy))throw new Error('Invalid workshop strategy');
 if(args.laya&&!args['model-file'])throw new Error('--laya requires an explicit --model-file');
 if(!['kev','baseline'].includes(policy))throw new Error('policy must be kev or baseline');
@@ -53,6 +58,7 @@ const interval=Number(args.interval||'.05'),maxWaves=Number(args.waves||'40'),ma
 const maxDecisions=Number(args.decisions??Math.ceil(maxSeconds/interval)+maxWaves*25);
 const seedStart=Number(args.seed||'100'),count=Number(args.runs||'8'),excluded=Number(args.exclude||'-1');
 if(![interval,maxWaves,maxSeconds,maxDecisions,count].every(n=>Number.isFinite(n)&&n>0)||count>1000||interval>5||Math.round(interval*60)<1)throw new Error('Invalid playtest bounds');
+if(startWave>maxWaves)throw new Error('start-wave must not exceed waves');
 const latencyMode=args.timing==='latency';
 const configText=await readFile(resolve(root,args.config||'engine/balance.json'),'utf8'),config=JSON.parse(configText);
 const wasm=await readFile(resolve(root,'src/wasm/towerium_bg.wasm'));
@@ -64,11 +70,11 @@ if((await readdir(out)).length)throw new Error(`Output directory is not empty: $
 const localKev=policy==='kev'&&args.laya?openKev(args.laya,args['model-file'],resolve(out,'kev-runtime.log')):null;
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const workshopCost=config.upgrades.reduce((sum,u)=>sum+u.costs.reduce((a,b)=>a+b,0),0);
-const harnessHashes=Object.fromEntries(await Promise.all(['playtest.mjs','playtest-policy.mjs','kev-local.mjs'].map(async name=>[name,hash(await readFile(resolve(root,'scripts',name)))])));
+const harnessHashes=Object.fromEntries(await Promise.all(['playtest.mjs','playtest-policy.mjs','kev-local.mjs','human-controls.mjs','aim-assist.mjs'].map(async name=>[name,hash(await readFile(resolve(root,'scripts',name)))])));
 const metadata={policy,strategy,aim:policy==='baseline'?aim:null,endpoint:policy==='kev'?(localKev?'local stdio':endpoint):null,modelFile:localKev?(args['model-file']):null,interval,maxWaves,maxSeconds,maxDecisions,seedStart,count,excluded,
   timing:latencyMode?'latency-replayed: previous input continues during measured inference delay':'decision-paused accelerated simulation; inference time is not simulated',
   configHash:hash(configText),wasmHash:hash(wasm),bindingsHash:hash(bindings),harnessHashes,runtime:localKev?.runtime??null,runtimeRotation:localKev?'scheduled restart and recorded warmup in paused shop before each subsequent wave':null,started:new Date().toISOString()};
-Object.assign(metadata,{circleSeconds:aim==='circle'?circleSeconds:null,circleFrom,weaponMode,weaponFrom});
+Object.assign(metadata,{circleSeconds:aim==='circle'?circleSeconds:null,circleFrom,weaponMode,weaponFrom,humanOptions,startWave});
 await writeFile(resolve(out,'metadata.json'),JSON.stringify(metadata,null,2));
 await writeFile(resolve(out,'balance.json'),configText);
 await writeFile(resolve(out,'towerium_bg.wasm'),wasm);
@@ -93,26 +99,42 @@ function summary() {
   }};
 }
 for(let run=0;run<count;run++) {
-  const seed=seedStart+run,game=new Game(seed,configText),log=resolve(out,`seed-${seed}.jsonl`),start=performance.now();
+  const seed=seedStart+run,game=Game.autoplay_start(seed,configText,startWave),log=resolve(out,`seed-${seed}.jsonl`),start=performance.now(),controller=new HumanController(humanOptions);
   let s=JSON.parse(game.snapshot()),decisions=0,modelCalls=0,combatFrames=0,error=null;
   const latencies=[],combatLatencies=[],shopLatencies=[],runtimeRestarts=[],purchases=[],powerPurchases=[],waves=[],weapons=[0,0,0,0];
-  let lastHp=s.hp,damage=0,stalls=0,impactWaits=0,previousCombat;
+  const powerNames=['Chain Lightning','Chrono Field','Swamp','Black Hole','Spotlight','Death Ray','Golden Tower',null,null,null,'Fallout','Demon Mode','Death Penalty','Space Displacer','Pulsar Harvester','Om Chip'];
+  const powerUptime=powerNames.map((name,index)=>name?{index,name,active_seconds:0,peak_bank_seconds:0}:null),wavePowerUptime=new Map();
+  const timerValues=state=>[...(state.powers??[]),null,null,null,state.fallout_time,state.demon_time,...(state.module_times??[])];
+  let telemetryState=s,lastHp=s.hp,damage=0,stalls=0,impactWaits=0,previousCombat;
   const snapshot=()=>JSON.parse(game.snapshot());
   const advance=seconds=>{
     const frames=Math.max(0,Math.round(seconds*60));
-    for(let i=0;i<frames;i++)game.advance(1/60);
+    for(let i=0;i<frames;i++){
+      game.advance(1/60);
+      const frameState=snapshot(),elapsed=Math.max(0,frameState.time-telemetryState.time),beforeTimers=timerValues(telemetryState),nextTimers=timerValues(frameState),waveKey=telemetryState.wave;
+      if(!wavePowerUptime.has(waveKey))wavePowerUptime.set(waveKey,powerNames.map((name,index)=>name?{index,name,active_seconds:0,peak_bank_seconds:0}:null));
+      const waveStats=wavePowerUptime.get(waveKey);
+      for(let index=0;index<powerUptime.length;index++)if(powerUptime[index]){
+        const prior=Math.max(0,beforeTimers[index]??0),current=Math.max(0,nextTimers[index]??0);
+        powerUptime[index].peak_bank_seconds=Math.max(powerUptime[index].peak_bank_seconds,prior,current);
+        waveStats[index].peak_bank_seconds=Math.max(waveStats[index].peak_bank_seconds,prior,current);
+        if(prior>0||current>0){powerUptime[index].active_seconds+=elapsed;waveStats[index].active_seconds+=elapsed;}
+      }
+      telemetryState=frameState;
+    }
     combatFrames+=frames;
-    const next=snapshot();damage+=Math.max(0,lastHp-next.hp);lastHp=next.hp;s=next;
+    const next=frames?telemetryState:snapshot();telemetryState=next;damage+=Math.max(0,lastHp-next.hp);lastHp=next.hp;
+    s=next;
     return frames;
   };
   try {
-    game.start_wave();s=snapshot();
-    await appendFile(log,JSON.stringify({event:'start',seed,configHash:metadata.configHash})+'\n');
+    s=snapshot();
+    await appendFile(log,JSON.stringify({event:'start',seed,startWave,prepare:true,configHash:metadata.configHash})+'\n');
     while(s.phase!==3&&s.wave<=maxWaves&&s.time<maxSeconds&&decisions<maxDecisions) {
       if(s.phase===2) {
-        const enteringShop=!waves.some(w=>w.wave===s.wave);
+        const enteringShop=!s.pending_start_wave&&!waves.some(w=>w.wave===s.wave);
         if(enteringShop)waves.push({wave:s.wave,time:s.time,waveSeconds:s.wave_time,cleanupSeconds:s.cleanup_seconds,hp:s.hp,coins:s.coins,earned:s.earned,ammo:s.ammo,levels:s.levels});
-        if(s.wave>=maxWaves)break;
+        if(s.wave>=maxWaves&&!s.pending_start_wave)break;
         if(enteringShop&&localKev) {
           // Typed decisions have no conversational state. Rotate only while the
           // game is paused; active-run failures remain errors, never hidden retries.
@@ -143,17 +165,34 @@ for(let run=0;run<count;run++) {
         } else choice=baselinePurchase(s,config,strategy,excluded);
         decisions++;
         const before={hp:s.hp,coins:s.coins,levels:s.levels};
+        let startedNext=false;
         if(choice<0){
           const power=baselinePowerPurchase(s,config,strategy);
           if(power){if(!game.buy_power(power.power,power.path))throw new Error('Rejected Power Stone purchase');const purchase={wave:s.wave,...power,cost:s.power_costs[power.power][power.path],stones:s.stones};powerPurchases.push(purchase);await appendFile(log,JSON.stringify({event:'power_shop',...purchase})+'\n');}
-          else {game.start_wave();previousCombat=undefined;}
+          else {game.start_wave();previousCombat=undefined;startedNext=true;}
         }
         else {if(!game.buy(choice))throw new Error(`Rejected legal purchase ${choice}`);purchases.push({wave:s.wave,index:choice,cost:s.costs[choice],hp:s.hp});}
         s=snapshot();lastHp=s.hp;
-        await appendFile(log,JSON.stringify({event:'shop',wave:before.levels? s.wave:null,choice,before,request,response,latency})+'\n');
+        await appendFile(log,JSON.stringify({event:'shop',wave:before.levels? s.wave:null,choice,startedNext,before,request,response,latency})+'\n');
         continue;
       }
       const candidates=targets(s,config);
+      if(policy==='baseline'){
+        const inputs=[],observation={wave:s.wave,time:s.time,hp:s.hp,coins:s.coins,enemies:s.enemies.length,kills:s.kills,ammo:s.ammo,charges:s.charges};
+        const frames=Math.max(1,Math.round(interval*60));
+        for(let frame=0;frame<frames&&s.phase===1;frame++){
+          const action=controller.step(s,1/60,(observed,context)=>{
+            return baselineAction(observed,config,targets(observed,config),aim==='circle'&&observed.wave<circleFrom?'priority':aim,circleSeconds,{...context,weaponMode:observed.wave<weaponFrom?'all':weaponMode});
+          });
+          game.input(...action.aim,action.fire,action.weapon);
+          const usedDeathWave=action.deathWave&&game.death_wave();
+          inputs.push({pointer:action.aim,fire:action.fire,weapon:action.weapon,usedDeathWave});
+          weapons[action.weapon]++;advance(1/60);
+        }
+        decisions++;
+        await appendFile(log,JSON.stringify({event:'human_combat',observation,inputs})+'\n');
+        continue;
+      }
       let action,request,response,latency=0,delayFrames=0;
       if(policy==='kev'&&candidates.length) {
         request=combatRequest(s,config,candidates,strategy,interval);
@@ -193,6 +232,7 @@ for(let run=0;run<count;run++) {
     latencyMs:{p50:percent(latencies,.5),p95:percent(latencies,.95),max:latencies.length?Math.max(...latencies):null},
     combatLatencyMs:{p50:percent(combatLatencies,.5),p95:percent(combatLatencies,.95),max:combatLatencies.length?Math.max(...combatLatencies):null},
     shopLatencyMs:{p50:percent(shopLatencies,.5),p95:percent(shopLatencies,.95),max:shopLatencies.length?Math.max(...shopLatencies):null},
+    powerUptime,last20WavePowerUptime:[...wavePowerUptime.entries()].sort((a,b)=>a[0]-b[0]).slice(-20).map(([wave,powers])=>({wave,powers})),
     runtimeRestarts,warmupCalls:runtimeRestarts.length,
     wallSeconds:(performance.now()-start)/1000,finalStateHash:hash(game.snapshot())};
   results.push(result);game.free();
