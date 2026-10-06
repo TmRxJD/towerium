@@ -1595,3 +1595,54 @@ test('normal Autocannon fires independently while manual shots keep their own we
   });
   expect(decision.automatic).toBe(2);expect(decision.manual).toBe('enemy_1');
  });
+
+test('Dev Mode isolates saves and exposes validated live balance controls',async({page})=>{
+ await page.goto('/?seed=42');await expect(page.locator('#start')).toBeEnabled();
+ await page.locator('#start').click();await page.locator('#pause').click();
+ const saved=await page.evaluate(()=>localStorage.getItem('towerium.run.v1'));
+ await page.reload();await expect(page.locator('#restore-run')).toBeVisible();
+ await page.locator('#dev-enable').check();await expect(page.locator('#dev-open')).toBeVisible();
+ await page.locator('#start').click();await page.locator('#dev-open').click();
+ const panel=page.locator('.dev-panel');await expect(panel).toBeVisible();
+ await panel.locator('[data-path="coins"]').fill('12345');await panel.locator('[data-path="stones"]').fill('456');
+ await panel.getByRole('button',{name:'Apply Run Values',exact:true}).click();
+ expect((await readSnapshot(page)).coins).toBe(12345);expect((await readSnapshot(page)).stones).toBe(456);
+ await panel.locator('[data-path="coins"]').fill('54321');await panel.locator('[data-path="shields"]').fill('99');
+ await panel.getByRole('button',{name:'Apply Run Values',exact:true}).click();
+ await expect(panel.locator('#dev-status')).toContainText('Invalid sandbox');expect((await readSnapshot(page)).coins).toBe(12345);
+ await panel.locator('#dev-count').fill('10');await panel.getByRole('button',{name:'Spawn Enemies',exact:true}).click();
+ expect((await readSnapshot(page)).enemies.length).toBeGreaterThanOrEqual(10);
+ const kills=(await readSnapshot(page)).kills;await panel.getByRole('button',{name:'Clear Enemies',exact:true}).click();
+ expect((await readSnapshot(page)).enemies).toHaveLength(0);expect((await readSnapshot(page)).kills).toBe(kills);
+ await panel.getByRole('button',{name:'Balance',exact:true}).click();await panel.locator('summary').filter({hasText:'Basic'}).first().click();
+ await panel.locator('[data-path="enemies.0.speed"]').fill('-1');await panel.getByRole('button',{name:'Apply Balance',exact:true}).click();
+ await expect(panel.locator('#dev-status')).toContainText('Invalid enemy');
+ await panel.locator('[data-path="enemies.0.speed"]').fill('25');await panel.getByRole('button',{name:'Apply Balance',exact:true}).click();
+ await expect(panel.locator('#dev-status')).toHaveText('Balance Applied');
+ await panel.getByRole('button',{name:'Experiments',exact:true}).click();
+ const downloadPromise=page.waitForEvent('download');await panel.getByRole('button',{name:'Export Settings',exact:true}).click();
+ const download=await downloadPromise;expect(download.suggestedFilename()).toBe('towerium-experiment.json');
+ await panel.locator('#dev-import').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from('{"version":99}')});
+ await expect(panel.locator('#dev-status')).toContainText('Expected Towerium Experiment Version 1');
+ await panel.getByRole('button',{name:'Live Run',exact:true}).click();await panel.locator('#dev-wave').fill('50');
+ await panel.getByRole('button',{name:'New Sandbox At Wave',exact:true}).click();await panel.getByRole('button',{name:'Done',exact:true}).click();
+ await expect(page.locator('#modal-dev-open')).toBeVisible();await expect(page.locator('#next-wave')).toContainText('Start Wave 50');
+ await page.locator('#modal-dev-open').click();await page.locator('.dev-panel').getByRole('button',{name:'Experiments',exact:true}).click();
+ await page.locator('.dev-panel').getByRole('button',{name:'Leave Dev Mode',exact:true}).click();
+ await expect(page.locator('#restore-run')).toBeVisible();await expect(page.locator('#dev-open')).toBeHidden();
+ expect(await page.evaluate(()=>localStorage.getItem('towerium.run.v1'))).toBe(saved);
+ await page.locator('#restore-run').click();expect((await readSnapshot(page)).wave).toBe(1);
+});
+
+test('Dev Mode panel stays usable on narrow mobile and landscape screens',async({page})=>{
+ await page.setViewportSize({width:320,height:568});await page.goto('/');await expect(page.locator('#start')).toBeEnabled();
+ await page.locator('#dev-enable').check();await page.locator('#dev-open').click();
+ const panel=page.locator('.dev-panel');await expect(panel.getByRole('button',{name:'Done',exact:true})).toBeInViewport();
+ await panel.getByRole('button',{name:'Balance',exact:true}).click();
+ await expect(panel.getByRole('button',{name:'Apply Balance',exact:true})).toBeInViewport();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);
+ await page.screenshot({path:'.local/dev-mobile.png'});
+ await page.setViewportSize({width:568,height:320});await expect(panel.getByRole('button',{name:'Done',exact:true})).toBeInViewport();
+ await expect(panel.getByRole('button',{name:'Apply Balance',exact:true})).toBeInViewport();
+ await page.screenshot({path:'.local/dev-landscape.png'});
+});

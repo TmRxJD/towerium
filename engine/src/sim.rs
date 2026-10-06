@@ -313,7 +313,7 @@ pub struct World {
     #[serde(default)]
     pub proc_meters: [u32; 10],
     #[serde(skip, default = "default_pressure")]
-    wave_pressure: WaveMilestone,
+    pub(crate) wave_pressure: WaveMilestone,
     pub hp: f32,
     #[serde(default)]
     pub wall_hp: f32,

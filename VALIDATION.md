@@ -1,5 +1,14 @@
 # Validation status
 
+## Dev Mode Checks — 2026-10-06
+
+- Rust: 186 passed, 0 failed, 1 ignored (`dense_endurance_profile`); formatting and Clippy with `-D warnings` passed.
+- Controller/automation: 78 passed. Content, WASM generation, TypeScript and production build passed; diff whitespace checks passed.
+- Focused Chrome browser checks: Dev Mode 2/2, Help 1/1, reload/restore 3/3. Dev checks cover live grants, atomic invalid edits, enemy spawning/clearing, balance edits, export/version rejection, fresh-wave access and preservation/resumption of an existing normal save.
+- Desktop 1440×1080, portrait 320×568 and landscape 568×320 captures reviewed; the Dev panel keeps its header/footer in view and scrolls internally. Fixed initial phone overflow and nested-dialog ordering failures.
+- Kritic deterministic artifact/command checks passed. Kev scoring was unavailable because the backend is off. The bounded UX crawl reached its deadline before measuring Dev/pause/restart; these paths are unmeasured by that crawl, not proven unreachable. The UX reviewer inspected all crawl screens and six final Dev captures and accepted the layout.
+- The ignored endurance workload and physical-phone testing were not repeated. Dev Mode adds tuning tools; these checks do not establish new survival or balance targets.
+
 Recorded 2026-10-05. Current checks cover Autocannon, perks, automation and Critical Coin; earlier release evidence is labeled historical.
 
 ## Current Autocannon, Perks, Automation And Critical Coin Checks

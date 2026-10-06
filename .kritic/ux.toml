@@ -8,6 +8,13 @@ viewport = [1440, 1080]
 settle_ms = 600
 
 [[tasks]]
+name = "open Dev Mode"
+goal = "Enable Dev Mode on the splash screen and open its tuning workspace"
+done = { text = "Paused · Unscored" }
+budget = 2
+primary = true
+
+[[tasks]]
 name = "start a run"
 goal = "Begin playing Towerium"
 done = { text = "Wave 1" }

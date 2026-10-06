@@ -1,5 +1,6 @@
 mod balance;
 mod config;
+mod dev;
 #[cfg(test)]
 mod expansion_tests;
 mod math;
@@ -99,5 +100,33 @@ impl Game {
     }
     pub fn snapshot(&self) -> String {
         serde_json::to_string(&self.world.snapshot()).expect("finite snapshot")
+    }
+    pub fn dev_balance(&mut self, json: &str) -> Result<(), JsValue> {
+        self.world
+            .dev_balance(json)
+            .map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn dev_config(json: &str) -> Result<String, JsValue> {
+        crate::dev::normalize_balance(json).map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn dev_run(&mut self, json: &str) -> Result<(), JsValue> {
+        self.world.dev_run(json).map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn dev_spawn(&mut self, kind: usize, count: u32) -> Result<(), JsValue> {
+        self.world
+            .dev_spawn(kind, count)
+            .map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn dev_power(&mut self, kind: usize) -> bool {
+        if kind >= crate::power_shop::POWER_COUNT {
+            return false;
+        }
+        self.world.activate(kind);
+        true
+    }
+    pub fn dev_clear(&mut self) {
+        self.world.enemies.clear();
+        self.world.hostile.clear();
+        self.world.overcharge.clear();
     }
 }

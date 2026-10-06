@@ -1,4 +1,5 @@
 import './game.css';
+import { DevPanel, defaultBalance } from './dev-panel';
 import { AutoPlayer } from './autoplay';
 import { humanDefaults } from '../scripts/human-controls.mjs';
 import { powerShop, stoneIcon } from './power-shop';
@@ -52,10 +53,10 @@ function buyRanked(){if(autoPlayer||snapshot.phase!==2)return;let changed=false;
  if(changed){saveRun();updateHud();returnRunScreen();}
 }
 function applyAutomaticPerk(){if(!automation.perkEnabled||!snapshot.perks.offers.length)return;const choice=priorityPerk(snapshot,automation);if(choice===undefined)return;
- if(game.choose_perk(choice)){read();if(snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());saveRun();returnRunScreen();}
+ if(game.choose_perk(choice)){read();if(!devMode&&snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());saveRun();returnRunScreen();}
 }
 function updateAutomation(dt:number){
- if(autoPlayer||snapshot.phase!==2||!automation.enabled){roundCountdown.reset();automationAppliedWave=-1;return;}
+ if(devPanel?.open||autoPlayer||snapshot.phase!==2||!automation.enabled){roundCountdown.reset();automationAppliedWave=-1;return;}
  const viewing=modal.classList.contains('shop-modal')||modal.classList.contains('report-modal');
  if(!viewing||automationOpen||helpOpen||prioritiesOpen||restartPrompt)return;
  if(automationAppliedWave!==snapshot.wave){applyAutomaticPerk();buyRanked();automationAppliedWave=snapshot.wave;}
@@ -76,7 +77,9 @@ let last=0,lastHud=0,uiPhase=-1,helpOpen=false,resultSent=false,animation=0;
 let best=0;
 try {const stored=Number(localStorage.getItem('towerium.best-wave'));if(Number.isSafeInteger(stored)&&stored>0)best=stored;}catch{/* Storage is optional in embedded/private contexts. */}
 const cosmetics=new Cosmetics(best);
-const runKey='towerium.run.v1',configJson=JSON.stringify(balance);
+const runKey='towerium.run.v1';
+let configJson=JSON.stringify(balance),devMode=false,devSpeed=1;
+let devPanel:DevPanel;
 let savedRun:{seed:number;state:string;config:string}|null=null,lastSave=0,restartPrompt=false;
 let runRetries:RunRetries;
 let compatibleConfig:(config:unknown)=>boolean=config=>config===configJson;
@@ -86,7 +89,7 @@ let autoPlayer:AutoPlayer|null=null,autoStartWave=1;
 let humanGame:Game|null=null,humanSeed=seed;
 function resumeAudio(){void audio.resume().catch(error=>{console.error('Audio could not resume:',error);setText('notice','Audio Unavailable');});}
 function saveRun() {
-  if(autoPlayer || !game || !snapshot || snapshot.phase===0)return;
+  if(devMode || autoPlayer || !game || !snapshot || snapshot.phase===0)return;
   try {
     if(snapshot.phase===3){localStorage.removeItem(runKey);savedRun=null;return;}
     savedRun={seed,state:game.save(),config:configJson};
@@ -96,7 +99,7 @@ function saveRun() {
 function showIntro(){
   const milestone=Math.floor(cosmetics.completed/50)*50;
   const retry=!savedRun&&runRetries?.available?`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint!.wave} · ${3-runRetries.used} Left</button>`:'';
-  el('intro').innerHTML=`<img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2>${savedRun?'<button id="restore-run" class="primary">Resume Run</button>':'<button id="start" class="primary">Play</button>'}<div class="intro-options">${savedRun?'<button id="new-run" class="quiet">New Run</button>':''}${retry}${milestone?`<button id="milestone-run" class="secondary" title="Empty Shops With Coin And Power Stone Budgets">Fresh Wave ${milestone}<small>Empty Shops + Budget</small></button>`:''}<button id="auto-play" class="secondary">Auto Play</button></div>`;
+  el('intro').innerHTML=`<img src="${towerUrl}" alt="" width="110" height="110"><h2>TOWERIUM</h2>${savedRun&&!devMode?'<button id="restore-run" class="primary">Resume Run</button>':'<button id="start" class="primary">Play</button>'}<div class="intro-options">${savedRun&&!devMode?'<button id="new-run" class="quiet">New Run</button>':''}${devMode?'':retry}${milestone&&!devMode?`<button id="milestone-run" class="secondary" title="Empty Shops With Coin And Power Stone Budgets">Fresh Wave ${milestone}<small>Empty Shops + Budget</small></button>`:''}<button id="auto-play" class="secondary">Auto Play</button></div><label class="dev-enable"><input id="dev-enable" type="checkbox" ${devMode?'checked':''}> Dev Mode</label>`;
 }
 function configureAutoPlay(){
   modalContent('<div class="modal-top"><h2 id="modal-title">Auto Play</h2></div><div class="auto-settings"><label>Start Wave<input id="auto-start-wave" type="number" min="1" max="10000" step="1" value="1" required></label><label>Reaction Delay (ms)<input id="auto-reaction" type="number" min="0" max="2000" step="10" required></label><label>Aim Speed (Battlefield Pixels/s)<input id="auto-speed" type="number" min="50" max="10000" step="50" required></label><label>Weapon Switch Delay (ms)<input id="auto-switch" type="number" min="0" max="2000" step="10" required></label><label>Build<select id="auto-build"><option value="balanced">Balanced</option><option value="offense">Offense</option><option value="defense">Defense</option><option value="economy">Economy</option></select></label><label>Aim<select id="auto-aim"><option value="crowd">Crowd Sweeps</option><option value="nearest">Closest Threat</option><option value="priority">Priority Targets</option><option value="circle">Circle Sweep</option></select></label><label>Weapons<select id="auto-weapons"><option value="all">All Weapons</option><option value="projectile">Primary Only</option><option value="light">Favor Light Speed</option><option value="missile">Favor Smart Missiles</option><option value="hook">Favor Hook Bomb</option><option value="rotate">Rotate Weapons</option></select></label></div><div class="modal-actions"><button id="cancel-auto-play" class="quiet">Cancel</button><button id="watch-auto-play" class="primary">Watch</button></div>');
@@ -124,11 +127,12 @@ function prepareAutoRun(){
 function stopAutoPlay(){
   if(!autoPlayer || !humanGame)return;
   audio.pause();game.free();game=humanGame;humanGame=null;seed=humanSeed;autoPlayer=null;
+  if(devMode)game.dev_balance(configJson);
   firing=false;weapon=0;helpOpen=false;restartPrompt=false;uiPhase=-1;last=0;resultSent=false;
   closeModal();read();syncPhase();updateHud();showIntro();el('auto-play').focus();
 }
 function runAutoPlayer(dt:number){
-  if(!autoPlayer || helpOpen || restartPrompt)return;
+  if(!autoPlayer || devPanel?.open || helpOpen || restartPrompt)return;
   if(snapshot.phase===2&&snapshot.perks.offers.length){game.choose_perk(selectAutoPerk(snapshot,autoPlayer.strategy)!);read();renderReport();return;}
   const action=autoPlayer.update(snapshot,dt);if(!action)return;
   if(action.kind==='combat'){
@@ -157,20 +161,20 @@ function restoreRun() {
   if(!savedRun)return;
   const restored=Game.restore(configJson,savedRun.state);
   game.free();game=restored;seed=savedRun.seed;read();weapon=snapshot.weapon;
-  if(runRetries.checkpoint&&runRetries.checkpoint.seed!==seed)runRetries.reset();
+  if(!devMode&&runRetries.checkpoint&&runRetries.checkpoint.seed!==seed)runRetries.reset();
   aim=[0,-220];firing=false;uiPhase=-1;last=0;syncPhase();updateHud();
   if(snapshot.phase===1){pause();el('modal-title').textContent=`Run Restored · Wave ${snapshot.wave}`;}
   else if(snapshot.phase===2)void resumeAudio();
 }
 function retryRun() {
-  if(autoPlayer||!runRetries.available||!runRetries.checkpoint)return;
+  if(devMode||autoPlayer||!runRetries.available||!runRetries.checkpoint)return;
   const restored=runRetries.retry();if(!restored)return;
   stopFiring();game.free();game=restored;seed=runRetries.checkpoint.seed;
   closeModal();helpOpen=false;aim=[0,-220];weapon=0;firing=false;uiPhase=-1;last=0;resultSent=false;
   input();read();syncPhase();updateHud();saveRun();void resumeAudio();canvas.focus({preventScroll:true});
 }
 function milestoneRun() {
-  if(autoPlayer)return;
+  if(devMode||autoPlayer)return;
   const wave=Math.floor(cosmetics.completed/50)*50;if(wave<50)return;
   const nextSeed=crypto.getRandomValues(new Uint32Array(1))[0];
   const fresh=Game.milestone_start(nextSeed,configJson,wave);
@@ -185,7 +189,7 @@ app.innerHTML=`
   <div class="shell">
     <header class="header">
       <div class="brand"><img src="${towerUrl}" alt="" width="28" height="28"><h1>TOWERIUM</h1></div>
-      <nav aria-label="Game controls"><button id="help" class="quiet" title="Controls and enemy guide">Help</button><button id="music" class="quiet sound-toggle" aria-pressed="${!audio.musicMuted}" aria-label="Music" title="Music ${audio.musicMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></svg></button><button id="effects" class="quiet sound-toggle" aria-pressed="${!audio.effectsMuted}" aria-label="Effects" title="Effects ${audio.effectsMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"/></svg></button><button id="pause" class="quiet" title="Pause or resume · Esc" disabled>Pause</button></nav>
+      <nav aria-label="Game controls"><button id="dev-open" class="secondary" hidden>Dev</button><button id="help" class="quiet" title="Controls and enemy guide">Help</button><button id="music" class="quiet sound-toggle" aria-pressed="${!audio.musicMuted}" aria-label="Music" title="Music ${audio.musicMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></svg></button><button id="effects" class="quiet sound-toggle" aria-pressed="${!audio.effectsMuted}" aria-label="Effects" title="Effects ${audio.effectsMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"/></svg></button><button id="pause" class="quiet" title="Pause or resume · Esc" disabled>Pause</button></nav>
     </header>
     <main class="layout">
       <section class="play-column" aria-label="Towerium game">
@@ -228,6 +232,25 @@ function post(type:string,payload:Record<string,unknown>={}) {
   }
 }
 function read() {snapshot=JSON.parse(game.snapshot()) as Snapshot;return snapshot;}
+function changeDevMode(enabled:boolean){
+  if(autoPlayer||snapshot.phase!==0)return;
+  devMode=enabled;devSpeed=1;game.free();Object.assign(balance,structuredClone(defaultBalance));configJson=JSON.stringify(balance);
+  game=new Game(seed,configJson);read();updateHud();showIntro();
+}
+function createDevPanel(){
+  const resetRoutes=()=>{helpOpen=false;prioritiesOpen=false;automationOpen=false;restartPrompt=false;roundCountdown.reset();};
+  return new DevPanel({read:()=>read(),config:()=>balance,seed:()=>seed,speed:value=>{devSpeed=value;},getSpeed:()=>devSpeed,
+    leave:()=>{resetRoutes();if(humanGame){humanGame.free();humanGame=null;}autoPlayer=null;closeModal();game.free();devMode=false;devSpeed=1;Object.assign(balance,structuredClone(defaultBalance));configJson=JSON.stringify(balance);game=new Game(seed,configJson);uiPhase=-1;read();syncPhase();updateHud();showIntro();},
+    validate:config=>JSON.parse(Game.dev_config(JSON.stringify(config))),
+    apply:config=>{const json=Game.dev_config(JSON.stringify(config));game.dev_balance(json);Object.assign(balance,JSON.parse(json));configJson=json;read();updateHud();return balance;},
+    run:json=>{game.dev_run(json);read();updateHud();},
+    spawn:(kind,count)=>{game.dev_spawn(kind,count);read();},
+    power:kind=>{game.dev_power(kind);read();updateHud();},clear:()=>{game.dev_clear();read();},
+    fresh:(wave,nextSeed)=>{const fresh=Game.autoplay_start(nextSeed,configJson,wave);resetRoutes();game.free();game=fresh;seed=nextSeed;firing=false;weapon=0;resultSent=false;uiPhase=-1;read();game.pause(true);updateHud();},
+    pause:()=>{const was=snapshot.paused;stopFiring();game.pause(true);read();audio.pause();return was;},
+    close:was=>{game.pause(was);read();last=0;syncPhase();updateHud();if(!was)resumeAudio();},
+  });
+}
 // Read-only diagnostics for integration tests. No test-only simulation controls.
 export function getRenderSnapshot():Snapshot {return JSON.parse(game.snapshot()) as Snapshot;}
 export function getControlState(){return {aim:[...aim],effectiveAim:[...displayedAim()],firing,weapon,manualTarget:autoPlayer?.manualTarget??null,autoFireReady,autoWeapon,autoTargetId,autoAim:assistedAim?[...assistedAim]:null,aimPreferences:structuredClone(aimPreferences)};}
@@ -252,10 +275,10 @@ function updateAim(dt:number){
 function canFireWeapon(){return !!snapshot&&snapshot.disabled_weapon!==weapon&&(weapon===0||snapshot.ammo[weapon]>0);}
 function stopFiring() {assistedAim=null;autoTargetId=-1;aimController.reset();autoFireReady=false;touchControls.reset();firing=false;if(game)input();}
 function selectWeapon(index:number) {if(snapshot.disabled_weapon===index)return;if(index!==weapon)touchControls.releaseFire();weapon=index;input();read();updateHud();}
-function modalContent(html:string) {if(autoPlayer)html=html.replace('</h2>','</h2><span class="auto-badge">Auto Play</span>');modal.classList.remove('shop-modal','report-modal','automation-modal','help-modal');modal.classList.toggle('auto-mode',!!autoPlayer);modal.innerHTML=html;if(!modal.open)modal.showModal();}
+function modalContent(html:string) {if(devMode)html=html.replace('</h2>','</h2><button id="modal-dev-open" class="secondary">Dev</button>');if(autoPlayer)html=html.replace('</h2>','</h2><span class="auto-badge">Auto Play</span>');modal.classList.remove('shop-modal','report-modal','automation-modal','help-modal');modal.classList.toggle('auto-mode',!!autoPlayer);modal.innerHTML=html;if(!modal.open)modal.showModal();}
 function closeModal() {if(modal.open)modal.close();}
 function pause(show=true) {
-  if(!game || (snapshot.phase!==1 && !(autoPlayer && snapshot.phase===2)))return;
+  if(devPanel?.open || !game || (snapshot.phase!==1 && !(autoPlayer && snapshot.phase===2)))return;
   stopFiring();game.pause(true);audio.pause();read();last=0;updateHud();saveRun();
   if(show && !helpOpen)modalContent(`<div class="modal-top"><h2 id="modal-title">Paused</h2></div><div class="modal-actions"><button class="quiet" id="request-restart">${autoPlayer?'Restart Auto Play':'Restart'}</button>${autoPlayer?'<button class="quiet" id="stop-auto-play">Stop Auto Play</button>':''}<button class="primary" id="resume">Resume</button></div>`);
 }
@@ -263,7 +286,7 @@ function resume() {helpOpen=false;closeModal();game.pause(false);stopFiring();re
 function startWave() {closeModal();helpOpen=false;if(game.start_wave()){resumeAudio();last=0;read();syncPhase();updateHud();saveRun();canvas.focus({preventScroll:true});}}
 function restart() {
   restartPrompt=false;
-  if(!autoPlayer){savedRun=null;runRetries.reset();}else autoPlayer=new AutoPlayer(autoPlayer.strategy,autoPlayer.aim,autoPlayer.weapons,autoPlayer.options);
+  if(!autoPlayer&&!devMode){savedRun=null;runRetries.reset();}else if(autoPlayer)autoPlayer=new AutoPlayer(autoPlayer.strategy,autoPlayer.aim,autoPlayer.weapons,autoPlayer.options);
   closeModal();game.free();seed=crypto.getRandomValues(new Uint32Array(1))[0];game=autoPlayer?Game.autoplay_start(seed,configJson,autoStartWave):new Game(seed,configJson);
   aim=[0,-220];weapon=0;firing=false;resultSent=false;uiPhase=-1;if(autoPlayer){autoPlayer=new AutoPlayer(autoPlayer.strategy,autoPlayer.aim,autoPlayer.weapons,autoPlayer.options);prepareAutoRun();}else startWave();
 }
@@ -309,8 +332,8 @@ function runFooter(ended=false) {
   let actions=ended
     ? autoPlayer?'<button class="secondary" id="stop-auto-play">Stop Auto Play</button><button class="primary" id="restart">Watch Again</button>':'<button class="primary" id="restart">Play Again</button>'
     : `<div class="auto-buy-control"><button id="buy-now" title="Buy Now" ${autoPlayer?'disabled':''}>Buy</button><label title="Auto Buy Between Waves"><input id="auto-buy-enabled" type="checkbox" aria-label="Auto Buy Between Waves" ${automation.enabled?'checked':''} ${autoPlayer?'disabled':''}><span>Auto</span></label><button id="buy-priorities" title="Buy & Perk Priorities" aria-label="Buy & Perk Priorities" ${autoPlayer?'disabled':''}>☷</button></div>`+navigation+`<button id="next-wave" class="primary" ${autoPlayer?'disabled title="Auto Play Starts The Next Wave"':snapshot.perks.offers.length?'disabled title="Choose One Perk In Report First"':''}>${snapshot.perks.offers.length?'Choose A Perk':'Next Wave →'}</button>`;
-  if(ended&&!autoPlayer&&runRetries.available&&runRetries.checkpoint?.seed===seed)actions=`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint.wave} · ${3-runRetries.used} Left</button>`+actions;
-  if(ended&&!autoPlayer&&cosmetics.completed>=50)actions=`<button id="milestone-run" class="secondary">Fresh Wave ${Math.floor(cosmetics.completed/50)*50}</button>`+actions;
+  if(ended&&!autoPlayer&&!devMode&&runRetries.available&&runRetries.checkpoint?.seed===seed)actions=`<button id="retry-run" class="secondary">Retry Wave ${runRetries.checkpoint.wave} · ${3-runRetries.used} Left</button>`+actions;
+  if(ended&&!autoPlayer&&!devMode&&cosmetics.completed>=50)actions=`<button id="milestone-run" class="secondary">Fresh Wave ${Math.floor(cosmetics.completed/50)*50}</button>`+actions;
   if(!ended&&snapshot.pending_start_wave>0)actions=`<button id="next-wave" class="primary" ${autoPlayer?'disabled':''}>Start Wave ${snapshot.pending_start_wave} →</button>`;
   return `<div class="shop-footer"><div class="shop-tools">${shopSoundButtons()}${pauseOrRestart}<button id="shop-aim-priorities" class="quiet" title="Target Priority" aria-label="Target Priority" ${autoPlayer?'disabled':''}>Target Priority</button><button id="shop-help" class="quiet">Help</button><button id="shop-skins" ${autoPlayer?'disabled':''} class="quiet skin-button" title="${autoPlayer?'Skins Are Read Only During Auto Play':'Tower Skins'}" aria-label="Skins${cosmetics.fresh?', new skin unlocked':''}">${skinIcon(cosmetics.selected)}<span${cosmetics.fresh?' class="new-skin"':''}>Skins</span></button></div><p id="purchase-status" class="sr-only" role="status">${snapshot.notice.text.includes('upgraded')?esc(snapshot.notice.text):''}</p><div class="report-actions">${actions}</div></div>`;
 }
@@ -320,13 +343,13 @@ function returnRunScreen() {
 function renderReport() {
   if(snapshot.pending_start_wave>0){renderShop();return;}
   postWaveView='report';
-  if(!autoPlayer)cosmetics.clear(snapshot.wave);
+  if(!autoPlayer&&!devMode)cosmetics.clear(snapshot.wave);
   modalContent(`<div class="shop-heading"><h2 id="modal-title">Wave ${snapshot.wave} Cleared</h2>${wallet()}</div><div class="report-body">${perkChoices(snapshot,!!autoPlayer)}${reportSection('This Wave',snapshot.wave_report,'wave-report-heading')}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter()}`);
   modal.classList.add('report-modal');
 }
 function renderShop() {
   postWaveView='shop';
-  if(!autoPlayer)cosmetics.clear(snapshot.wave);
+  if(!autoPlayer&&!devMode)cosmetics.clear(snapshot.wave);
   const categories=`<div class="shop-categories" role="group" aria-label="Shop Category"><button id="category-workshop" class="secondary" aria-pressed="${shopCategory==='workshop'}">Workshop</button><button id="category-powers" class="secondary" aria-pressed="${shopCategory==='powers'}">Powerups</button><button id="category-supplies" class="secondary" aria-pressed="${shopCategory==='supplies'}">Supplies</button></div>`;
   if(shopCategory==='supplies'){
     modalContent(`<div class="shop-heading"><h2 id="modal-title" class="sr-only">Supplies</h2>${categories}${wallet()}</div><div class="shop-body">${supplyShop(snapshot,!!autoPlayer)}</div>${runFooter()}`);
@@ -343,7 +366,7 @@ function renderShop() {
   modal.classList.add('shop-modal');
 }
 function renderSkins() {
-  cosmetics.fresh=false;
+  if(!devMode)cosmetics.fresh=false;
   modalContent(`<div class="shop-heading"><h2 id="modal-title">Tower Skins</h2></div><div class="skin-grid">${skins.map((skin,i)=>{
     const unlocked=cosmetics.unlocked(i),selected=i===cosmetics.selected;
     return `<button class="skin-card${selected?' selected':''}" data-skin="${i}" ${unlocked?'':'disabled'} aria-pressed="${selected}" aria-label="${skin.name}${unlocked?selected?', selected':'':`, unlocks after wave ${i*30}`}" title="${skin.name}${unlocked?'':` · Clear wave ${i*30}`}">${skinIcon(i)}<span>${unlocked?selected?'✓ '+skin.name:skin.name:'Wave '+i*30}</span></button>`;
@@ -352,17 +375,18 @@ function renderSkins() {
 }
 function gameOver() {
   const cleared=Math.max(0,snapshot.wave-1);
-  if(!autoPlayer&&cleared>best){best=cleared;try{localStorage.setItem('towerium.best-wave',String(best));}catch{/* Optional local best. */}}
-  if(!autoPlayer&&!resultSent){audio.tone(180,.5,'triangle',.025,40);post('towerium:result',{payload:{version:1,aimAssisted:snapshot.aim_assisted,seed,waveReached:snapshot.wave,wavesCleared:cleared,kills:snapshot.kills,coinsEarned:snapshot.earned,durationSeconds:Math.round(snapshot.time)}});resultSent=true;}
+  if(!autoPlayer&&!devMode&&cleared>best){best=cleared;try{localStorage.setItem('towerium.best-wave',String(best));}catch{/* Optional local best. */}}
+  if(!autoPlayer&&!devMode&&!resultSent){audio.tone(180,.5,'triangle',.025,40);post('towerium:result',{payload:{version:1,aimAssisted:snapshot.aim_assisted,seed,waveReached:snapshot.wave,wavesCleared:cleared,kills:snapshot.kills,coinsEarned:snapshot.earned,durationSeconds:Math.round(snapshot.time)}});resultSent=true;}
   modalContent(`<div class="shop-heading"><h2 id="modal-title">Game Over</h2><span class="run-result">Wave ${snapshot.wave} · ${cleared} Cleared</span></div><div class="report-body">${snapshot.aim_assisted?'<p class="perk-picked">Autocannon Used</p>':'<p class="perk-picked">Manual Aim</p>'}${perkBuild(snapshot)}${reportSection('Overall',snapshot.overall_report,'overall-report-heading')}</div>${runFooter(true)}`);
   modal.classList.add('report-modal');
 }
 function syncPhase() {
+  if(devPanel?.open)return;
   if(snapshot.phase===uiPhase)return;uiPhase=snapshot.phase;
   el('intro').hidden=snapshot.phase!==0;
   if(snapshot.phase===2){
     stopFiring();
-    if(!autoPlayer&&snapshot.pending_start_wave===0&&snapshot.wave%10===0&&snapshot.perks.offers.length===0)runRetries.capture(seed,snapshot.wave,game.save());
+    if(!autoPlayer&&!devMode&&snapshot.pending_start_wave===0&&snapshot.wave%10===0&&snapshot.perks.offers.length===0)runRetries.capture(seed,snapshot.wave,game.save());
     renderReport();
   }
   if(snapshot.phase===3){stopFiring();gameOver();}
@@ -382,7 +406,7 @@ function updateHud() {
   touchControls.update(mobile&&snapshot.phase===1&&!snapshot.paused&&!modal.open,canFireWeapon());
   const toggle=el<HTMLButtonElement>('auto-aim-toggle');toggle.textContent=`Autocannon: ${autoPlayer||aimPreferences.enabled?'On':'Off'}`;toggle.setAttribute('aria-pressed',String(!!autoPlayer||aimPreferences.enabled));toggle.disabled=!!autoPlayer;toggle.title=autoPlayer?'Auto Play Controls The Autocannon':'Toggle The Autocannon';el<HTMLButtonElement>('aim-priorities').disabled=!!autoPlayer;
   const s=snapshot;
-  el('run-mode').hidden=!autoPlayer;
+  el('run-mode').hidden=!autoPlayer&&!devMode;setText('run-mode',devMode?'Dev Run · Unscored':'Auto Play');el('dev-open').hidden=!devMode;
   setText('wave',String(s.wave||1).padStart(2,'0'));setText('coins',number(s.coins));setText('stones',number(s.stones));
   const cleanup=s.wave_time>=balance.waves.spawn_seconds;
   setText('next-perk',nextPerkText(s).replace('Wave ','W'));
@@ -413,11 +437,11 @@ document.addEventListener('click',event=>{
   const button=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(!button || button.disabled || !game)return;
   if(button.dataset.autoRule!==undefined){const rules=automationTab==='buy'?automation.buy:automation.perks;rules[Number(button.dataset.autoRule)].enabled=!rules[Number(button.dataset.autoRule)].enabled;saveAutomation();renderAutomation();return;}
   if(button.dataset.autoMove!==undefined){const rules=automationTab==='buy'?automation.buy:automation.perks,i=Number(button.dataset.autoMove),j=i+Number(button.dataset.direction);if(j>=0&&j<rules.length){[rules[i],rules[j]]=[rules[j],rules[i]];saveAutomation();renderAutomation();}return;}
-  if(button.dataset.perk!==undefined&&!autoPlayer){if(game.choose_perk(Number(button.dataset.perk))){read();if(snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());saveRun();renderReport();el('next-wave').focus();}return;}
+  if(button.dataset.perk!==undefined&&!autoPlayer){if(game.choose_perk(Number(button.dataset.perk))){read();if(!devMode&&snapshot.wave%10===0)runRetries.capture(seed,snapshot.wave,game.save());saveRun();renderReport();el('next-wave').focus();}return;}
   if(button.dataset.rule){const r=aimPreferences.rules.find(r=>r.id===button.dataset.rule);if(r){r.enabled=!r.enabled;saveAimPreferences();renderPriorities();modal.querySelector<HTMLButtonElement>(`[data-rule="${r.id}"]`)?.focus();}return;}
   if(button.dataset.moveRule!==undefined){const i=Number(button.dataset.moveRule),j=i+Number(button.dataset.direction);if(j>=0&&j<aimPreferences.rules.length){const moved=aimPreferences.rules[i];[aimPreferences.rules[i],aimPreferences.rules[j]]=[aimPreferences.rules[j],aimPreferences.rules[i]];saveAimPreferences();renderPriorities();modal.querySelector<HTMLButtonElement>(`[data-rule="${moved.id}"]`)?.focus();}return;}
   if(button.dataset.weapon!==undefined&&!autoPlayer){selectWeapon(Number(button.dataset.weapon));return;}
-  if(button.dataset.skin!==undefined&&!autoPlayer){if(cosmetics.select(Number(button.dataset.skin))){renderer.skin=cosmetics.selected;returnRunScreen();el('shop-skins').focus({preventScroll:true});}return;}
+  if(button.dataset.skin!==undefined&&!autoPlayer&&!devMode){if(cosmetics.select(Number(button.dataset.skin))){renderer.skin=cosmetics.selected;returnRunScreen();el('shop-skins').focus({preventScroll:true});}return;}
   if(button.dataset.supply!==undefined&&!autoPlayer){const item=Number(button.dataset.supply);if(game.buy_supply(item)){read();saveRun();renderShop();updateHud();modal.querySelector<HTMLButtonElement>(`[data-supply="${item}"]`)?.focus({preventScroll:true});}return;}
   if(button.dataset.powerSelect!==undefined){selectedPower=Number(button.dataset.powerSelect);renderShop();modal.querySelector<HTMLButtonElement>(`[data-power-select="${selectedPower}"]`)?.focus({preventScroll:true});return;}
   if(button.dataset.powerBuy!==undefined&&!autoPlayer){const power=Number(button.dataset.powerBuy),path=Number(button.dataset.powerPath);if(game.buy_power(power,path)){read();saveRun();renderShop();const next=modal.querySelector<HTMLButtonElement>(`[data-power-buy="${power}"][data-power-path="${path}"]`);if(next&&!next.disabled)next.focus({preventScroll:true});else modal.querySelector<HTMLButtonElement>(`[data-power-select="${power}"]`)?.focus({preventScroll:true});updateHud();}return;}
@@ -432,12 +456,13 @@ document.addEventListener('click',event=>{
     case 'automation-buy-tab':automationTab='buy';renderAutomation();break;
     case 'automation-perk-tab':automationTab='perks';renderAutomation();break;
     case 'automation-done':automationOpen=false;returnRunScreen();roundCountdown.reset();break;
+    case 'dev-open':case 'modal-dev-open':devPanel.show();break;
     case 'auto-play':configureAutoPlay();break;
     case 'watch-auto-play':startAutoPlay();break;
     case 'cancel-auto-play':closeModal();break;
     case 'stop-auto-play':stopAutoPlay();break;
     case 'auto-pause':snapshot.paused?resume():pause();break;
-    case 'start':if(!autoPlayer){runRetries.reset();startWave();}break;
+    case 'start':if(!autoPlayer){if(!devMode)runRetries.reset();startWave();}break;
     case 'next-wave':if(!autoPlayer)startWave();break;
     case 'retry-run':retryRun();break;
     case 'milestone-run':milestoneRun();break;
@@ -479,6 +504,7 @@ for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.add
 window.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'&&!(e.target instanceof Element&&e.target.closest('#touch-controls')))stopFiring();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('keydown',e=>{
+  if(devPanel?.open)return;
   if(!game || e.ctrlKey || e.metaKey || e.altKey)return;
   if(e.key==='Escape'){e.preventDefault();if(automationOpen){automationOpen=false;returnRunScreen();roundCountdown.reset();return;}if(prioritiesOpen){closePriorities();return;}if(snapshot.phase===0){closeModal();return;}if(restartPrompt){cancelRestart();return;}if(snapshot.phase===1){if(snapshot.paused)resume();else pause();}else if(snapshot.phase===2){helpOpen=false;if(autoPlayer&&snapshot.paused)resume();else returnRunScreen();}else if(helpOpen){helpOpen=false;closeModal();if(snapshot.phase===3)gameOver();}return;}
   if(modal.open)return;
@@ -501,6 +527,7 @@ window.addEventListener('pageshow',e=>{if(e.persisted){last=0;animation=requestA
 let backgroundLast=performance.now();
 let autoAccumulator=0;
 function stepGame(dt:number){
+  if(devMode)dt*=devSpeed;
   if(autoPlayer){
     autoAccumulator+=dt;
     while(autoAccumulator+1e-8>=1/60){autoAccumulator-=1/60;runAutoPlayer(1/60);game.advance(1/60);read();syncPhase();}
@@ -526,7 +553,7 @@ async function boot() {
   el<HTMLButtonElement>('start').disabled=true;el('start').textContent='Initializing…';
   const [art]=await Promise.all([loadArt(),init()]);
   compatibleConfig=await createSaveCompatibility(configJson,[runKey,retryStorageKey]);
-  game=new Game(seed,configJson);runRetries=new RunRetries(configJson,compatibleConfig);renderer=new Renderer(canvas,art);renderer.skin=cosmetics.selected;renderer.touchAim=touchDevice;read();updateHud();
+  game=new Game(seed,configJson);runRetries=new RunRetries(configJson,compatibleConfig);renderer=new Renderer(canvas,art);renderer.skin=cosmetics.selected;renderer.touchAim=touchDevice;devPanel=createDevPanel();read();updateHud();
   el<HTMLButtonElement>('start').disabled=false;el('start').textContent='Play';showIntro();
   try {
     const raw=localStorage.getItem(runKey);
@@ -547,6 +574,6 @@ void boot().catch(error=>{
   console.error('Towerium initialization failed:',error);
 });
 
-document.addEventListener('change',event=>{const input=event.target as HTMLInputElement;if(input.id==='auto-buy-enabled'){automation.enabled=input.checked;roundCountdown.reset();automationAppliedWave=-1;saveAutomation();return;}if(input.id==='auto-perk-enabled'){automation.perkEnabled=input.checked;saveAutomation();return;}if(input.dataset.autoLimit!==undefined){const i=Number(input.dataset.autoLimit),rule=automation.buy[i];rule.limit=Math.max(0,Math.min(balance.upgrades[rule.id].cap,Math.floor(Number(input.value)||0)));saveAutomation();renderAutomation();}});
+document.addEventListener('change',event=>{const input=event.target as HTMLInputElement;if(input.id==='dev-enable'){changeDevMode(input.checked);return;}if(input.id==='auto-buy-enabled'){automation.enabled=input.checked;roundCountdown.reset();automationAppliedWave=-1;saveAutomation();return;}if(input.id==='auto-perk-enabled'){automation.perkEnabled=input.checked;saveAutomation();return;}if(input.dataset.autoLimit!==undefined){const i=Number(input.dataset.autoLimit),rule=automation.buy[i];rule.limit=Math.max(0,Math.min(balance.upgrades[rule.id].cap,Math.floor(Number(input.value)||0)));saveAutomation();renderAutomation();}});
 document.addEventListener('pointerdown',event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-upgrade]');if(!button||button.disabled||autoPlayer||event.button!==0)return;suppressBuyClick=false;heldPurchased=false;heldStat=Number(button.dataset.upgrade);heldPointer=event.pointerId;holdSince=performance.now();holdTimer=window.setTimeout(repeatStat,400);});
 document.addEventListener('pointerup',event=>{if(event.pointerId===heldPointer)stopStatHold();});document.addEventListener('pointercancel',stopStatHold);window.addEventListener('blur',stopStatHold);

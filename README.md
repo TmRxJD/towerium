@@ -56,6 +56,20 @@ Power supply scales with wave density after 100 planned enemies. Base/max global
 
 Extra Orbs adds three faster counter-rotating Orbs through Black Hole centers. Area Of Effect expands splash and control fields. Four roaming bots provide coin/Stone rewards, damage amplification, escalating burns or stun/slow control; each bot has its own radius upgrades in Powerups. Gold and Amp are support auras and never attack.
 
+## Dev Mode
+
+Enable **Dev Mode** on the splash screen. **Dev** remains available during combat and in every run dialog. Editing pauses the simulation; Done restores its previous pause state.
+
+- **Live Run:** set coins, Stones, HP, ammo, charges, shields and workshop/power levels; spawn or clear enemies; activate powers; change simulation speed; create a seeded sandbox at any wave with a starting budget.
+- **Balance:** edit enemy stats/rewards, weapon stats/ammo bundles, upgrade bonuses/cost curves, drops, defenses, modules and power effects. Wave profiles can be edited individually or scaled together.
+- **Experiments:** export/import versioned JSON, edit the full config, restore default settings, or leave the sandbox.
+
+Apply Balance validates the whole configuration atomically. Invalid settings leave the running config unchanged. Mechanical constraints still apply: probabilities, capacities, ordered wave profiles must remain valid. Enemy HP already on screen is preserved; new spawn composition/counts take effect next wave, and starting bonuses need a new sandbox. Power Shop bases follow their mechanical power settings automatically. Clearing enemies grants no rewards. Ammo grants respect capacity.
+
+Shared settings may change numeric mechanics; display labels and metadata stay fixed. Import rejects unsupported schema versions and altered metadata.
+
+Dev runs never update normal saves, retries, skin unlocks, best waves or tracker results. Settings exports include seed and wave notes; importing stages balance settings rather than restoring a run. To reproduce an experiment, apply its settings and create a fresh sandbox using the recorded seed/wave. Dev settings are session-local unless exported.
+
 ## Checks
 
 ```sh

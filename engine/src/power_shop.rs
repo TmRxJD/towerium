@@ -90,7 +90,7 @@ impl PowerWorkshop {
     }
 }
 
-fn effect_bases(c: &Config) -> [f32; POWER_COUNT] {
+pub(crate) fn effect_bases(c: &Config) -> [f32; POWER_COUNT] {
     [
         c.powers.chain_chance,
         c.powers.chrono_slow,
