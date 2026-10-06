@@ -254,7 +254,7 @@ function createDevPanel(){
 // Read-only diagnostics for integration tests. No test-only simulation controls.
 export function getRenderSnapshot():Snapshot {return JSON.parse(game.snapshot()) as Snapshot;}
 export function getControlState(){return {aim:[...aim],effectiveAim:[...displayedAim()],firing,weapon,manualTarget:autoPlayer?.manualTarget??null,autoFireReady,autoWeapon,autoTargetId,autoAim:assistedAim?[...assistedAim]:null,aimPreferences:structuredClone(aimPreferences)};}
-function displayedAim():[number,number] {if(assistedAim&&!firing&&!autoPlayer)return assistedAim;return touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;}
+function displayedAim():[number,number] {return touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;}
 function input() {
  const manualAim=touchDevice&&!autoPlayer&&firing?assistAim(snapshot,aim,14,canvas.clientWidth,weapon):aim;
  game.input(...manualAim,firing,weapon);

@@ -1646,3 +1646,33 @@ test('Dev Mode panel stays usable on narrow mobile and landscape screens',async(
  await expect(panel.getByRole('button',{name:'Apply Balance',exact:true})).toBeInViewport();
  await page.screenshot({path:'.local/dev-landscape.png'});
 });
+test('manual reticle stays independent of Autocannon after mouse and touch Fire release',async({browser})=>{
+ for(const touch of [false,true]){
+  const context=await browser.newContext({viewport:touch?{width:390,height:844}:{width:1440,height:1080},isMobile:touch,hasTouch:touch});
+  const page=await context.newPage();await page.clock.install();await page.goto('/?seed=42');
+  await expect(page.locator('#start')).toBeEnabled();await page.locator('#start').click();
+  if(!touch)await page.locator('#auto-aim-toggle').click();
+  await page.clock.runFor(6000);
+  let cdp;
+  if(touch){
+   cdp=await context.newCDPSession(page);
+   const pad=await page.locator('#aim-pad').boundingBox(),fire=await page.locator('#touch-fire').boundingBox();
+   const point={id:61,x:pad.x+pad.width/2,y:pad.y+pad.height/2};
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...point,x:point.x+45}]});
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:62,x:fire.x+fire.width/2,y:fire.y+fire.height/2}]});
+  }else{
+   const arena=await page.locator('#arena').boundingBox();await page.mouse.move(arena.x+arena.width*.75,arena.y+arena.height*.75);await page.mouse.down();
+  }
+  await page.clock.runFor(200);const firing=await readControlState(page);expect(firing.firing).toBe(true);
+  if(touch)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});else await page.mouse.up();
+  await page.clock.runFor(300);const released=await readControlState(page);
+  expect(released.firing).toBe(false);expect(released.aim).toEqual(firing.aim);
+  expect(released.effectiveAim).toEqual(released.aim);expect(released.autoAim).not.toBeNull();
+  expect(Math.hypot(released.autoAim[0]-released.aim[0],released.autoAim[1]-released.aim[1])).toBeGreaterThan(20);
+  await page.clock.runFor(500);const idle=await readControlState(page);
+  expect(idle.aim).toEqual(released.aim);expect(idle.effectiveAim).toEqual(released.aim);
+  await context.close();
+ }
+});

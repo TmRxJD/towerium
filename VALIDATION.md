@@ -1,5 +1,11 @@
 # Validation status
 
+## Manual Reticle Release — 2026-10-06
+
+- Removed the idle manual-reticle handoff to Autocannon aim. Manual and automatic firing inputs remain separate; touch snap still applies while firing.
+- Chrome checks passed: release regression on both mouse/touch (1 test), touch snap (2), independent manual/automatic firing (1). Controller tests 78/78, content, WASM/TypeScript production build and diff checks passed.
+- Kritic deterministic checks passed; Kev backend remains off. UX review accepted desktop/touch captures. Its four-action crawl does not measure all unrelated screens. Rust simulation was unchanged, so the native/endurance suite was not repeated.
+
 ## Dev Mode Checks — 2026-10-06
 
 - Rust: 186 passed, 0 failed, 1 ignored (`dense_endurance_profile`); formatting and Clippy with `-D warnings` passed.
