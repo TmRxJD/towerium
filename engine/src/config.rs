@@ -587,7 +587,7 @@ fn validate_timing(c: &Config) -> Result<(), String> {
         || p.swamp_cap == 0
         || p.swamp_cap > 8
         || p.fallout_attack_multiplier > 1.0
-        || p.demon_invincible_duration > p.demon_duration
+        || p.demon_invincible_duration != 10.0
         || p.drop_reference_kills > 1000.0
         || p.demon_drop_interval <= p.demon_invincible_duration
         || p.demon_damage_multiplier < 1.0

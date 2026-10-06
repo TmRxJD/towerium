@@ -1582,7 +1582,7 @@
         1916,
         2113
       ],
-      "description": "Increase maximum banked power time from 50 to 70 seconds. Demon invincibility remains capped at 50 seconds.",
+      "description": "Increase maximum banked power time from 50 to 70 seconds. Demon invincibility stays at 10 seconds and cannot stack.",
       "display_scale": 1,
       "group": "Autocannon"
     }

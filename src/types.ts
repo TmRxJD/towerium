@@ -37,7 +37,7 @@ export interface Snapshot {
   enemy_burns:[number,number,number][]; extra_power_times:number[]; extra_orbs:[number,number][]; bots:[number,number,number,number,number][]; aoe_scale:number;
   powers:number[]; remaining:number; total:number; spawned:number; range:number; view_extent:number; rapid:number;
   shock_in:number; orb_angle:number; orb_count:number; spotlight_angle:number; ray_angle:number; ray_active:boolean;
-  enemies:Enemy[]; shots:Shot[]; drops:Drop[]; areas:[number,number,number,number][];
+  enemies:Enemy[]; shots:Shot[]; shot_targets:[number,number,number][]; drops:Drop[]; areas:[number,number,number,number][];
   hostile:[number,number][]; deathwaves:number[]; fx:Fx[]; notice:{text:string;time:number};
   levels:number[]; values:number[]; costs:number[];
 }

@@ -1,10 +1,31 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction,baselineWeapon,baselinePurchase,baselinePowerPurchase,baselineSupplyPurchase,weaponDamage,predictedDamage,decisionDue} from '../scripts/playtest-policy.mjs';
+import {targets,combatRequest,shopRequest,shopNominations,decodeChoice,baselineAction,baselineWeapon,baselinePurchase,baselinePowerPurchase,baselineSupplyPurchase,weaponDamage,predictedDamage,decisionDue,incomingPremiumDamage} from '../scripts/playtest-policy.mjs';
 const config=JSON.parse(readFileSync(new URL('../engine/balance.json',import.meta.url),'utf8'));
 const state={wave:1,hp:100,max_hp:100,coins:50,enemies:[[1,0,100,0,2,2,0],[2,5,200,0,45,45,0],[3,1,500,0,1,1,0]],drops:[[4,8,150,0,8]],range:360,
   ammo:[0,0,18,0],powers:[0,0,0,0,0,0,0],module_times:[0,0,0,0],power_effects:config.power_workshop.upgrades.map(u=>u.effect_base),power_levels:Array.from({length:config.power_workshop.upgrades.length},()=>[0,0]),power_costs:config.power_workshop.upgrades.map(u=>[u.weight_costs[0],u.effect_costs[0]]),stones:0,shots:[],charges:0,remaining:10,weapon:0,levels:Array(config.upgrades.length).fill(0),values:config.upgrades.map(u=>u.base),costs:config.upgrades.map(u=>u.costs[0])};
+
+test('a lethal homing missile prevents manual follow-up shots until impact or loss',()=>{
+ const s={...state,enemies:[[1,2,220,0,2,10,0]],drops:[],shots:[[20,2,100,0,0]],shot_targets:[[20,1,1]],time:1};
+ assert(incomingPremiumDamage(s,config).get('enemy_1')>=2);
+ for(const human of [true,false]){
+  const action=baselineAction(s,config,targets(s,config),'crowd',2,{human});
+  assert.equal(action.fire,false);assert.equal(action.waitingForImpact,true);
+ }
+ const lost={...s,shots:[],shot_targets:[]};
+ assert.equal(baselineAction(lost,config,targets(lost,config),'crowd',2,{human:true}).fire,true);
+ const nonlethal={...s,enemies:[[1,2,220,0,100,100,0]]};
+ assert.equal(baselineAction(nonlethal,config,targets(nonlethal,config),'crowd',2,{human:true}).fire,true);
+});
+
+test('an isolated safe tank does not justify premium ammo even with a weapon preference',()=>{
+ const s={...state,enemies:[[1,2,320,0,20,20,0]],drops:[],ammo:[0,0,100,6]};
+ for(const weaponMode of ['all','missile','hook']){
+  const action=baselineAction(s,config,targets(s,config),'crowd',2,{human:true,weaponMode});
+  assert.equal(action.weapon,0);
+ }
+});
 
 test('pressure does not prevent collecting a missing defensive power',()=>{
   const pressured={...state,enemies:[[1,0,50,0,20,20,0],[2,0,0,70,20,20,0],[3,0,-90,0,20,20,0]],drops:[[4,1,120,0,20]]};

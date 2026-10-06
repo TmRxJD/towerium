@@ -450,9 +450,9 @@ fn new_power_timers_stack_and_legacy_seven_power_saves_remain_strict() {
     }
     assert_eq!(w.fallout_time, 50.0);
     assert_eq!(w.demon_time, 50.0);
-    assert_eq!(w.demon_invincible, 20.0);
+    assert_eq!(w.demon_invincible, 10.0);
     let restored = World::restore(w.c.clone(), &w.save()).unwrap();
-    assert_eq!(restored.demon_invincible, 20.0);
+    assert_eq!(restored.demon_invincible, 10.0);
     assert_eq!(restored.fallout_time, 50.0);
     let mut legacy: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
     for key in [
@@ -473,6 +473,56 @@ fn new_power_timers_stack_and_legacy_seven_power_saves_remain_strict() {
         bad["world"][key] = serde_json::json!(value);
         assert!(World::restore(w.c.clone(), &bad.to_string()).is_err());
     }
+}
+
+#[test]
+fn demon_repeat_pickups_extend_damage_without_refreshing_invincibility() {
+    let mut w = active();
+    w.levels[20] = w.c.upgrades[20].cap;
+    w.levels[34] = w.c.upgrades[34].cap;
+    w.activate(DEMON);
+    assert_eq!(w.demon_invincible, 10.0);
+    w.demon_invincible = 4.0;
+    w.activate(DEMON);
+    assert_eq!(w.demon_invincible, 4.0);
+    assert_eq!(w.demon_time, 70.0);
+    w.demon_invincible = 0.0;
+    w.activate(DEMON);
+    assert_eq!(w.demon_invincible, 0.0);
+    let mut old: serde_json::Value = serde_json::from_str(&w.save()).unwrap();
+    old["world"]["demon_invincible"] = serde_json::json!(50.0);
+    let restored = World::restore(w.c.clone(), &old.to_string()).unwrap();
+    assert_eq!(restored.demon_invincible, 10.0);
+    w.demon_time = 0.0;
+    w.activate(DEMON);
+    assert_eq!(w.demon_invincible, 10.0);
+}
+
+#[test]
+fn fresh_high_wave_support_is_granted_once_at_combat_start_not_during_shopping() {
+    for wave in [50, 160, 500] {
+        let mut w = World::autoplay_start(Config::standard(), 42, wave).unwrap();
+        assert_eq!(w.powers, [0.0; 7]);
+        w = World::restore(w.c.clone(), &w.save()).unwrap();
+        w.start_wave();
+        for power in [CHRONO, BLACKHOLE, SPOTLIGHT, GOLDEN] {
+            assert_eq!(w.powers[power], 20.0);
+        }
+        assert_eq!(w.extra_power_times[0], 20.0);
+        assert_eq!(w.extra_power_times[6], 20.0);
+        assert_eq!(w.shields, 1);
+        assert_eq!(w.overall_stats.powerups_collected, 0);
+        w.powers = [0.0; 7];
+        w.extra_power_times = [0.0; 7];
+        w.shields = 0;
+        w.phase = 2;
+        w.start_wave();
+        assert_eq!(w.powers, [0.0; 7]);
+        assert_eq!(w.shields, 0);
+    }
+    let mut opening = World::autoplay_start(Config::standard(), 42, 1).unwrap();
+    opening.start_wave();
+    assert_eq!(opening.powers, [0.0; 7]);
 }
 
 #[test]

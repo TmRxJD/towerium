@@ -252,7 +252,7 @@ function updateAim(dt:number){
 function canFireWeapon(){return !!snapshot&&snapshot.disabled_weapon!==weapon&&(weapon===0||snapshot.ammo[weapon]>0);}
 function stopFiring() {assistedAim=null;autoTargetId=-1;aimController.reset();autoFireReady=false;touchControls.reset();firing=false;if(game)input();}
 function selectWeapon(index:number) {if(snapshot.disabled_weapon===index)return;if(index!==weapon)touchControls.releaseFire();weapon=index;input();read();updateHud();}
-function modalContent(html:string) {if(autoPlayer)html=html.replace('</h2>','</h2><span class="auto-badge">Auto Play</span>');modal.classList.remove('shop-modal','report-modal','automation-modal');modal.classList.toggle('auto-mode',!!autoPlayer);modal.innerHTML=html;if(!modal.open)modal.showModal();}
+function modalContent(html:string) {if(autoPlayer)html=html.replace('</h2>','</h2><span class="auto-badge">Auto Play</span>');modal.classList.remove('shop-modal','report-modal','automation-modal','help-modal');modal.classList.toggle('auto-mode',!!autoPlayer);modal.innerHTML=html;if(!modal.open)modal.showModal();}
 function closeModal() {if(modal.open)modal.close();}
 function pause(show=true) {
   if(!game || (snapshot.phase!==1 && !(autoPlayer && snapshot.phase===2)))return;
@@ -270,6 +270,7 @@ function restart() {
 function help() {
   const live=snapshot.phase===1;helpOpen=true;if(live)pause(false);
   modalContent(renderHelp({live,best,time:clock(snapshot.time),seed}));
+  modal.classList.add('help-modal');
 }
 function statText(value:number,index:number) {
   const u=balance.upgrades[index];

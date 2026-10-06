@@ -108,8 +108,24 @@ function contactTime(shot,target,speed,radius,horizon) {
 }
 
 /** Conservatively reserve only the first likely contact of each visible shot. */
+/** Current native homing targets, shared by both cannons; no future enemy positions. */
+export function incomingPremiumDamage(state,config) {
+  const damage=new Map(),shots=new Map((state.shots??[]).map(s=>[s[0],s]));
+  const enemies=new Map(state.enemies.filter(e=>e[4]>0).map(e=>[e[0],e]));
+  for(const [shotId,targetId,efficiency] of state.shot_targets??[]){
+    const shot=shots.get(shotId),enemy=enemies.get(targetId);
+    if(!shot||!enemy||![2,3].includes(shot[1]))continue;
+    if(Math.hypot(enemy[2]-shot[2],enemy[3]-shot[3])/config.weapons[shot[1]].speed>3)continue;
+    const target={kind:enemy[1],x:enemy[2],y:enemy[3],hp:enemy[4],maxHp:enemy[5]};
+    const key=`enemy_${targetId}`;
+    damage.set(key,(damage.get(key)??0)+weaponDamage({...state,range:state.range*efficiency},config,target,shot[1])*Math.min(1,efficiency));
+  }
+  return damage;
+}
+
 export function predictedDamage(state,config,candidates,context={}) {
-  const damage=new Map(),wanted=new Map(candidates.map(t=>[t.key,t]));
+  const damage=incomingPremiumDamage(state,config),wanted=new Map(candidates.map(t=>[t.key,t]));
+  const homing=new Set((state.shot_targets??[]).map(s=>s[0]));
   if(!state.shots.length)return damage;
   const radii=new Map(state.enemy_radii??[]),effects=new Map((state.enemy_effects??[]).map(e=>[e[0],e]));
   const previous=context.previous?{elapsed:state.time-context.previous.time,positions:new Map(context.previous.enemies.map(e=>[e[0],[e[2],e[3]]]))}:undefined;
@@ -118,6 +134,7 @@ export function predictedDamage(state,config,candidates,context={}) {
   for(const e of state.enemies)if(e[4]>0)add(enemyDetails(state,config,e,radii,effects,previous));
   for(const d of state.drops)add({key:`drop_${d[0]}`,drop:d[1],x:d[2],y:d[3],vx:0,vy:0,radius:18});
   for(const shot of state.shots){
+    if(homing.has(shot[0]))continue;
     if(shot[1]===1||shot[1]>4)continue;
     const speed=shot[1]===4?config.weapons[0].speed*.8:config.weapons[shot[1]].speed;
     const horizon=shot[1]===0||shot[1]===4?1:.65;
@@ -201,7 +218,8 @@ export function baselineAction(state, config, candidates, aim='nearest', circleS
     return {target:'circle',pointer:[Math.cos(angle)*state.range*.9,Math.sin(angle)*state.range*.9],weapon:0,fire:true,sweep:true,deathWave:false};
   }
   if(aim==='idle')return {target:'hold',weapon:0,deathWave:false};
-  const committed=context.human?(context.pendingDamage??new Map()):predictedDamage(state,config,candidates,context);
+  const committed=context.human?incomingPremiumDamage(state,config):predictedDamage(state,config,candidates,context);
+  if(context.human)for(const [key,value] of context.pendingDamage??[])committed.set(key,Math.max(value,committed.get(key)??0));
   const open=candidates.filter(t=>(committed.get(t.key)??0)+.00001<(t.drop===undefined?t.hp:1));
   const angle=t=>Math.atan2(t.y,t.x),currentAngle=Math.atan2(context.aim?.[1]??0,context.aim?.[0]??1);
   const groupSize=t=>state.enemies.filter(e=>e[4]>0&&visible(e[2],e[3],0,state.view_extent??650)&&Math.abs(angleDelta(Math.atan2(e[3],e[2]),angle(t)))<.22).length;
@@ -228,7 +246,7 @@ export function baselineAction(state, config, candidates, aim='nearest', circleS
     const matchup=target.spec.weapon_damage;
     const cluster=state.enemies.filter(e=>e[4]>0&&visible(e[2],e[3],0,state.view_extent??650)&&Math.hypot(e[2]-target.x,e[3]-target.y)<100).length;
     if(available(3)&&target.distance<=state.range+.1&&(bossKinds.has(target.kind)||state.ammo[3]>3&&cluster>=4)&&hp>weaponDamage(state,config,target,0)*2)weapon=3;
-    else if(available(2)&&hits(0)>3&&(!bossKinds.has(target.kind)||target.distance<=state.range+.1)&&(bossKinds.has(target.kind)||state.ammo[2]>8&&(matchup[2]>matchup[1]||target.kind===2)))weapon=2;
+    else if(available(2)&&hits(0)>3&&(!bossKinds.has(target.kind)||target.distance<=state.range+.1)&&(bossKinds.has(target.kind)||state.ammo[2]>8&&(cluster>=3||target.danger<2)&&(matchup[2]>matchup[1]||target.kind===2)))weapon=2;
     else if(available(1)&&(hits(1)<hits(0)||state.ammo[1]>=(state.ammo_caps?.[1]??config.weapons[1].capacity)*.4)&&!(target.kind===8&&!target.child&&matchup[0]>matchup[1]))weapon=1;
     // A nearly dead special does not justify a fresh premium missile or bomb.
     if(hits(0)===1&&target.danger>1&&weapon!==1)weapon=0;
@@ -236,7 +254,7 @@ export function baselineAction(state, config, candidates, aim='nearest', circleS
   weapon=baselineWeapon(state,weapon,context.weaponMode??'all');
   // Preference modes never turn a pickup or cheap solo kill into a premium shot.
   const bombGroup=target?state.enemies.filter(e=>e[4]>0&&Math.hypot(e[2]-target.x,e[3]-target.y)<100).length:0;
-  if(weapon>=2&&(target?.drop!==undefined||!target||target.hp<=weaponDamage(state,config,target,0)*2||bossKinds.has(target.kind)&&target.distance>state.range+.1||weapon===3&&(target.distance>state.range+.1||!bossKinds.has(target.kind)&&bombGroup<4)||!bossKinds.has(target.kind)&&state.ammo[weapon]<=(weapon===3?3:8)))weapon=0;
+  if(weapon>=2&&(target?.drop!==undefined||!target||target.hp<=weaponDamage(state,config,target,0)*2||bossKinds.has(target.kind)&&target.distance>state.range+.1||weapon===3&&(target.distance>state.range+.1||!bossKinds.has(target.kind)&&bombGroup<4)||!bossKinds.has(target.kind)&&(state.ammo[weapon]<=(weapon===3?3:8)||bombGroup<3&&target.danger>=2)))weapon=0;
   let pointer;
   if(target){
     let vx=context.human?0:target.vx??0,vy=context.human?0:target.vy??0;

@@ -37,6 +37,7 @@ Vite prints the local address. To build a static production bundle, run `npm run
 - Use Pause, Help, Music, and Effects from the game controls. The Workshop and wave report share the between-wave flow; Next Wave starts the next attack.
 - Saved human runs can be resumed from the opening screen. Restart asks for confirmation.
 - Each run has up to three retries from its latest cleared ten-wave checkpoint. Clearing wave 50 unlocks a fresh Wave 50 start with empty shops and reference-based coin and Power Stone budgets.
+- Fresh starts at wave 50+ receive a one-time 20-second support kit when combat begins: Chrono Field, Black Hole, Spotlight, Golden Tower, Extra Orbs, Critical Coin, and one Shield. Shopping does not consume it; normal subsequent waves do not replenish it.
 - Auto Play runs a separate spectator game with selectable start wave, build, aim, weapon preferences, reaction delay, cursor speed and switch delay, keeps advancing when the tab is hidden, and does not use or overwrite the personal human run. Manual runs pause when the window loses focus.
 
 Auto Play spends its starting coin and Power Stone budgets using the selected build, then starts the chosen wave automatically. Timing defaults are 180 ms / 2,400 battlefield pixels per second / 160 ms switch delay (touch: 240 ms / 1,800 pixels per second / 200 ms); Crowd Sweeps favors nearby groups and fires Multishot while turning through them; these defaults are tuning assumptions, not proof of human playability. Camera zoom keeps the range circle inside the viewport.
@@ -74,6 +75,8 @@ The reference values and remaining economy caveats are summarized in [the Tower 
 ## Assets and attribution
 
 The game uses locally extracted Tower artwork and music under `public/tower-assets/`. `npm run assets:sync` refreshes the curated local assets when their source packages are available. It does not download game files.
+
+Demon Mode grants at most 10 seconds of invincibility per active cycle. Repeat pickups and duration upgrades extend only its damage bonus. Both cannons reserve damage from live homing targets so a lethal missile can land before they spend more ammo on that enemy; safe isolated normal enemies do not justify premium shots.
 
 Towerium is inspired by *Delirium*. Tower artwork was extracted from *The Tower*; the included music tracks are attributed to Krisu in the asset manifest. See the packaged provenance manifests for per-asset source details.
 

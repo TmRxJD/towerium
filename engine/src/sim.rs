@@ -600,7 +600,7 @@ impl World {
         }
         w.fallout_time = w.fallout_time.min(stack_cap);
         w.demon_time = w.demon_time.min(stack_cap);
-        w.demon_invincible = w.demon_invincible.min(w.c.powers.timer_cap);
+        w.demon_invincible = w.demon_invincible.min(w.c.powers.demon_invincible_duration);
         w.paused = true;
         w.firing = false;
         w.accumulator = 0.0;
@@ -638,7 +638,7 @@ impl World {
         Ok(w)
     }
     /// A fresh workshop funded by the existing reference earnings model.
-    /// No old purchases, combat reports, pickups or active powers carry over.
+    /// No old purchases or combat reports carry over; combat starts with a support kit.
     pub fn milestone_start(c: Config, seed: u32, wave: u32) -> Result<Self, String> {
         if wave == 0 || !wave.is_multiple_of(50) || wave > 10_000 {
             return Err("Milestone must be a completed multiple of 50, at most 10000".into());
@@ -735,8 +735,9 @@ impl World {
                         .ceil() as u32
                 || (s.bounces == 0 && s.bounce_distance != 0.0)
                 || s.id >= self.next_id
-                || s.target
-                    .is_some_and(|id| id == 0 || id >= self.next_id || s.kind != BOMB)
+                || s.target.is_some_and(|id| {
+                    id == 0 || id >= self.next_id || !matches!(s.kind, MISSILE | BOMB)
+                })
         }))
     }
     fn valid_save_effects(&self) -> bool {
@@ -927,6 +928,17 @@ impl World {
         if (self.phase != 0 && self.phase != 2) || !self.perks.offers.is_empty() {
             return false;
         }
+        if self.pending_start_wave >= 50 {
+            // One-time bridge into an established wave, after the starting build is bought.
+            for power in [CHRONO, BLACKHOLE, SPOTLIGHT, GOLDEN] {
+                self.powers[power] = self.powers[power].max(20.0);
+            }
+            for power in [EXTRA_ORBS, CRITICAL_COIN] {
+                self.extra_power_times[power - EXTRA_ORBS] =
+                    self.extra_power_times[power - EXTRA_ORBS].max(20.0);
+            }
+            self.shields = self.shields.max(1);
+        }
         self.wave = if self.pending_start_wave > 0 {
             std::mem::take(&mut self.pending_start_wave)
         } else {
@@ -1100,11 +1112,11 @@ impl World {
             }
             self.fx.push(Fx(10, 0.0, 0.0, 550.0, 0.0, 0.7));
         } else if k == DEMON {
+            if self.demon_time <= 0.0 {
+                self.demon_invincible = self.c.powers.demon_invincible_duration;
+            }
             self.demon_time = (self.demon_time + self.c.powers.demon_duration + self.stat(20))
                 .min(self.power_stack_cap());
-            self.demon_invincible = (self.demon_invincible
-                + self.c.powers.demon_invincible_duration)
-                .min(self.c.powers.timer_cap);
         } else if k == NEXUS {
             for power in [BLACKHOLE, SPOTLIGHT, GOLDEN] {
                 self.powers[power] = (self.powers[power]
@@ -2029,11 +2041,14 @@ impl World {
                         score(a).total_cmp(&score(b))
                     });
                 if let Some(i) = target {
+                    s.target = Some(self.enemies[i].id);
                     let turn = angle_delta(s.angle, self.enemies[i].p.sub(s.p).angle());
                     s.angle += turn.clamp(
                         -self.c.missile_turn_rate * DT,
                         self.c.missile_turn_rate * DT,
                     );
+                } else {
+                    s.target = None;
                 }
             }
             if s.kind == BOMB {
@@ -2897,6 +2912,7 @@ pub struct Snapshot<'a> {
     pub enemy_burns: Vec<(u32, f32, u32)>,
     pub ray_spins: Vec<(u32, f32)>,
     pub shots: Vec<(u32, u8, f32, f32, f32)>,
+    pub shot_targets: Vec<(u32, u32, f32)>,
     pub drops: Vec<(u32, usize, f32, f32, f32)>,
     pub areas: Vec<(u8, f32, f32, f32)>,
     pub hostile: Vec<(f32, f32)>,
@@ -3047,6 +3063,12 @@ impl World {
                 .shots
                 .iter()
                 .map(|s| (s.id, s.kind, s.p.x, s.p.y, s.angle))
+                .collect(),
+            shot_targets: self
+                .shots
+                .iter()
+                .filter(|s| matches!(s.kind, MISSILE | BOMB) && s.life > 0.0)
+                .filter_map(|s| s.target.map(|target| (s.id, target, s.efficiency)))
                 .collect(),
             enemy_effects: self
                 .enemies

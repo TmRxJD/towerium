@@ -1,8 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {AutoAimController,manualTargets,manualTargetPlan,aimTarget,defaultAimPreferences,validateAimPreferences} from '../scripts/auto-aim.mjs';
 const enemy=(id,kind,x,hp=10)=>[id,kind,x,0,hp,10,0];
 const state={range:300,enemies:[enemy(1,0,250),enemy(2,3,290),enemy(3,1,220),enemy(4,12,280)],drops:[]};
+
+test('autocannon waits for a lethal missile and conserves rockets on a safe solo tank',()=>{
+ const config=JSON.parse(readFileSync(new URL('../engine/balance.json',import.meta.url),'utf8'));
+ const s={...state,enemies:[[1,2,280,0,20,20,0]],shots:[],shot_targets:[],powers:[0,0,0,0,0,0,0],power_effects:config.power_workshop.upgrades.map(u=>u.effect_base),ammo:[0,0,20,0],values:config.upgrades.map(u=>u.base),disabled_weapon:-1,speed_multiplier:1};
+ s.values[30]=1;s.values[31]=2400;s.values[32]=2;
+ const cannon=new AutoAimController();
+ assert.equal(cannon.step(s,config,[],.1).weapon,0);
+ s.enemies[0][4]=2;s.shots=[[20,2,220,0,0]];s.shot_targets=[[20,1,1]];
+ assert.equal(cannon.step(s,config,[],.1).fire,false);
+ assert.equal(cannon.step(s,config,[],.1).targetId,-1);
+ s.shots=[];s.shot_targets=[];
+ assert.equal(cannon.step(s,config,[],.1).targetId,1);
+});
 test('ranked categories reorder live; danger wins defaults',()=>{
  assert.equal(aimTarget(state,defaultAimPreferences().rules).id,2);
  const rules=[{id:'fast',enabled:true},{id:'closest',enabled:true}];assert.equal(aimTarget(state,rules).id,3);

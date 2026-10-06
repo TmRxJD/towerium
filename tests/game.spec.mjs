@@ -1,6 +1,27 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 
+test('Help groups concise rules and opens power references accessibly on mobile',async({page})=>{
+ await page.setViewportSize({width:320,height:568});
+ await page.goto('/');await page.getByRole('button',{name:'Help',exact:true}).click();
+ await expect(page.locator('.help-section')).toHaveCount(9);
+ await expect(page.locator('.help-section[open]')).toHaveCount(1);
+ await expect(page.locator('.help-controls')).toBeVisible();
+ const powers=page.locator('.help-section').filter({has:page.locator('summary',{hasText:'Pickups & Powers'})});
+ await powers.locator('summary').first().click();
+ await expect(powers.locator('.help-powers dt')).toHaveCount(23);
+ expect(await powers.innerText()).not.toContain('undefined');
+ await expect(powers.getByText('Demon invincibility never stacks or exceeds 10s.',{exact:false})).toBeVisible();
+ await expect(powers.locator('dt').filter({hasText:'Demon Mode'})).toBeVisible();
+ await expect(page.locator('#close-help')).toBeInViewport();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);
+ await page.setViewportSize({width:568,height:320});
+ await expect(page.locator('#close-help')).toBeInViewport();
+ await page.locator('.help-body').evaluate(body=>body.scrollTop=body.scrollHeight);
+ await expect(page.locator('.help-section>summary').last()).toBeInViewport();
+ await page.locator('#close-help').click();await expect(page.getByRole('button',{name:'Play',exact:true})).toBeVisible();
+});
+
 async function readBalance(page) {
   return page.evaluate(async()=>await(await fetch('/engine/balance.json')).json());
 }
@@ -1287,6 +1308,10 @@ test('Auto Play spends the wave-160 build and Stone budgets before its first spa
   expect(expected.prepared.levels.some(level=>level>0)).toBe(true);
   expect(expected.prepared.power_levels.flat().some(level=>level>0)).toBe(true);
   expect(expected.started).toBe(true);expect(expected.firstCombat.phase).toBe(1);expect(expected.firstCombat.spawned).toBe(0);
+  for(const index of [1,3,4,6])expect(expected.firstCombat.powers[index]).toBeGreaterThanOrEqual(20);
+  expect(expected.firstCombat.extra_power_times[0]).toBeGreaterThanOrEqual(20);
+  expect(expected.firstCombat.extra_power_times[6]).toBeGreaterThanOrEqual(20);
+  expect(expected.firstCombat.shields).toBeGreaterThanOrEqual(1);
 
   const strategies=await Promise.all(['balanced','offense','defense','economy'].map(strategy=>nativeAutoBuild(page,160,strategy,42)));
   const signatures=Object.fromEntries(strategies.map(build=>[build.strategy,JSON.stringify(build.plan)]));
@@ -1302,6 +1327,7 @@ test('Auto Play spends the wave-160 build and Stone budgets before its first spa
   const personal=await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])));
   await page.locator('#auto-play').click();await page.locator('#auto-start-wave').fill('160');
   const first=await clickAndReadSnapshot(page,'#watch-auto-play');await expect(page.locator('#run-mode')).toBeVisible();expectAutoBuild(first,expected,160);
+  for(const index of [1,3,4,6])expect(first.powers[index]).toBeGreaterThan(19);
   expect(await page.evaluate(()=>Object.fromEntries(['towerium.run.v1','towerium.best-wave','towerium.cosmetics.v1'].map(key=>[key,localStorage.getItem(key)])))).toEqual(personal);
 
   await page.locator('#pause').click();await page.locator('#request-restart').click();

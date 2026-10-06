@@ -93,3 +93,15 @@ Release-candidate browser setup initially failed with `Error: Cannot find module
 - Captures: `.local/perks-offer-320x568.png`, `.local/perks-owned-320x568.png`, `.local/perks-offer-568x320.png`, `.local/perks-owned-568x320.png`, `.local/crowded-reticle-320x568.png`, and `.local/crowded-reticle-568x320.png`.
 - `npm run assets:sync` remains unavailable because the configured extraction lacks `unidentified/demon-wing-glow-lg.webp`. The failed sync's partial image copy was restored; the public asset directory has no unintended sync changes.
 - Dense endurance, physical-phone validation, and model scoring were not run.
+
+## Demon Mode, High-Wave Starts And Help — 2026-10-05
+
+Native checks pass: 182 tests, one ignored endurance test, formatting and Clippy. Controller checks pass 78/78, including lethal homing-shot reservation for both cannons and safe isolated-enemy ammo conservation. Content checks and the WASM/TypeScript/Vite build pass.
+
+A bounded actual-WASM Pro/Hybrid funded wave-160 diagnostic (seed 42) reached its 20-second limit: 291 kills, 7 hits taken, 3 collected powers, 973.4 earned coins, and 5 missile/5 bomb rounds spent across both cannons. Wall time was 1.07 seconds. This checks startup playability for one configured controller, not human endurance or long-run balance.
+
+Demon tests cover nonrefreshing 10-second invincibility, independent damage duration and clamping older saves. Fresh-start tests cover combat-only, one-time support and no false pickup-report credit. The wave-160 browser check confirms the bot buys its build before receiving the support kit. Help checks cover nine accessible groups, all 23 powers, closing/returning and portrait/landscape footer visibility. The visual reviewer accepted the corrected Help layouts.
+
+Initial native checks failed with `Invalid saved run state` because the shot schema only allowed bomb targets; missile targets now receive the same ID validation. A legacy fixture failed with `Invalid saved run` because it edited the wrapper rather than the world; corrected. Browser setup encountered missing `libnspr4.so` and `Error: No tests found.`; the installed Windows Chrome runner and explicit spec filter resolved these setup failures. Compact report overflow was corrected without shrinking text or loosening assertions. The full report/shop/restart browser flow now passes all six viewport bounds. Four affected browser cases pass: Help, funded wave-160 Auto Play, mobile perks, and report/shop/restart.
+
+Kritic deterministic validation passes; model scoring is off and unscored. Physical-phone play and long endurance were not repeated for this patch.

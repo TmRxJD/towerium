@@ -1,4 +1,5 @@
 import type { Snapshot } from '../src/types';
+export function incomingPremiumDamage(state:Snapshot,config:unknown):Map<string,number>;
 interface Candidate { id:number; key:string; x:number; y:number; }
 export function targets(state:Snapshot, config:unknown, aim?:string):Candidate[];
 export function baselineAction(state:Snapshot, config:unknown, candidates:Candidate[], aim?:string, circleSeconds?:number, context?:{previous?:Snapshot}):{target:string; pointer?:[number,number]; weapon:number; deathWave:boolean;urgent?:boolean;premiumInterval?:number;transitTargets?:[number,number,number][];transitFanAngles?:number[];transitChance?:number;fire?:boolean;waitingForImpact?:boolean};

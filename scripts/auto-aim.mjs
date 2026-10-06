@@ -1,3 +1,4 @@
+import {incomingPremiumDamage} from './playtest-policy.mjs';
 export const priorityRules = [
   {id:'danger',label:'Tower Threats'}, {id:'ranged',label:'Ranged Attackers'},
   {id:'fast',label:'Fast Enemies'}, {id:'boss',label:'Bosses & Elites'},
@@ -41,13 +42,18 @@ export class AutoAimController {
   constructor(){this.reset();}
   reset(){this.position=[0,-220];this.targetId=-1;this.wait=0;}
   step(s,config,rules,dt){
-    const target=aimTarget(s,rules,0,config);
+    const incoming=incomingPremiumDamage(s,config);
+    const observed={...s,enemies:s.enemies.filter(e=>(incoming.get(`enemy_${e[0]}`)??0)+.00001<e[4])};
+    const target=aimTarget(observed,rules,0,config);
     if(!target)return {aim:[...this.position],weapon:0,fire:false,targetId:-1};
     const unlock=Math.floor(s.values[32]),distanceToTarget=Math.hypot(target.x,target.y);
     const threat=[2,4,5,6,7,8,9,10,11,12].includes(target.kind);
     const clustered=s.enemies.filter(e=>e[4]>0&&Math.hypot(e[2]-target.x,e[3]-target.y)<config.bomb_radius*2).length>=5;
     let weapon=unlock>=1&&s.ammo[1]>0&&distanceToTarget<=s.range*s.values[30]?1:0;
-    if(!target.drop&&unlock>=2&&s.ammo[2]>0&&threat&&target.hp>config.weapons[0].damage*3)weapon=2;
+    const crowd=s.enemies.filter(e=>e[4]>0).length>=3;
+    const urgent=distanceToTarget<s.range*.5;
+    const hp=target.hp-(incoming.get(`enemy_${target.id}`)??0);
+    if(!target.drop&&unlock>=2&&s.ammo[2]>0&&threat&&(crowd||urgent||[5,12].includes(target.kind))&&hp>config.weapons[0].damage*3)weapon=2;
     if(!target.drop&&unlock>=3&&s.ammo[3]>0&&(clustered||[5,12].includes(target.kind))&&target.hp>config.weapons[0].damage*8&&!s.shots.some(shot=>shot[1]===3||shot[1]===4))weapon=3;
     if(s.disabled_weapon===weapon)weapon=0;
     if(s.disabled_weapon===weapon)return {aim:[...this.position],weapon,fire:false,targetId:target.id};

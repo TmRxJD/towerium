@@ -1,88 +1,23 @@
 import { perks } from './perks';
 import balance from '../engine/balance.json';
-import { enemyNames, enemyUrls, workshop } from './assets';
-
-import { weapons as weaponNames } from '../scripts/playtest-policy.mjs';
+import { enemyNames, enemyUrls, workshop, powerUrls } from './assets';
+import { weapons as weaponNames, powers } from '../scripts/playtest-policy.mjs';
 export { weaponNames };
-
-const weaponDescriptions=[
-  'Unlimited steady fire.',
-  'Instant hits; one fewer hit against standard enemies. Shares Projectiles upgrades.',
-  'Two homing missiles per second.',
-  'Magnetic main bomb; six unguided splits.',
-];
-
-const enemyDescriptions=[
-  'Approaches and attacks.',
-  'Fast and fragile.',
-  'Heavy; resists knockback.',
-  'Fires from the edge of your range.',
-  'Blocks passive damage; shoot it directly.',
-  'Heavy assault enemy; immune to control.',
-  'Drains health from the edge of your range.',
-  'Charges a powerful shot from your range line.',
-  'Splits into three smaller Scatters; they do not split again.',
-  'Boosts nearby enemies; auras do not stack.',
-  'Disables a special weapon or combat upgrade temporarily.',
-  'Bounces an increasingly powerful shot between itself and the tower.',
-  'Every tenth wave; slow, high HP, resists instant kills.',
-];
-
-const workshopByIndex=new Map(workshop.map(item=>[item.index,item]));
-const upgradeByIndex=balance.upgrades.map((upgrade,index)=>({upgrade,index}));
-
+const weaponDescriptions=['Unlimited fire; shares upgrades with Light Speed.','Instant hit; one fewer standard hit to kill.','Homing rockets; starts at two shots per second.','Homing bomb with six unguided splits.'];
+const enemyDescriptions=['Approaches the tower.','Fast and fragile.','Heavy; resists knockback.','Shoots from your range line.','Shields nearby enemies from passive damage.','Immune to control.','Drains health at range.','Spins up a powerful shot.','Splits into three smaller Scatters.','Buffs nearby enemies.','Disables a weapon or combat stat.','Bouncing shot doubles damage each hit.','Every tenth wave; slow, durable, resists instant kills.'];
+const descriptions=['Chains hits between enemies.','Slows enemies just beyond range.','Brief stun; 1 damage every 4s.','Two traps; pulls inward and deals one bullet hit per second.','Three beams amplify damage and coins.','Clears Basics, Fasts and Ranged; extra hits to others. Fires 3s, rests 2s.','Multiplies kill coins.','Heals into Overheal capacity.','Bank three screen clears; bosses take fixed damage.','Blocks one hit; stacks to three.','Clears Basics, Fasts and Ranged; halves enemy attack speed for 30s.','10s invincibility; double damage for 30s. Repeat pickups extend damage only.','5% of enemies die in one hit.','Moves permanent mines into an evenly spaced inner orbit.','Hits can reduce enemy speed and mass.','Activates or extends GT, SL and BH together.','Three faster, stronger Orbs through Black Hole centers.','Doubles splash size and damage; Chrono reach gains only 15%.','Aura boosts coin and Stone income; does not attack.','Aura doubles damage from other sources; does not attack.','Pulses every 5s; increasing burn hits over 5s.','Contact stuns for 3s, then slows for 5s.','Lets Basics drop coins.'];
+const section=(title:string,body:string,open=false)=>`<details class="help-section"${open?' open':''}><summary>${title}</summary>${body}</details>`;
+const group=(title:string,indices:number[])=>`<h3>${title}</h3><dl class="help-powers">${indices.map(i=>`<dt><img src="${powerUrls[i]}" width="24" height="24" alt="">${powers[i]}</dt><dd>${descriptions[i]}</dd>`).join('')}</dl>`;
 export function renderHelp({live,best,time,seed}:{live:boolean;best:number;time:string;seed:number}):string {
-  return `<div class="modal-top"><h2 id="modal-title">How To Play</h2></div>
-    <div class="help-body">
-      <section><h3>Controls</h3>
-        <p>Mouse: aim and hold to fire. Touch: drag the trackpad to aim; hold Fire with your other thumb. Lift and replant without moving the crosshair. Touch aim gently snaps within 14 screen pixels of enemies and pickups while firing. Hook Bomb fires once per press. Adjust sensitivity and aiming hand below the pad.</p>
-        <p><kbd>1–4</kbd> / Wheel: switch weapon · <kbd>Q</kbd> / Right Click: Death Wave · <kbd>Esc</kbd>: pause.<br>Keyboard: arrows aim, Space fires.</p>
-      </section>
-      <section><h3>Weapons &amp; Drops</h3>
-        <div class="help-weapons">${weaponNames.map((name,i)=>`<div><kbd>${i+1}</kbd><strong>${name}</strong><span>${weaponDescriptions[i]}</span></div>`).join('')}</div>
-        <p><strong>Critical Coin.</strong> Basics drop no coins normally. This timed power grants their coin reward, multiplied by Coins/Kill and active overlaps.</p><p><strong>Pickups.</strong> Coins and ammo collect automatically. Direct weapon kills drop ammo; all kills can supply coins and powers. Start with 40/20/5 special rounds. Each pickup adds 35 Light Speed and 2 Smart Missiles before upgrades. Every fourth pickup also adds 1 Hook Bomb round. Base reserves hold 200/30/6; Max Ammo Capacity raises these limits. Shoot power-ups to activate them; repeated timed pickups add time up to the Power Stack Cap (50s initially, 70s maximum). Flashing drops and powers are about to expire.</p>
-        <p><strong>Precision Refills.</strong> Every ${balance.precision_ammo.hits} original manual cannon hits refill ${balance.precision_ammo.light} Light Speed and ${balance.precision_ammo.missiles} Missile; every ${balance.precision_ammo.hook_every} refills add ${balance.precision_ammo.hooks} Hook Bomb. Extras, bounces and automatic shots do not count. Ammo Quantity and capacity apply.</p>
-        <p><strong>Death Wave.</strong> Holds up to 3 charges, clears normal enemies and deals 150 base damage to Super Bosses.</p>
-        <p><strong>Power Fields.</strong> Black Hole holds enemies in two fields and deals one bullet hit per second; Spotlight sweeps three beams. Swamp briefly stuns and deals 1 damage every 4 seconds. Chrono Field slows enemies just beyond your range. Death Ray clears Basics, Fasts and Ranged on contact; other enemies take two extra bullet hits per beam contact. It fires for 3 seconds, rests for 2, then restarts from a random angle. Overlapping fields do not stack.</p>
-        <p><strong>Nuke.</strong> Clears Basics, Fasts and Ranged; fallout halves enemy attack speed for 30 seconds. <strong>Demon Mode.</strong> Drops at most once per minute. Invincible for 10 seconds; enemies take double damage for 30. Duration upgrades extend fallout and bonus damage, but not invincibility.</p>
-        <p><strong>Modules.</strong> Death Penalty makes 5% of enemies die in one hit, including bosses. Landmines remain until triggered; at the mine limit, new mines are skipped. Space Displacer spaces them evenly in an inner orbit opposite the Orbs. Multiverse Nexus activates Golden Tower, Spotlight and Black Hole together, adding time if already active.</p>
-        <p><strong>Pulsar Harvester.</strong> Weapon hits have a 2.5% base proc chance. Each proc permanently lowers that enemy’s speed and mass by 5%, down to 25% of its original values.</p>
-      </section>
-      <section><h3>Wave Reports</h3>
-        <p><strong>Wall.</strong> Wall HP unlocks contact protection with normal Thorns. Ranged attacks bypass it. A broken wall rebuilds after its timer. Range automatically zooms the battlefield out.</p>
-        <p><strong>Retries.</strong> Three per run. Replay your last cleared ten-wave milestone with both shops restored. Cleared fifty-wave milestones unlock fresh starts with empty shops and coin/Stone budgets. Auto Play is separate and continues out of focus. Choose a wave and build; the bot spends its starting coin/Stone budgets before combat. Reaction delay, aim speed and weapon switching are adjustable.</p>
-        <p><strong>Accuracy.</strong> Main shots that hit enemies or collect power-ups. Multishot extras, bounces and split bombs do not affect accuracy.</p>
-        <p><strong>Hits Taken And Coins Earned.</strong> Hits Taken excludes shield blocks and Vampire drain. Coins Earned excludes starting coins and remains counted after purchases.</p>
-        <p><strong>Time And Procs.</strong> Time is active gameplay, including cleanup. Proc chances fill independent meters; a 10% chance triggers every 10 eligible actions. Progress carries across waves and saves. Waves spawn for 30 seconds, then the timer shows cleanup time.</p>
-      </section>
-      <section><h3>Automation</h3><p>Buy spends coins once. Its checkbox repeats between waves and starts the next wave after 5s; uncheck to stop. Buy &amp; Perk Priorities sets purchase order, level limits and perk choices. Hold a workshop stat to buy faster over time.</p></section><section><h3>Autocannon</h3><p>Rank enemies and pickups in Target Priority; higher rules win. The Autocannon fires alongside your manual weapon with its own aim and cooldown. Efficiency upgrades raise its stats from 10% to 110%; Targeting Speed improves traversal, and Auto Weapons unlocks LSS, missiles and bombs. Ammo is shared. Death Wave stays manual. Mobile starts enabled; results mark Autocannon use.</p></section>
-      <section><h3>Perks</h3><p>Choose one of three after waves 5, 15, 30, 50, 75, then increasingly spaced waves. The wave HUD shows the next perk. Your Perks lists selected bonuses and levels. Maxed choices leave the pool. Fresh milestone runs and older saves begin their own schedule. Tradeoffs apply both benefits and penalties.</p><div class="perk-help">${perks.map(({name,effect,cap})=>`<p><strong>${name}.</strong> ${effect} · ${cap} ${cap===1?'level':'levels'}.</p>`).join('')}</div></section>
-      <section><h3>Extra Powers</h3>
-        <p><strong>Extra Orbs.</strong> Three faster Orbs orbit through Black Hole centers in reverse, deal one extra bullet hit, and increase Orb kill coins.</p>
-        <p><strong>Area Of Effect.</strong> Doubles bomb, mine, Swamp and Flame splash size and damage, plus Black Hole and Shockwave reach. Chrono reach gains 15%.</p>
-        <p><strong>Bots.</strong> Roam inside range; upgrade each radius with Stones. Gold multiplies kill coins by 1.2 and awards a Stone every 20 eligible aura kills. Amp doubles damage from other sources. Neither attacks.</p>
-        <p><strong>Flame And Thunder.</strong> Flame pulses every 5s: burns deal 1, 2, 3, 4, then 5 bullet hits over five seconds. Thunder stuns on radius contact for 3s, then slows for 5s at half speed. Protectors block these attacks.</p>
-      </section>
-      <section><h3>Enemies</h3>
-        <div class="enemy-list">${enemyNames.map((name,i)=>`<div><img src="${enemyUrls[i]}" width="28" height="28" alt=""><strong>${name}</strong><span>${balance.enemies[i].hp} HP</span><small>${enemyDescriptions[i]}${balance.enemies[i].weapon_damage.some(m=>m!==1)?' · '+balance.enemies[i].weapon_damage.map((m,w)=>m===1?'':`${weaponNames[w]} ${m}×`).filter(Boolean).join(', '):''}</small></div>`).join('')}</div>
-        <p><strong>Waves.</strong> Wave 400 maps to Tower wave 10,000 for speed, mass and special arrivals. Heavier enemies resist pushes and pulls. Every tenth wave adds one cannon hit of enemy health.</p>
-        <p><strong>Coin Overlap.</strong> GT, BH, SL, Orb kills and enemies hit by DW each grant 15% more coins. Bonuses multiply: all five give about 2×. BH and SL check where the enemy dies; overlapping holes or beams count once.</p>
-        <p><strong>Supplies.</strong> Coins buy ammo, Death Wave charges and ready effects for the next wave. Fallout buys the attack slow; its screen clear is pickup-only. Timed powers add remaining time up to the purchased Power Stack Cap (50–70s); Demon invincibility stays capped at 50s.</p>
-        <p><strong>Rapid Fire.</strong> Normal volleys trigger short 4× firing bursts. Chance caps at 10%; active bursts cannot retrigger.</p>
-        <p><strong>Contact And Thorns.</strong> Enemies attack on tower contact once per second; repeated hits from one living enemy grow stronger. Thorns returns normal bullet hits, starting at one and gaining one per upgrade. It deals half damage to Bosses and Super Bosses. Vampire drain and Overcharge bounces do not trigger Thorns.</p>
-        <p><strong>Special Defenses.</strong> Overcharge doubles damage each tower hit (12 → 24 → 48 → 96). Destroying a Saboteur or Overcharge ends its effect. Sabotage can remove a purchased combat bonus or disable a special weapon, but cannot remove HP, regeneration, range or income upgrades. Protector shields block orbs, Thorns, mines and automatic damage powers; direct weapons and Death Wave still work.</p>
-      </section>
-      <section><h3>Upgrades</h3>
-        <p><strong>Range.</strong> Outside the dashed ring, shots deal half damage, or a quarter to bosses. Bombs deal half a normal enemy’s maximum HP outside range, including split bombs; inside, they kill normal enemies and deal fixed damage to bosses. Split bombs cannot split again.</p>
-        <p><strong>Auto Buy.</strong> Buy purchases once. Check the box to buy between waves and start after 5 seconds; uncheck to stop. Settings ranks upgrades, level limits and perk choices. Hold an upgrade to buy faster.</p>
-        <p><strong>Run Upgrades.</strong> Spend coins between waves; upgrades last for the run. Ammo Quantity adds 20% per level; fractions carry forward. Ammo comes from direct kills; powers can come from any kill. Above 100 enemies per wave, power chance scales with density to keep supply steady. The shop shows the adjusted chance; upgrades increase supply proportionally. Timed pickups add remaining time up to the Power Stack Cap. Duration upgrades exclude Demon invincibility; packages, Death Wave and shields have no duration.</p>
-        <p><strong>Health And Shields.</strong> Recovery Packages can heal above Health up to your Overheal % capacity. Energy Shield blocks one discrete hit per charge, up to three; Vampire drain does not consume charges. Blocked hits do not trigger Thorns.</p>
-        <dl class="upgrade-help">${upgradeByIndex.map(({upgrade,index})=>`<dt>${workshopByIndex.get(index)!.label}</dt><dd>${upgrade.description}</dd>`).join('')}</dl>
-        <p><strong>Power Stones.</strong> Special enemies award Stones automatically: 1 each, bosses 2, Super Bosses 5. Spend them in Shop → Powerups. Drop Share shifts the mix of powerups without increasing total drops; effect upgrades strengthen the selected power. Both shops reset with a new run.</p>
-        <p><strong>Cosmetics.</strong> Clear each 30 waves to unlock a tower skin. Skins and selection carry across runs; backgrounds change every 30 cleared waves. Cosmetics do not affect combat.</p>
-        <p>Music: Krisu · The Tower soundtrack.</p>
-        <p>Best: ${best} waves · <strong>This Run:</strong> ${time} · Seed ${seed}</p>
-      </section>
-    </div>
-    <div class="modal-actions"><button class="primary" id="close-help">${live?'Back To Game':'Close'}</button></div>`;
+ return `<div class="modal-top"><h2 id="modal-title">How To Play</h2></div><div class="help-body">
+ ${section('Controls',`<dl class="help-controls"><dt>Mouse</dt><dd>Aim and hold to fire.</dd><dt>Touch</dt><dd>Drag the trackpad to aim; hold Fire. Lift to reposition.</dd><dt>Switch Weapon</dt><dd><kbd>1–4</kbd> or mouse wheel.</dd><dt>Death Wave</dt><dd><kbd>Q</kbd> or right click.</dd><dt>Pause</dt><dd><kbd>Esc</kbd>.</dd><dt>Keyboard Aim</dt><dd>Arrow keys; Space fires.</dd></dl><p>Hook Bomb fires once per press.</p>`,true)}
+ ${section('Weapons & Survival',`<div class="help-weapons">${weaponNames.map((name,i)=>`<div><kbd>${i+1}</kbd><strong>${name}</strong><span>${weaponDescriptions[i]}</span></div>`).join('')}</div><ul><li>Outside range: half damage; bosses take a quarter. Bombs cannot instantly kill outside range.</li><li>Contact attacks once per second. Thorns retaliates; half effect against bosses.</li><li>Wall blocks contact, then rebuilds when broken. Ranged attacks bypass it.</li><li>Shields block individual hits, not Vampire drain.</li><li>Proc meters are steady: 10% triggers every ten eligible actions.</li></ul>`)}
+ ${section('Pickups & Powers',`<p>Shoot powers to activate them. Coins and ammo collect automatically. Timed pickups add remaining time up to your Power Stack Cap (50–70s). Demon invincibility never stacks or exceeds 10s.</p>${group('Damage & Control',[0,1,2,3,4,5,8,16,17])}${group('Survival & Economy',[6,7,9,10,11,22])}${group('Modules',[12,13,14,15])}${group('Bots',[18,19,20,21])}`)}
+ ${section('Ammo & Income',`<ul><li>Direct weapon kills supply ammo; all kills can drop powers.</li><li>Ammo pickups: +35 Light Speed, +2 Missiles; every fourth adds +1 Hook Bomb. Ammo Quantity adds 20% per level; capacity limits reserves.</li><li>Every ${balance.precision_ammo.hits} original manual cannon hits refill ${balance.precision_ammo.light} Light Speed and ${balance.precision_ammo.missiles} Missile; every ${balance.precision_ammo.hook_every} refills add ${balance.precision_ammo.hooks} Hook Bomb. Extras, bounces and automatic shots do not count.</li><li>Basics need Critical Coin to earn coins. Coins/Kill multiplies income.</li><li>GT, BH, SL, Orb kills and DW marks each add 15% coins, multiplying together. Gold Bot adds its own bonus.</li><li>Special enemies give Stones: 1 each, bosses 2, Super Bosses 5.</li></ul>`)}
+ ${section('Workshop & Power Shop',`<p>Coins buy run upgrades and Supplies. Stones buy power effects and Drop Share; Drop Share changes the mix, not total drops. Hold an upgrade to buy repeatedly.</p><details class="help-reference"><summary>Workshop Stat Reference</summary><dl class="upgrade-help">${workshop.map(({index,label})=>`<dt>${label}</dt><dd>${balance.upgrades[index].description}</dd>`).join('')}</dl></details>`)}
+ ${section('Autocannon & Automation',`<ul><li>Autocannon fires alongside your manual weapon. Target Priority ranks enemies and powers; higher rules win.</li><li>Efficiency raises its stats from 10% to 110%. Targeting Speed improves movement; Auto Weapons unlocks special weapons. Ammo is shared.</li><li>Buy purchases once. Its checkbox repeats between waves and starts the next wave after 5s; uncheck to stop.</li><li>Buy & Perk Priorities sets purchase order, level limits and perk choices.</li><li>Auto Play is separate, with adjustable reaction, aim and switch speed. It spends its starting budget before combat and runs out of focus.</li></ul>`)}
+ ${section('Perks',`<p>Choose one of three after waves 5, 15, 30, 50, 75, then increasingly spaced waves. The HUD shows the next choice; Your Perks lists your build. Tradeoffs apply both bonuses and penalties.</p><dl class="upgrade-help">${perks.map(({name,effect,cap})=>`<dt>${name} · ${cap} ${cap===1?'Level':'Levels'}</dt><dd>${effect}</dd>`).join('')}</dl>`)}
+ ${section('Enemies',`<div class="enemy-list">${enemyNames.map((name,i)=>`<div><img src="${enemyUrls[i]}" width="28" height="28" alt=""><strong>${name}</strong><span>${balance.enemies[i].hp} Base HP</span><small>${enemyDescriptions[i]}${balance.enemies[i].weapon_damage.some(m=>m!==1)?' · '+balance.enemies[i].weapon_damage.map((m,w)=>m===1?'':`${weaponNames[w]} ${m}×`).filter(Boolean).join(', '):''}</small></div>`).join('')}</div><p>Every tenth wave adds one cannon hit of health. Wave 400 maps to Tower wave 10,000 for movement and special arrivals. Protectors block passive damage; direct weapons and Death Wave still work.</p>`)}
+ ${section('Waves, Reports & Fresh Starts',`<ul><li>Spawning lasts 30s, then cleanup. Start the next wave when ready.</li><li>Accuracy counts main shots hitting enemies or powers; excludes extras, bounces and splits.</li><li>Hits Taken excludes shields and Vampire drain. Earned coins exclude starting budgets.</li><li>Three retries replay your last cleared tenth-wave checkpoint.</li><li>Fifty-wave milestones unlock fresh starts with empty shops and a budget. Fresh starts at wave 50+ get 20s of Chrono Field, Black Hole, Spotlight, Golden Tower, Extra Orbs and Critical Coin, plus one Shield. Shopping does not consume this kit.</li><li>Clear each 30 waves to unlock skins; backgrounds change too.</li></ul><p>Best: ${best} waves · This Run: ${time} · Seed ${seed}<br>Music: Krisu · The Tower soundtrack.</p>`)}
+ </div><div class="modal-actions"><button class="primary" id="close-help">${live?'Back To Game':'Close'}</button></div>`;
 }
