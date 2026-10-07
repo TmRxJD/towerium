@@ -361,3 +361,10 @@ dialog::backdrop {background:#030a10bd;backdrop-filter:blur(5px)}
 .dev-exit{border-top:1px solid #54707d;margin-top:28px;padding-top:14px}.dev-exit p{margin-bottom:10px}
 @media(max-width:600px){.dev-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.dev-powers{grid-template-columns:repeat(2,minmax(0,1fr))}.dev-heading,.dev-footer{padding:10px}.dev-body{padding:12px}.dev-tabs{padding:8px;gap:5px}.dev-tabs button{flex:1;padding:8px;font-size:13px}.dev-footer{align-items:flex-start}}
 @media(max-width:600px){.header:has(#dev-open:not([hidden])){height:auto;min-height:53px;flex-wrap:wrap;gap:6px;padding:8px 0}.header:has(#dev-open:not([hidden])) nav{width:100%;justify-content:flex-end}}
+/* Fullscreen uses the same responsive controls as normal browser play. */
+html, body { min-height:100vh; min-height:100dvh; overscroll-behavior:none; }
+.shell { padding-top:env(safe-area-inset-top); padding-bottom:max(12px,env(safe-area-inset-bottom)); }
+.fullscreen-status { position:fixed; left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:30; width:max-content; max-width:90vw; padding:8px 12px; border-radius:8px; background:#102533ed; color:#e0f5ef; font-size:12px; text-align:center; pointer-events:none; }
+.fullscreen-status:empty { display:none; }
+[data-fullscreen] { min-width:44px; min-height:44px; font-size:20px; }
+@media(max-width:400px) { .header { gap:4px; }.header .brand { gap:4px; }.header h1 { font-size:17px; letter-spacing:1px; }.header nav { gap:0; }.header nav .quiet { padding-inline:5px; }.header nav [data-fullscreen] { min-width:36px; }.hud { gap:7px; } }

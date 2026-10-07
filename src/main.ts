@@ -1,3 +1,4 @@
+import { setupFullscreen } from './fullscreen';
 import './game.css';
 import { DevPanel, defaultBalance } from './dev-panel';
 import { AutoPlayer } from './autoplay';
@@ -189,7 +190,7 @@ app.innerHTML=`
   <div class="shell">
     <header class="header">
       <div class="brand"><img src="${towerUrl}" alt="" width="28" height="28"><h1>TOWERIUM</h1></div>
-      <nav aria-label="Game controls"><button id="dev-open" class="secondary" hidden>Dev</button><button id="help" class="quiet" title="Controls and enemy guide">Help</button><button id="music" class="quiet sound-toggle" aria-pressed="${!audio.musicMuted}" aria-label="Music" title="Music ${audio.musicMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></svg></button><button id="effects" class="quiet sound-toggle" aria-pressed="${!audio.effectsMuted}" aria-label="Effects" title="Effects ${audio.effectsMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"/></svg></button><button id="pause" class="quiet" title="Pause or resume · Esc" disabled>Pause</button></nav>
+      <nav aria-label="Game controls"><button id="dev-open" class="secondary" hidden>Dev</button><button data-fullscreen class="quiet" aria-label="Enter fullscreen">⛶</button><button id="help" class="quiet" title="Controls and enemy guide">Help</button><button id="music" class="quiet sound-toggle" aria-pressed="${!audio.musicMuted}" aria-label="Music" title="Music ${audio.musicMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></svg></button><button id="effects" class="quiet sound-toggle" aria-pressed="${!audio.effectsMuted}" aria-label="Effects" title="Effects ${audio.effectsMuted?'Off':'On'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"/></svg></button><button id="pause" class="quiet" title="Pause or resume · Esc" disabled>Pause</button></nav>
     </header>
     <main class="layout">
       <section class="play-column" aria-label="Towerium game">
@@ -212,6 +213,7 @@ app.innerHTML=`
   </div>
   <dialog id="modal" aria-labelledby="modal-title"></dialog>
 `;
+setupFullscreen();
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
 const canvas=el<HTMLCanvasElement>('arena'),modal=el<HTMLDialogElement>('modal');
 touchControls=new TouchControls(el('touch-controls'),canvas,{
@@ -577,3 +579,4 @@ void boot().catch(error=>{
 document.addEventListener('change',event=>{const input=event.target as HTMLInputElement;if(input.id==='dev-enable'){changeDevMode(input.checked);return;}if(input.id==='auto-buy-enabled'){automation.enabled=input.checked;roundCountdown.reset();automationAppliedWave=-1;saveAutomation();return;}if(input.id==='auto-perk-enabled'){automation.perkEnabled=input.checked;saveAutomation();return;}if(input.dataset.autoLimit!==undefined){const i=Number(input.dataset.autoLimit),rule=automation.buy[i];rule.limit=Math.max(0,Math.min(balance.upgrades[rule.id].cap,Math.floor(Number(input.value)||0)));saveAutomation();renderAutomation();}});
 document.addEventListener('pointerdown',event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-upgrade]');if(!button||button.disabled||autoPlayer||event.button!==0)return;suppressBuyClick=false;heldPurchased=false;heldStat=Number(button.dataset.upgrade);heldPointer=event.pointerId;holdSince=performance.now();holdTimer=window.setTimeout(repeatStat,400);});
 document.addEventListener('pointerup',event=>{if(event.pointerId===heldPointer)stopStatHold();});document.addEventListener('pointercancel',stopStatHold);window.addEventListener('blur',stopStatHold);
+
